@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.108 · Zeitraffer, EP &amp; Futterplatzanzeige</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.109 · Kescher- und EP-Anzeigen getrennt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3631,6 +3631,17 @@ html,body{
   font-size:7.2px!important
 }
 
+/* V8.109: Die Kescherbestätigung besitzt ihren eigenen Präsentationsschritt.
+   Sollte ein langsames Gerät beide Schritte für ein einzelnes Bild halten,
+   bleibt sie zusätzlich oberhalb der erst danach startenden EP-Animation. */
+.angling-ui.is-catch-sequence .angling-catch-sequence{
+  z-index:290!important;
+  box-sizing:border-box;
+  max-width:min(540px,calc(100% - 24px));
+  white-space:normal;
+  text-align:center
+}
+
 </style>
 </head>
 <body>
@@ -4266,7 +4277,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.108 · ZEITRAFFER-EP-FUTTERPLATZ';
+const VIEWER_VERSION='V8.109 · EP-KESCHER-ANZEIGEN-GETRENNT';
 const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -20929,24 +20940,38 @@ function updateAnglingDeadwoodSnagDetection(){
   const collision=findAnglingDeadwoodCollision(point,type==='artificial'?.075:.05);
   if(collision)beginAnglingObstacleSnag(type,collision);
 }
-let anglingEpPopupTimer=0,anglingEpCounterTimer=0,anglingEpPopupHideTimer=0;
-function showAnglingEpGain(gain,oldXp,newXp,snagged=false,detail=''){
-  window.clearTimeout(anglingEpPopupTimer);window.clearInterval(anglingEpCounterTimer);window.clearTimeout(anglingEpPopupHideTimer);
+let anglingEpPopupTimer=0,anglingEpCounterTimer=0,anglingEpPopupHideTimer=0,anglingEpPopupRevealTimer=0;
+function showAnglingEpGain(gain,oldXp,newXp,snagged=false,detail='',revealDelay=0){
+  window.clearTimeout(anglingEpPopupTimer);window.clearInterval(anglingEpCounterTimer);window.clearTimeout(anglingEpPopupHideTimer);window.clearTimeout(anglingEpPopupRevealTimer);
+  const popupDelay=Math.max(0,Math.floor(Number(revealDelay)||0));
   if(anglingEpPopup){
     anglingEpPopup.classList.remove('show');
+    anglingEpPopup.setAttribute('aria-hidden','true');
     anglingEpPopup.textContent='';
     const safeGain=Math.max(0,Math.round(Number(gain)||0));
     const sub=snagged?'Gerissener Fisch · 50 % Wertung':String(detail||'').trim();
-    anglingEpPopup.append(document.createTextNode('+'+safeGain+' EP'));
-    if(sub){const small=document.createElement('small');small.textContent=sub;anglingEpPopup.appendChild(small);}
-    anglingEpPopup.setAttribute('aria-hidden','false');
-    void anglingEpPopup.offsetWidth;
-    anglingEpPopup.classList.add('show');
-    anglingEpPopupHideTimer=window.setTimeout(()=>{
-      anglingEpPopup.classList.remove('show');
-      anglingEpPopup.setAttribute('aria-hidden','true');
-      anglingEpPopupHideTimer=0;
-    },3450);
+    const revealPopup=()=>{
+      // Beim Fang wartet die EP-Blase zuverlässig, bis die eigenständige
+      // Kescherbestätigung beendet ist – auch bei einem langsamen Bildaufbau.
+      if(popupDelay&&anglingUi?.classList.contains('is-catch-sequence')){
+        anglingEpPopupRevealTimer=window.setTimeout(revealPopup,90);
+        return;
+      }
+      anglingEpPopupRevealTimer=0;
+      anglingEpPopup.textContent='';
+      anglingEpPopup.append(document.createTextNode('+'+safeGain+' EP'));
+      if(sub){const small=document.createElement('small');small.textContent=sub;anglingEpPopup.appendChild(small);}
+      anglingEpPopup.setAttribute('aria-hidden','false');
+      void anglingEpPopup.offsetWidth;
+      anglingEpPopup.classList.add('show');
+      anglingEpPopupHideTimer=window.setTimeout(()=>{
+        anglingEpPopup.classList.remove('show');
+        anglingEpPopup.setAttribute('aria-hidden','true');
+        anglingEpPopupHideTimer=0;
+      },3450);
+    };
+    if(popupDelay)anglingEpPopupRevealTimer=window.setTimeout(revealPopup,popupDelay);
+    else revealPopup();
   }
   const counter=anglingEpBadge?.querySelector('strong');
   if(!counter)return;
@@ -20959,7 +20984,7 @@ function showAnglingEpGain(gain,oldXp,newXp,snagged=false,detail=''){
       counter.textContent=String(Math.round(oldXp+(newXp-oldXp)*eased));
       if(t>=1){window.clearInterval(anglingEpCounterTimer);anglingEpCounterTimer=0;counter.textContent=String(newXp);anglingEpBadge.classList.remove('ep-pulse');void anglingEpBadge.offsetWidth;anglingEpBadge.classList.add('ep-pulse');}
     },32);
-  },1450);
+  },popupDelay+1450);
 }
 function anglingLocalDayKey(ts=Date.now()){
   const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -23354,7 +23379,15 @@ function finishAnglingCatch(){
     caughtFeedSpot.placementRewardReady=true;
     if(caughtFeedSpot===anglingFeedActive)anglingFeedPlacementRewardReady=true;
   }
-  saveAnglingProgress();updateAnglingSetupUi();showAnglingEpGain(xpGain,oldXp,newXp,!!caught.snagged,bonus.labels.length?'Bonus: '+bonus.labels.join(' · '):'');
+  const perfectLanding=bonus.labels.includes('Sauber gekeschert +5');
+  const epBonusLabels=bonus.labels.filter(label=>label!=='Sauber gekeschert +5');
+  // Erst die Kescherbestätigung, danach mit einem kleinen Abstand die nach
+  // oben fliegende EP-Anzeige. Dadurch kann keine der beiden unter der anderen
+  // liegen. Der Kescherbonus bleibt selbstverständlich im EP-Gesamtwert.
+  saveAnglingProgress();updateAnglingSetupUi();showAnglingEpGain(
+    xpGain,oldXp,newXp,!!caught.snagged,
+    epBonusLabels.length?'Bonus: '+epBonusLabels.join(' · '):'',1720
+  );
   // Tagesquests beobachten ausschließlich den bereits sicher gelandeten Fang.
   // Sie verändern weder Fischwahl noch Biss-, Drill- oder Kescherlogik.
   processAnglingDailyQuestCatch(caught);
@@ -23389,7 +23422,8 @@ function finishAnglingCatch(){
   if(isLegendaryKoi)labels.push('✨ Legendärer Fang');
   else if(newlyFound)labels.push('⭐ Neue Art');
   if(isPersonalBest&&!isLegendaryKoi)labels.push('🏆 Persönlicher Rekord');
-  anglingCatchSequence.textContent=(labels.length?labels.join(' · ')+' · ':'')+'🥅 Sicher im Kescher';
+  const landingPresentation=perfectLanding?'🥅 Perfekt gekeschert · +5 EP':'🥅 Sicher im Kescher';
+  anglingCatchSequence.textContent=(labels.length?labels.join(' · ')+' · ':'')+landingPresentation;
   anglingCatchRevealData={caught,newlyFound,isPersonalBest,isLegendaryKoi,baitBonus,xpGain};
   const dir=anglingCurrentDirection(anglingTmpA);
   const side=anglingTmpB.copy(dir).applyAxisAngle(anglingUp,Math.PI/2);
@@ -23778,6 +23812,7 @@ function resetAllAnglingUiOverlays(){
   if(anglingToast)anglingToast.textContent='';
   window.clearTimeout(anglingEpPopupTimer);anglingEpPopupTimer=0;
   window.clearTimeout(anglingEpPopupHideTimer);anglingEpPopupHideTimer=0;
+  window.clearTimeout(anglingEpPopupRevealTimer);anglingEpPopupRevealTimer=0;
   window.clearInterval(anglingEpCounterTimer);anglingEpCounterTimer=0;
   if(anglingEpPopup){anglingEpPopup.classList.remove('show');anglingEpPopup.setAttribute('aria-hidden','true');anglingEpPopup.textContent='';}
   const epCounter=anglingEpBadge?.querySelector('strong');
