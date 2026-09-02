@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.105 · Auto-Highscore &amp; mobile Kopfleisten</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.106 · Mobile Ansicht, Deeper &amp; Hilfe</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3517,6 +3517,51 @@ html,body{
 #anglingLeaderboardRefresh{display:none!important}
 .angling-leaderboard-toolbar label{width:100%}
 
+/* V8.106: Die Lockfutterauswahl sitzt auf Telefonen in der schmalen freien
+   Zeile zwischen Live-Posenfenster und unterer Statusleiste. Dadurch ragt sie
+   weder in das Livebild noch in die Spielbedienung hinein. */
+.aczo-phone-layout .angling-feed-controls{
+  bottom:51px!important;
+  width:min(340px,calc(100% - 28px))!important;
+  gap:3px!important;
+  flex-wrap:nowrap!important
+}
+.aczo-phone-layout .angling-feed-btn{
+  flex:1 1 0!important;
+  min-width:0!important;
+  width:auto!important;
+  height:19px!important;
+  min-height:19px!important;
+  padding:1px 3px!important;
+  font-size:6.1px!important;
+  line-height:1!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important
+}
+
+/* Das Deeper-Sonar bleibt auf Desktop unverändert. Auf Telefonen wird es als
+   kompaktes Instrument unmittelbar über der Statusleiste rechts verankert. */
+.aczo-phone-layout .angling-ui.deeper-active.line-active .angling-float-zoom{
+  left:auto!important;
+  right:7px!important;
+  bottom:52px!important;
+  width:min(58vw,225px)!important;
+  height:150px!important;
+  grid-template-rows:minmax(0,1fr) 27px!important;
+  border-radius:11px!important
+}
+.aczo-phone-layout .angling-ui.deeper-active .angling-deeper-footer{
+  gap:3px!important;
+  padding:2px 4px 2px 6px!important;
+  font-size:6.3px!important
+}
+.aczo-phone-layout .angling-ui.deeper-active .angling-deeper-save{
+  min-height:21px!important;
+  padding:2px 5px!important;
+  border-radius:7px!important;
+  font-size:6.4px!important
+}
+
 </style>
 </head>
 <body>
@@ -3872,19 +3917,24 @@ html,body{
        </div>
        <div class="angling-help-content">
          <section><h3>🎯 Angelstelle & Auswurf</h3><p>Wähle zuerst einen Platz am Ufer. Danach bewegst du das Zielkreuz auf die gewünschte Wasserstelle und bestätigst sie. Erst dann wird der Auswurf freigegeben. Tiefe, Entfernung, Struktur, Wetter und Tageszeit beeinflussen die Fischaktivität.</p></section>
+         <section><h3>📱 Mobile Steuerung</h3><p>Tippe in die Szene, um Ziel oder Aktion auszuführen. Halten kurbelt kontinuierlich; ein Doppeltipp holt Kunstköder oder Deeper schnell vollständig zum Ufer zurück. Während des Drills hältst du „Kurbeln“ gedrückt und führst Rute beziehungsweise Finger auf die Gegenseite des Fisches. Beim Keschern bewegst du den Kescher mit dem Finger unter den Fisch. Textauswahl, iOS-Lupe und Kontextmenü sind während der aktiven Spielsteuerung gesperrt.</p></section>
          <section><h3>🎒 Köder- & Tacklebox</h3><p>Alle Köder besitzen einen echten Bestand. Die Standardrute mit 50 m Wurfweite gehört von Beginn an dir. Die mittlere Rute wirft 75 m und die beste 100 m. Weitere Ruten, Kescher und der Deeper werden nach dem Kauf dauerhaft in deiner Tacklebox gespeichert. Lockfutter wird dort mit seinem aktuellen Vorrat angezeigt. Nicht vorhandene kaufbare Artikel sind ausgegraut und führen direkt in den Tackle-Shop.</p></section>
+         <section><h3>🟡 Lockfutter & Futterplätze</h3><p>Die drei Lockfuttersorten besitzen unterschiedliche Stärke und einen echten Vorrat. Wähle eine Sorte, setze den Zielpunkt im Wasser und bestätige den Wurf. Bis zu zwei Futterplätze können gleichzeitig wirken; ihre Markierung zeigt Sorte und Restzeit. Eine sauber im Futterplatz liegende Pose verbessert die Fangchance zusätzlich.</p></section>
+         <section><h3>📡 Deeper-Echolot</h3><p>Kaufe und montiere den Deeper in der Tacklebox, wähle einen Messpunkt und wirf ihn wie einen Köder aus. Das Sonar zeigt aktuelle Tiefe, Bodenverlauf, Messkegel und erkannte Fischsignale. Mit „Stelle speichern“ setzt du am Messpunkt eine Markierung. Ziehe den Deeper normal ein oder hole ihn am Desktop per Rechtsklick und mobil per Doppeltipp schnell zurück.</p></section>
          <section><h3>🌽 Naturköder</h3><p>Wurm, Made, Mais und Spezial-Naturköder werden beim erfolgreichen Anhieb verbraucht. Bei einem verpassten Anhieb besteht eine kleinere Chance auf Köderverlust. Einfaches Einholen verbraucht keinen Naturköder.</p></section>
          <section><h3>🐟 Köderfisch</h3><p>Geeignete gefangene Kleinfische erhöhen deinen Köderfischbestand. Ein Köderfisch wird bei einer Raubfischattacke verbraucht. Er kann nicht gekauft werden.</p></section>
          <section><h3>🌀 Kunstköder</h3><p>Blinker und Gummifisch fangen nur in Bewegung. Klick oder Tipp holt etwa 0,5 m ein, Halten kurbelt kontinuierlich. Mobil holt ein Doppeltipp schnell komplett ein; am Desktop bleibt es der Rechtsklick. Maus- oder Fingerbewegung nach oben/unten verändert die Rutenhöhe und Lauftiefe; links/rechts gibt einen kleinen seitlichen Impuls.</p></section>
          <section><h3>🐊 Spezialköder</h3><p>Premium- und artspezifische Köder erhöhen die Gewichtung bestimmter Fischarten, garantieren aber keinen Biss. Standort, Tiefe, Aktivität und Zufall bleiben relevant.</p></section>
          <section><h3>⚡ Biss & Anhieb</h3><p>Beim Posenangeln zeigt der Schwimmer zuerst den Biss. Danach läuft das Reaktions-QTE zweimal vollständig. Ein exakt mittiger Treffer gilt als perfekter Anhieb und bringt beim Fang +8 EP. Triff den grünen beziehungsweise besonders guten Bereich. Ein früher Fehlversuch beendet nicht sofort den gesamten Versuch.</p></section>
-         <section><h3>🎣 Drill</h3><p>Beobachte Schnurspannung, Fisch-Ausdauer und Entfernung. Kurbeln gewinnt Schnur, erhöht aber die Belastung. Bei zu hoher Spannung droht Schnurbruch. Ein montierter Kunstköder geht bei Schnurbruch verloren.</p></section>
+         <section><h3>🎣 Drill</h3><p>Beobachte Schnurspannung, Fisch-Ausdauer und Entfernung. Halte „Kurbeln“ gedrückt und führe die Rute immer auf die Gegenseite des Fisches: Fisch links bedeutet Rute rechts, Fisch rechts bedeutet Rute links. Kurbeln gewinnt Schnur, erhöht aber die Belastung. Bei zu hoher Spannung musst du kurz lösen, sonst droht Schnurbruch. Ein montierter Kunstköder geht bei Schnurbruch verloren.</p></section>
          <section><h3>🥅 Keschern</h3><p>Bewege den Kescher mit Maus oder Finger nach links/rechts unter den Fisch und keschere im passenden Moment. Der Standardkescher gehört zur Startausrüstung. Der größere Pro Kescher kann im Shop gekauft werden und vergrößert die reale Fangzone um rund 18 %. Der erste knappe Fehlversuch wird weiterhin verziehen.</p></section>
          <section><h3>⏱️ Zeitwechsel</h3><p>Der Zeitwechsel steht ausschließlich in der Ufer-Angelperspektive bereit, solange die Angel noch nicht ausgeworfen wurde und du den Auswurfpunkt wählen kannst. In Stellenauswahl, Unterwasseransicht, nach dem Auswurf, bei Biss, Drill und Keschern ist die Funktion ausgeblendet. Du kannst die Spielzeit in 1-Stunden-Schritten bis maximal 24 Stunden vor- oder zurückspulen. Jede Stunde kostet 1 EP und läuft in 0,5 Sekunden ab. Einsteiger besitzen pro Sitzung einen Vorwärts- und einen Rückwärtswechsel; höhere Anglerstufen erhalten zusätzliche Wechsel.</p></section>
          <section><h3>🌗 Aktivitätszeiten</h3><p>Die Fischaktivität verändert sich mit der Tageszeit. Hecht und Barsch profitieren vor allem von Morgen- und Abendphasen. Zander wird besonders in Dämmerung, Nacht und bei Bewölkung aktiv; Aal und Wels bevorzugen überwiegend Abend und Nacht. Zwischen ungefähr 13 und 15 Uhr tritt eine allgemeine, leicht schwankende Mittags-Beißflaute auf. Sie reduziert die Bisschance deutlich, aber niemals auf null.</p></section>
          <section><h3>⭐ EP & Shop</h3><p>Gefangene Fische bringen EP. Große und seltene Fische sind deutlich wertvoller; der einzigartige Koi bringt 1.000 EP. Gute Aktionen bringen Zusatz-EP, zum Beispiel ein perfekter Anhieb, eine präzise Pose im Futterplatz, sauberes Keschern, ein Fang am aktiven Futterplatz oder aktive Kunstköderführung. Ein gerissener Fisch zählt nur zu 50 % und erhält keine Fangboni. EP sind die ausgebbare Währung. Zusätzlich sammeln sich Gesamt-EP für deine dauerhafte Anglerstufe; Einkäufe senken diese Gesamt-EP nicht.</p></section>
-         <section><h3>☁️ Cloud-Spielstand</h3><p>EP, Gesamt-EP, Fortschritt, persönliche Bestwerte, Köderfische, gekaufte Köder und Futterbestände sowie die in der 3D-Unterwasseransicht entdeckten Fischarten werden online gespeichert. Das Fangbuch mit den einzelnen Fangereignissen bleibt ausschließlich lokal.</p></section><section><h3>🔑 Gerätewechsel</h3><p>Unter „Spielstand“ findest du einen privaten Wiederherstellungscode. Mit ihm kannst du deinen Cloud-Spielstand auf einem anderen Gerät übernehmen. Ein neu erzeugter Code macht den alten ungültig.</p></section>
-         <section><h3>🏆 Bestenliste</h3><p>Für jede Fischart kann dein jeweils größter Fang später zusätzlich in die öffentliche Bestenliste übertragen werden. Die Bestenliste ist vorbereitet, bleibt aber bis zur Einrichtung des Google Sheets im Offline-Modus.</p></section><section><h3>✨ Hall of Fame</h3><p>Im Hauptmenü unter „Highscore“ startet die Hall of Fame aus der Stellenauswahl oder aus einer ruhigen Uferansicht. Das Spiel pausiert während der Präsentation vollständig. „Zurück“ fliegt exakt in die zuvor gespeicherte Ansicht zurück. Während Biss, Drill, Kameraflug oder Kunstköder-Unterwasseransicht bleibt die Funktion gesperrt.</p></section>
+         <section><h3>🎯 Tagesaufgaben</h3><p>Jeden Spieltag warten drei Aufgaben mit unterschiedlicher Schwierigkeit. Jede erledigte Aufgabe bringt EP; wer alle drei schafft, erhält den zusätzlichen Tagesbonus. Nach der kurzen Einblendung bleiben die Aufgaben jederzeit im Hauptmenü abrufbar.</p></section>
+         <section><h3>☁️ Cloud-Spielstand</h3><p>EP, Gesamt-EP, Fortschritt, persönliche Bestwerte, Köderfische, gekaufte Köder und Futterbestände sowie die in der 3D-Unterwasseransicht entdeckten Fischarten werden automatisch online gespeichert. Das Fangbuch mit den einzelnen Fangereignissen bleibt ausschließlich lokal.</p></section><section><h3>🔑 Gerätewechsel</h3><p>Unter „Spielstand“ findest du einen privaten Wiederherstellungscode. Mit ihm kannst du deinen Cloud-Spielstand auf einem anderen Gerät übernehmen. Der übernommene Datensatz wird dem neuen Gerät zugeordnet; ein neu erzeugter Code macht den bisherigen Code ungültig.</p></section>
+         <section><h3>🏆 Highscore & Bestenliste</h3><p>Deine persönlichen Bestfänge stehen im Highscore. Wenn du einen Anzeigenamen festlegst und die Veröffentlichung aktivierst, werden deine freigegebenen Artenrekorde automatisch mit der öffentlichen Bestenliste abgeglichen. Die Liste lädt beim Öffnen selbstständig; ein Aktualisieren-Knopf ist nicht nötig.</p></section><section><h3>✨ Hall of Fame</h3><p>Die Hall of Fame besitzt im Hauptmenü einen eigenen Knopf und präsentiert öffentliche Rekorde über dem Weiher. Das Spiel pausiert während der Präsentation vollständig. „Zurück“ fliegt exakt in die zuvor gespeicherte Ansicht zurück. Während Biss, Drill, Kameraflug oder Kunstköder-Unterwasseransicht bleibt die Funktion gesperrt.</p></section>
+         <section><h3>🟢 Angler online</h3><p>Ist die Namenssichtbarkeit aktiviert, meldet eine kurze Einblendung andere gerade aktive Angler. Die Meldung verschwindet selbstständig und zeigt keine private Spieler-ID oder Wiederherstellungscodes.</p></section>
        </div>
      </div>
      <div id="anglingTimePanel" class="angling-game-panel angling-time-panel" aria-hidden="true">
@@ -4095,7 +4145,7 @@ html,body{
        <div class="help-grid">
          <div class="help-item"><strong>🗺️ 2D / 3D</strong><span>Wechselt zwischen drehbarer Draufsicht und räumlicher Standardansicht.</span></div>
          <div class="help-item"><strong>🖱️ Desktop</strong><span>Ziehen dreht oder verschiebt die Karte; das Mausrad zoomt. Unter Wasser steuert es vor und zurück.</span></div>
-         <div class="help-item"><strong>📱 Mobil</strong><span>Ein Finger bewegt die Karte. Zwei Finger zoomen; unter Wasser steuern sie Blick und Tauchwinkel.</span></div>
+         <div class="help-item"><strong>📱 Mobile Karte</strong><span>Ein Finger dreht beziehungsweise bewegt die Karte, zwei Finger zoomen. Im Unterwasser-Modus steuern die Gesten Bewegung, Blick und Tauchwinkel.</span></div>
          <div class="help-item"><strong>↻ Reset</strong><span>Stellt Kamera, Zoom, Drehung und Neigung wieder auf die Ausgangsansicht.</span></div>
          <div class="help-item"><strong>💧 Wasser: AN/AUS</strong><span>Blendet die bewegten Oberflächen von Weiher und Mosel ein oder aus. Standardmäßig ist Wasser aktiv.</span></div>
          <div class="help-item"><strong>🌦️ Wetter</strong><span>LIVE verwendet Tageszeit und aktuelle Wetterdaten. NEUTRAL entfernt Wetter- und Tageszeiteinflüsse für eine klare Referenzansicht.</span></div>
@@ -4108,7 +4158,7 @@ html,body{
          <div class="help-item"><strong>📍 Standort</strong><span>Zeigt nach Freigabe die eigene Position im Bereich des Weihers.</span></div>
          <div class="help-item"><strong>👁️ Anzeigen</strong><span>Blendet Wetterfenster, Tiefenlegende und Kompass gemeinsam ein oder aus.</span></div>
          <div class="help-item"><strong>🐟 Unterwasser-Modus</strong><span>Im Weiher schwimmen, Fische anklicken und alle 16 Arten farbig freischalten. Mobil erscheint die Gestenhilfe bei jedem Einstieg sechs Sekunden; die Minikarte zeigt die Position.</span></div>
-          <div class="help-item"><strong>🎣 Angelspiel</strong><span>Mit dem roten Button „Angeln“ startest du den Angelsimulator. Die vollständige Spielanleitung findest du anschließend direkt im Menü des Angelspiels unter „Hilfe“.</span></div>
+          <div class="help-item"><strong>🎣 Angelspiel mobil</strong><span>Tippen bedient Ziel und Aktionen, Halten kurbelt, ein Doppeltipp holt Kunstköder oder Deeper schnell zurück. Im Drill „Kurbeln“ halten und den Finger auf die Gegenseite des Fisches führen. Die vollständige Anleitung steht im Spielmenü unter „Hilfe“.</span></div>
          <div class="help-item"><strong>🌿 Unterwasserwelt</strong><span>Boden, Steine, Pflanzen, Schwebstoffe, Lichtmuster und Fischverhalten bilden den Weiher lebendig nach.</span></div>
          <div class="help-item"><strong>🚶🚲🚗 Umgebung</strong><span>Radfahrer, Fußgänger, Besucher und Vögel beleben die Umgebung.</span></div>
        </div>
@@ -4147,7 +4197,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.105 · AUTO-HIGHSCORE-MOBILE-KOPFLEISTEN';
+const VIEWER_VERSION='V8.106 · MOBILE-ANSICHT-DEEPER-HILFE';
 const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -16364,7 +16414,7 @@ const ANGLING_MIN_CAST_DISTANCE=1; // Nahangeln bis direkt vor dem Ufer zulassen
 const ANGLING_MAX_CAST_DISTANCE=100; // physisches Systemlimit; die aktive Rute begrenzt darunter individuell
 const ANGLING_SHORE_FOV=46;
 const ANGLING_PHONE_SHORE_FOV=46;
-const ANGLING_PHONE_CAMERA_ZOOM=1;
+const ANGLING_PHONE_CAMERA_ZOOM=.70;
 let anglingLastFastTapAt=0,anglingLastFastTapX=0,anglingLastFastTapY=0;
 
 // V8.103: Telefonerkennung nicht allein von einer Media-Query abhängig machen.
@@ -16388,9 +16438,9 @@ function anglingGameCameraZoom(){
 }
 syncAnglingPhoneLayoutClass();
 
-// V8.105: Position, Ziel, Uferachse, FOV und Projektions-Zoom entsprechen auf
-// Telefonen exakt der Desktopkamera. Nur das Seitenverhältnis des Bildschirms
-// bleibt naturgemäß unterschiedlich; Kamerafahrten und Angelpositionen bleiben gleich.
+// V8.106: Position, Ziel, Uferachse, FOV und sämtliche Kamerafahrten bleiben
+// identisch. Nur der mobile Projektionszoom wird weiter geöffnet, damit Rute,
+// Rolle und Geschehen trotz des schmalen Hochformats vollständig im Bild liegen.
 function anglingShoreFieldOfView(){
   return anglingPhoneLayoutActive()?ANGLING_PHONE_SHORE_FOV:ANGLING_SHORE_FOV;
 }
