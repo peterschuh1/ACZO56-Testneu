@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.103 · Mobile Abstand, Kompaktmenüs &amp; Profilbereinigung</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.105 · Auto-Highscore &amp; mobile Kopfleisten</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3365,6 +3365,158 @@ html,body{
 .aczo-phone-layout .angling-main-profile-options label{padding:5px 6px!important;font-size:8px!important}
 .aczo-phone-layout .angling-main-status{font-size:8px!important;line-height:1.3!important;padding:5px 7px!important;margin-top:5px!important}
 
+/* V8.104: Die Wiederherstellungsmaske bleibt beim Öffnen der iPhone-Tastatur
+   im sichtbaren Viewer. 16 px am aktiven Feld verhindert Safaris automatischen
+   Eingabe-Zoom; der Dialog selbst bleibt vertikal scrollbar. */
+.aczo-phone-layout .angling-recovery-panel.open{
+  top:7px!important;bottom:auto!important;transform:translateX(-50%)!important;
+  max-height:calc(100% - 14px)!important;overflow-x:hidden!important;overflow-y:auto!important;
+  overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch;
+  touch-action:pan-y!important
+}
+.aczo-phone-layout .angling-recovery-body{
+  padding:7px!important;gap:7px!important;overflow:visible!important
+}
+.aczo-phone-layout .angling-recovery-card{
+  padding:9px!important;border-radius:11px!important
+}
+.aczo-phone-layout .angling-recovery-card h3{
+  margin-bottom:4px!important;font-size:11px!important
+}
+.aczo-phone-layout .angling-recovery-card p{
+  margin-bottom:6px!important;font-size:8.3px!important;line-height:1.34!important
+}
+.aczo-phone-layout .angling-recovery-code-row{gap:5px!important}
+.aczo-phone-layout .angling-recovery-code-row input{
+  min-height:39px!important;padding:7px 8px!important
+}
+.aczo-phone-layout #anglingRecoveryInput{
+  position:relative;z-index:2;font-size:16px!important;line-height:1.15!important;
+  letter-spacing:.04em!important;touch-action:manipulation!important;
+  -webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important
+}
+.aczo-phone-layout .angling-recovery-code-row button,
+.aczo-phone-layout .angling-recovery-action{
+  min-height:36px!important;padding:6px 8px!important;font-size:8.5px!important
+}
+.aczo-phone-layout .angling-recovery-warning,
+.aczo-phone-layout .angling-recovery-status{font-size:7.7px!important;line-height:1.3!important}
+
+/* Während der Eingabe wird nur der momentan unnötige eigene Codeblock
+   ausgeblendet. Dadurch bleibt das fokussierte Feld oberhalb der Tastatur. */
+.aczo-phone-layout .angling-ui.recovery-input-active .angling-recovery-own-card{
+  display:none!important
+}
+.aczo-phone-layout .angling-ui.recovery-input-active .angling-recovery-panel.open{
+  top:4px!important;max-height:calc(100% - 8px)!important
+}
+.aczo-phone-layout .angling-ui.recovery-input-active .angling-recovery-body{
+  padding-top:5px!important
+}
+
+/* V8.105: Die drei oberen Spielkarten teilen sich auf Telefonen dieselbe
+   Kopfzeile mit Hauptmenü und Uhr. Die Bedienelemente selbst bleiben an ihren
+   bisherigen Positionen; nur Größe und Bildschirmbelegung werden reduziert. */
+.aczo-phone-layout .angling-select-panel,
+.aczo-phone-layout .angling-setup,
+.aczo-phone-layout .angling-drill-panel{
+  top:7px!important;
+  width:min(560px,calc(100% - 116px))!important;
+  max-width:calc(100% - 116px)!important
+}
+.aczo-phone-layout .angling-line-summary{
+  top:7px!important;max-width:calc(100% - 116px)!important;
+  padding:5px 8px!important;font-size:7.6px!important;
+  overflow:hidden!important;text-overflow:ellipsis!important
+}
+.aczo-phone-layout .angling-select-panel{padding:5px 6px!important}
+.aczo-phone-layout .angling-select-title{font-size:10px!important}
+.aczo-phone-layout .angling-select-text{font-size:7px!important;line-height:1.16!important}
+.aczo-phone-layout .angling-select-actions{gap:3px!important;margin-top:4px!important}
+.aczo-phone-layout .angling-select-actions button{
+  min-height:25px!important;padding:2px 4px!important;font-size:7.4px!important
+}
+.aczo-phone-layout .angling-game-menu-row{
+  grid-template-rows:30px 23px!important;gap:2px!important;margin-bottom:1px!important
+}
+.aczo-phone-layout .angling-game-menu-row > #anglingBaitBoxBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingShopBtn{
+  height:30px!important;min-height:30px!important;padding:1px 4px!important
+}
+.aczo-phone-layout .angling-game-menu-row > #anglingTimeBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingEpBadge{
+  height:23px!important;min-height:23px!important
+}
+.aczo-phone-layout .game-menu-icon{font-size:11px!important}
+.aczo-phone-layout .game-menu-copy small{font-size:5.7px!important}
+.aczo-phone-layout .game-menu-copy strong{font-size:7px!important}
+.aczo-phone-layout .angling-ep-badge small{font-size:5.8px!important}
+.aczo-phone-layout .angling-ep-badge strong{font-size:9.5px!important}
+.aczo-phone-layout .angling-level-progress{padding:2px 4px!important}
+.aczo-phone-layout .angling-level-progress strong{font-size:6.5px!important}
+.aczo-phone-layout .angling-level-progress small{font-size:5.7px!important}
+.aczo-phone-layout .angling-setup-label{font-size:6.6px!important}
+.aczo-phone-layout .angling-distance-value{font-size:7.3px!important}
+.aczo-phone-layout .angling-setup-hint{font-size:6.1px!important}
+.aczo-phone-layout .angling-drill-title{font-size:9.4px!important;margin-bottom:2px!important}
+.aczo-phone-layout .angling-drill-direction{font-size:9px!important;min-height:13px!important;line-height:1.1!important}
+.aczo-phone-layout .angling-drill-brake{
+  display:grid!important;grid-template-columns:38px repeat(3,minmax(0,1fr))!important;
+  gap:3px!important;margin:2px 0!important
+}
+.aczo-phone-layout .angling-drill-brake .angling-setup-label{
+  width:auto!important;text-align:left!important
+}
+.aczo-phone-layout .angling-drill-brake .angling-option{
+  min-width:0!important;min-height:23px!important;padding:2px 3px!important;font-size:6.7px!important
+}
+.aczo-phone-layout .angling-drill-row{
+  grid-template-columns:52px 1fr 35px!important;gap:3px!important;margin:2px 0!important;font-size:6.8px!important
+}
+.aczo-phone-layout .angling-drill-help{font-size:6.5px!important;margin:1px 0 3px!important}
+.aczo-phone-layout .angling-reel-btn{
+  min-width:126px!important;min-height:31px!important;padding:3px 9px!important;font-size:8px!important
+}
+.aczo-phone-layout .angling-reel-icon{width:19px!important;height:19px!important}
+
+/* Die Hall-of-Fame-Marke wird am rechten Rand verankert. Damit berechnet der
+   Browser ihre Breite nicht mehr aus dem winzigen Restplatz rechts von "left". */
+.angling-hof-brand{
+  left:auto!important;
+  right:calc(var(--hof-right) + max(16px,env(safe-area-inset-right)))!important;
+  width:max-content!important;max-width:calc(var(--hof-width) - 32px)!important;
+  transform:none!important;white-space:nowrap!important
+}
+.angling-hof-brand small,.angling-hof-brand strong{white-space:nowrap!important}
+.angling-hof.returning .angling-hof-brand{transform:translateY(12px)!important}
+.aczo-phone-layout .angling-hof-brand{
+  right:calc(var(--hof-right) + max(12px,env(safe-area-inset-right)))!important;
+  top:calc(var(--hof-top) + max(14px,env(safe-area-inset-top)))!important
+}
+.aczo-phone-layout .angling-hof-brand small{font-size:7px!important;letter-spacing:.12em!important}
+.aczo-phone-layout .angling-hof-brand strong{font-size:14px!important;letter-spacing:.035em!important}
+
+/* Online-Präsenz ist eine kurze Statusmeldung und kein dauerhaftes HUD. Sie
+   erscheint unterhalb der oberen Bedienelemente, auch während eines Drills. */
+.angling-community-toast{top:165px!important}
+.angling-ui.is-drilling .angling-community-toast{top:190px!important}
+.aczo-phone-layout .angling-community-toast{
+  top:150px!important;max-width:calc(100% - 28px)!important;font-size:8px!important
+}
+.aczo-phone-layout .angling-ui.is-drilling .angling-community-toast{top:164px!important}
+
+/* iOS darf aus dem Dauerkurbeln weder Textauswahl, Lupe noch Callout ableiten. */
+.angling-ui.is-drilling .angling-drill-panel,
+.angling-ui.is-drilling .angling-drill-panel *{
+  -webkit-user-select:none!important;user-select:none!important;
+  -webkit-touch-callout:none!important;-webkit-user-drag:none!important
+}
+.angling-ui.is-drilling .angling-reel-btn{touch-action:none!important}
+
+/* Die Rangliste aktualisiert sich automatisch; der manuelle Knopf bleibt aus. */
+#anglingLeaderboardRefresh{display:none!important}
+.angling-leaderboard-toolbar label{width:100%}
+
 </style>
 </head>
 <body>
@@ -3692,7 +3844,7 @@ html,body{
          <button id="anglingRecoveryClose" class="angling-panel-close" aria-label="Spielstand schließen"><span>‹</span><small>Zurück</small></button>
        </div>
        <div class="angling-recovery-body">
-         <div class="angling-recovery-card">
+         <div class="angling-recovery-card angling-recovery-own-card">
            <h3>Dein Wiederherstellungscode</h3>
            <p>Mit diesem Code kannst du deinen gespeicherten Spielstand auf einem anderen Gerät laden. Bewahre ihn privat auf.</p>
            <div class="angling-recovery-code-row">
@@ -3702,11 +3854,11 @@ html,body{
            <button id="anglingRecoveryRotateBtn" class="angling-recovery-action danger-lite">Neuen Code erzeugen</button>
            <div class="angling-recovery-warning">Ein neu erzeugter Code macht den bisherigen Code ungültig.</div>
          </div>
-         <div class="angling-recovery-card">
+         <div class="angling-recovery-card angling-recovery-restore-card">
            <h3>Auf einem anderen Gerät weiterspielen</h3>
            <p>Gib dort deinen Code ein. Der Cloud-Spielstand ersetzt EP, Fortschritt, Bestwerte, Käufe, Bestände und die 3D-Fischsammlung. Das lokale Fangbuch dieses Geräts bleibt unangetastet.</p>
            <div class="angling-recovery-code-row">
-             <input id="anglingRecoveryInput" type="text" maxlength="29" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" aria-label="Wiederherstellungscode eingeben">
+             <input id="anglingRecoveryInput" type="text" maxlength="29" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" aria-label="Wiederherstellungscode eingeben">
            </div>
            <button id="anglingRecoveryRestoreBtn" class="angling-recovery-action">Cloud-Spielstand wiederherstellen</button>
          </div>
@@ -3807,9 +3959,9 @@ html,body{
        </div>
        <div class="angling-leaderboard-toolbar">
          <label>Fischart <select id="anglingLeaderboardSpecies"></select></label>
-         <button id="anglingLeaderboardRefresh" class="angling-item-action equip">Aktualisieren</button>
+         <button id="anglingLeaderboardRefresh" class="angling-item-action equip" hidden aria-hidden="true">Aktualisieren</button>
        </div>
-       <div id="anglingLeaderboardState" class="angling-leaderboard-state">Die Online-Bestenliste wird im nächsten Schritt mit Google Sheets verbunden.</div>
+       <div id="anglingLeaderboardState" class="angling-leaderboard-state">Die Online-Bestenliste wird automatisch geladen …</div>
        <div class="angling-leaderboard-columns" aria-hidden="true"><span>Rang</span><span>Name</span><span>Fischart</span><span>Größe</span><span>Gewicht</span></div>
        <div id="anglingLeaderboardList" class="angling-leaderboard-list"></div>
        <div class="angling-leaderboard-note">Veröffentlicht wird später nur der gewählte Anzeigename/Nickname sowie Fischart, Länge, Gewicht und Datum. Dein lokales Fangbuch bleibt davon getrennt.</div>
@@ -3995,8 +4147,8 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.103 · MOBILE-ABSTAND-KOMPAKTMENUES-PROFILBEREINIGUNG';
-const VIEWER_BUILD='27.08.2026';
+const VIEWER_VERSION='V8.105 · AUTO-HIGHSCORE-MOBILE-KOPFLEISTEN';
+const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4309,6 +4461,7 @@ const anglingRecoveryRotateBtn=document.getElementById('anglingRecoveryRotateBtn
 const anglingRecoveryInput=document.getElementById('anglingRecoveryInput');
 const anglingRecoveryRestoreBtn=document.getElementById('anglingRecoveryRestoreBtn');
 const anglingRecoveryStatus=document.getElementById('anglingRecoveryStatus');
+let anglingRecoveryInputBlurTimer=null;
 const anglingGameHelpBtn=document.getElementById('anglingGameHelpBtn');
 const anglingGameHelpPanel=document.getElementById('anglingGameHelpPanel');
 const anglingGameHelpClose=document.getElementById('anglingGameHelpClose');
@@ -16211,7 +16364,7 @@ const ANGLING_MIN_CAST_DISTANCE=1; // Nahangeln bis direkt vor dem Ufer zulassen
 const ANGLING_MAX_CAST_DISTANCE=100; // physisches Systemlimit; die aktive Rute begrenzt darunter individuell
 const ANGLING_SHORE_FOV=46;
 const ANGLING_PHONE_SHORE_FOV=46;
-const ANGLING_PHONE_CAMERA_ZOOM=.82;
+const ANGLING_PHONE_CAMERA_ZOOM=1;
 let anglingLastFastTapAt=0,anglingLastFastTapX=0,anglingLastFastTapY=0;
 
 // V8.103: Telefonerkennung nicht allein von einer Media-Query abhängig machen.
@@ -16235,9 +16388,9 @@ function anglingGameCameraZoom(){
 }
 syncAnglingPhoneLayoutClass();
 
-// Position, Ziel, Uferachse und alle vorhandenen Kamerafahrten bleiben identisch.
-// Der kleinere Projektions-Zoom zeigt auf Telefonen in sämtlichen Spielsichten
-// lediglich mehr von derselben Szene, damit insbesondere die ganze Rute sichtbar ist.
+// V8.105: Position, Ziel, Uferachse, FOV und Projektions-Zoom entsprechen auf
+// Telefonen exakt der Desktopkamera. Nur das Seitenverhältnis des Bildschirms
+// bleibt naturgemäß unterschiedlich; Kamerafahrten und Angelpositionen bleiben gleich.
 function anglingShoreFieldOfView(){
   return anglingPhoneLayoutActive()?ANGLING_PHONE_SHORE_FOV:ANGLING_SHORE_FOV;
 }
@@ -17395,7 +17548,9 @@ function anglingGamePanelOpen(){
 function closeAnglingGamePanels(){
  anglingBaitBoxPanel.classList.remove('open');anglingShopPanel.classList.remove('open');anglingGameHelpPanel.classList.remove('open');anglingLeaderboardPanel.classList.remove('open');anglingDailyQuestPanel?.classList.remove('open');anglingRecoveryPanel?.classList.remove('open');anglingTimePanel?.classList.remove('open');anglingJumpLabPanel?.classList.remove('open');
  [anglingBaitBoxPanel,anglingShopPanel,anglingGameHelpPanel,anglingLeaderboardPanel,anglingDailyQuestPanel,anglingRecoveryPanel,anglingTimePanel,anglingJumpLabPanel].forEach(p=>p?.setAttribute('aria-hidden','true'));
- anglingUi.classList.remove('game-panel-open');
+ if(anglingRecoveryInputBlurTimer){window.clearTimeout(anglingRecoveryInputBlurTimer);anglingRecoveryInputBlurTimer=null;}
+ if(document.activeElement===anglingRecoveryInput)anglingRecoveryInput.blur();
+ anglingUi.classList.remove('game-panel-open','recovery-input-active');
  stopAnglingActionHold?.();
  anglingPointerStarts?.clear?.();
 }
@@ -18244,6 +18399,8 @@ function renderAnglingCommunityList(el,players,emptyText,recent=false){
 }
 
 let anglingCommunityLoadInFlight=null;
+let anglingCommunityToastTimer=null;
+let anglingCommunityToastSignature='';
 async function loadAnglingCommunity(){
   if(!ANGLING_LEADERBOARD_ENDPOINT){
     renderAnglingCommunityList(anglingRecentPlayers,[],'Online-Verbindung nicht eingerichtet.');
@@ -18293,14 +18450,26 @@ function updateAnglingActiveToast(players){
   if(!anglingCommunityToast)return;
   const others=Array.isArray(players)?players:[];
   if(!anglingMode||!others.length){
+    if(anglingCommunityToastTimer){window.clearTimeout(anglingCommunityToastTimer);anglingCommunityToastTimer=null;}
+    anglingCommunityToastSignature='';
     anglingCommunityToast.classList.remove('show');return;
   }
   const names=others.slice(0,3).map(p=>p.name||'Angler online');
   let text='🟢 '+others.length+' Angler aktiv';
   if(names.length)text+=' · '+names.join(' · ');
   if(others.length>3)text+=' · +'+(others.length-3);
+  const signature=others.map(p=>String(p.id||p.playerId||p.name||'')).sort().join('|')+'::'+text;
+  // Dieselbe Anwesenheit wird durch den 90-Sekunden-Abgleich nicht immer neu
+  // eingeblendet. Erst eine tatsächliche Änderung erzeugt wieder einen Hinweis.
+  if(signature===anglingCommunityToastSignature)return;
+  anglingCommunityToastSignature=signature;
+  if(anglingCommunityToastTimer)window.clearTimeout(anglingCommunityToastTimer);
   anglingCommunityToast.textContent=text;
   anglingCommunityToast.classList.add('show');
+  anglingCommunityToastTimer=window.setTimeout(()=>{
+    anglingCommunityToastTimer=null;
+    anglingCommunityToast.classList.remove('show');
+  },2800);
 }
 
 async function sendAnglingPresence(){
@@ -18335,6 +18504,8 @@ function startAnglingPresence(){
 function stopAnglingPresence(){
   if(anglingPresenceTimer){window.clearInterval(anglingPresenceTimer);anglingPresenceTimer=null;}
   if(anglingCommunityTimer){window.clearInterval(anglingCommunityTimer);anglingCommunityTimer=null;}
+  if(anglingCommunityToastTimer){window.clearTimeout(anglingCommunityToastTimer);anglingCommunityToastTimer=null;}
+  anglingCommunityToastSignature='';
   anglingCommunityToast?.classList.remove('show');
 }
 
@@ -18734,11 +18905,24 @@ async function resetAnglingEverything(){
   anglingMainStatus.textContent='✅ Das Angelspiel wurde vollständig auf Anfang zurückgesetzt.';
 }
 
+function setAnglingRecoveryInputActive(active){
+  if(anglingRecoveryInputBlurTimer){window.clearTimeout(anglingRecoveryInputBlurTimer);anglingRecoveryInputBlurTimer=null;}
+  anglingUi.classList.toggle('recovery-input-active',!!active);
+  if(active){
+    requestAnimationFrame(()=>{
+      anglingRecoveryPanel.scrollTop=0;
+      const body=anglingRecoveryPanel.querySelector('.angling-recovery-body');
+      if(body)body.scrollTop=0;
+    });
+  }
+}
+
 function openAnglingRecoveryPanel(){
   if(guardAnglingMenuOpen())return;
   closeAnglingGamePanels();
   updateAnglingRecoveryUi();
   markAnglingGamePanelOpen(anglingRecoveryPanel);
+  anglingRecoveryPanel.scrollTop=0;
 }
 
 async function copyAnglingRecoveryCode(){
@@ -18873,6 +19057,8 @@ async function restoreAnglingPlayerFromCode(){
     applyAnglingCloudPlayer(data.player);
     const removedTemporaryProfile=await deleteDisposableAnglingProfileAfterRecovery(previousProfile,data.playerId);
     anglingRecoveryInput.value='';
+    anglingRecoveryInput.blur();
+    setAnglingRecoveryInputActive(false);
     anglingRecoveryStatus.textContent=removedTemporaryProfile
       ?'Spielstand erfolgreich wiederhergestellt. Das leere Geräteprofil wurde aus der Cloud entfernt; das lokale Fangbuch blieb erhalten.'
       :'Spielstand erfolgreich wiederhergestellt. Das lokale Fangbuch blieb erhalten.';
@@ -19699,38 +19885,67 @@ async function anglingLeaderboardJson(url,options={},timeoutMs=15000){
  if(data.ok===false)throw new Error(data.error||'Online-Dienst meldet einen Fehler');
  return data;
 }
+const anglingLeaderboardCache=new Map();
+const anglingLeaderboardLoads=new Map();
 async function loadAnglingLeaderboard(){
- initAnglingLeaderboardSpecies();renderAnglingLeaderboard([]);
+ initAnglingLeaderboardSpecies();
+ const species=anglingLeaderboardSpecies.value||'all';
+ const cachedRows=anglingLeaderboardCache.get(species);
+ if(cachedRows){
+   renderAnglingLeaderboard(cachedRows);
+   anglingLeaderboardState.textContent=cachedRows.length
+     ?cachedRows.length+' Ranglisten-Einträge geladen · automatischer Abgleich läuft …'
+     :'Noch keine Einträge für diese Auswahl · automatischer Abgleich läuft …';
+ }else{
+   renderAnglingLeaderboard([]);
+   anglingLeaderboardState.textContent='Bestenliste wird automatisch geladen …';
+ }
  if(!ANGLING_LEADERBOARD_ENDPOINT){
    anglingLeaderboardState.textContent='Vorbereitet: Die Google-Sheets-Verbindung ist noch nicht eingerichtet. Lokales Fangbuch und Spiel funktionieren vollständig unabhängig davon.';
    return;
  }
- anglingLeaderboardState.textContent='Bestenliste wird geladen …';
+ let task=anglingLeaderboardLoads.get(species);
+ if(!task){
+   task=(async()=>{
+     const url=ANGLING_LEADERBOARD_ENDPOINT+(ANGLING_LEADERBOARD_ENDPOINT.includes('?')?'&':'?')+'action=list&species='+encodeURIComponent(species);
+     const data=await anglingLeaderboardJson(url,{method:'GET',cache:'no-store'},15000);
+     let rows=Array.isArray(data)?data:
+       (Array.isArray(data.entries)?data.entries:(Array.isArray(data.rows)?data.rows:[]));
+     if(species!=='all'){
+       const apiSpecies=ANGLING_LEADERBOARD_SPECIES_TO_API[species]||species;
+       rows=rows.filter(r=>r.species===apiSpecies||r.species===species);
+     }
+     rows.sort((a,b)=>(Number(b.lengthCm ?? b.cm)||0)-(Number(a.lengthCm ?? a.cm)||0));
+     anglingLeaderboardCache.set(species,rows);
+     return rows;
+   })();
+   anglingLeaderboardLoads.set(species,task);
+ }
  try{
-   const species=anglingLeaderboardSpecies.value||'all';
-   const url=ANGLING_LEADERBOARD_ENDPOINT+(ANGLING_LEADERBOARD_ENDPOINT.includes('?')?'&':'?')+'action=list&species='+encodeURIComponent(species);
-   const data=await anglingLeaderboardJson(url,{method:'GET',cache:'no-store'},15000);
-   let rows=Array.isArray(data)?data:
-     (Array.isArray(data.entries)?data.entries:(Array.isArray(data.rows)?data.rows:[]));
-   if(species!=='all'){
-     const apiSpecies=ANGLING_LEADERBOARD_SPECIES_TO_API[species]||species;
-     rows=rows.filter(r=>r.species===apiSpecies||r.species===species);
+   const rows=await task;
+   if((anglingLeaderboardSpecies.value||'all')===species){
+     renderAnglingLeaderboard(rows);
+     anglingLeaderboardState.textContent=rows.length
+       ?rows.length+' Ranglisten-Einträge automatisch geladen.'
+       :'Noch keine Einträge für diese Auswahl.';
    }
-   rows.sort((a,b)=>(Number(b.lengthCm ?? b.cm)||0)-(Number(a.lengthCm ?? a.cm)||0));
-   renderAnglingLeaderboard(rows);
-   anglingLeaderboardState.textContent=rows.length?rows.length+' Ranglisten-Einträge geladen.':'Noch keine Einträge für diese Auswahl.';
  }catch(err){
-   anglingLeaderboardState.textContent=err?.name==='AbortError'
-     ?'Bestenliste antwortet gerade zu langsam. Bitte später erneut aktualisieren.'
-     :'Bestenliste derzeit nicht erreichbar. Dein lokales Spiel ist davon nicht betroffen.';
+   if((anglingLeaderboardSpecies.value||'all')===species){
+     anglingLeaderboardState.textContent=cachedRows
+       ?'Die zuletzt geladene Rangliste bleibt sichtbar. Der automatische Abgleich antwortet gerade nicht.'
+       :(err?.name==='AbortError'
+         ?'Bestenliste antwortet gerade zu langsam. Sie wird beim nächsten Öffnen automatisch erneut geladen.'
+         :'Bestenliste derzeit nicht erreichbar. Dein lokales Spiel ist davon nicht betroffen.');
+   }
+ }finally{
+   if(anglingLeaderboardLoads.get(species)===task)anglingLeaderboardLoads.delete(species);
  }
 }
 async function openAnglingLeaderboard(){
  if(guardAnglingMenuOpen())return;
  closeAnglingGamePanels();initAnglingLeaderboardSpecies();syncAnglingLeaderboardProfileUi();markAnglingGamePanelOpen(anglingLeaderboardPanel);
- // V8.90: Bereits veröffentlichte PBs nicht bei jeder Menüöffnung erneut
- // hochladen. Neue PBs sowie das erstmalige Aktivieren der Freigabe werden
- // weiterhin sofort synchronisiert. Das verhindert unnötige Schreibserien.
+ // V8.105: Der beim Start vorgeladene Stand erscheint sofort; parallel wird
+ // bei jeder Öffnung automatisch frisch aus Google Sheets gelesen.
  await loadAnglingLeaderboard();
 }
 function openAnglingGameHelp(){if(guardAnglingMenuOpen())return;closeAnglingGamePanels();markAnglingGamePanelOpen(anglingGameHelpPanel);}
@@ -24555,7 +24770,7 @@ anglingDeeperSaveSpotBtn?.addEventListener('click',e=>{e.stopPropagation();addAn
 anglingShopBtn.addEventListener('click',openAnglingShop);
 anglingBaitBoxClose.addEventListener('click',closeAnglingGamePanels);
 anglingShopClose.addEventListener('click',closeAnglingGamePanels);
-[anglingBaitBoxPanel,anglingShopPanel,anglingGameHelpPanel,anglingLeaderboardPanel,anglingDailyQuestPanel,anglingTimePanel].forEach(panel=>{
+[anglingBaitBoxPanel,anglingShopPanel,anglingGameHelpPanel,anglingLeaderboardPanel,anglingDailyQuestPanel,anglingRecoveryPanel,anglingTimePanel].forEach(panel=>{
   panel.addEventListener('pointerdown',e=>e.stopPropagation());
   panel.addEventListener('pointermove',e=>e.stopPropagation());
   panel.addEventListener('pointerup',e=>e.stopPropagation());
@@ -24568,6 +24783,19 @@ anglingRecoveryCopyBtn.addEventListener('click',copyAnglingRecoveryCode);
 anglingRecoveryRestoreBtn.addEventListener('click',restoreAnglingPlayerFromCode);
 anglingRecoveryRotateBtn.addEventListener('click',rotateAnglingRecoveryCode);
 anglingRecoveryInput.addEventListener('input',()=>{anglingRecoveryInput.value=normalizeAnglingRecoveryCode(anglingRecoveryInput.value);});
+anglingRecoveryInput.addEventListener('focus',()=>setAnglingRecoveryInputActive(true));
+anglingRecoveryInput.addEventListener('blur',()=>{
+  if(anglingRecoveryInputBlurTimer)window.clearTimeout(anglingRecoveryInputBlurTimer);
+  anglingRecoveryInputBlurTimer=window.setTimeout(()=>{
+    anglingRecoveryInputBlurTimer=null;
+    if(document.activeElement!==anglingRecoveryInput)setAnglingRecoveryInputActive(false);
+  },220);
+});
+anglingRecoveryInput.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  restoreAnglingPlayerFromCode();
+});
 anglingGameHelpBtn?.addEventListener('click',openAnglingGameHelp);
 anglingGameHelpClose.addEventListener('click',returnToAnglingMainMenu);
 anglingLeaderboardBtn?.addEventListener('click',openAnglingLeaderboard);
@@ -24588,9 +24816,13 @@ anglingJumpSpawnAnywhere?.addEventListener('click',()=>triggerAnglingJumpLab('an
 anglingJumpSpawnBurst?.addEventListener('click',()=>triggerAnglingJumpLab('burst'));
 anglingLeaderboardClose.addEventListener('click',returnToAnglingMainMenu);
 anglingDailyQuestClose.addEventListener('click',returnToAnglingMainMenu);
-anglingLeaderboardRefresh.addEventListener('click',loadAnglingLeaderboard);
+anglingLeaderboardRefresh?.addEventListener('click',loadAnglingLeaderboard);
 anglingLeaderboardSpecies.addEventListener('change',loadAnglingLeaderboard);
 anglingLeaderboardSaveProfile.addEventListener('click',saveAnglingLeaderboardProfile);
+// V8.105: Die öffentliche Rangliste wird unabhängig von Mobil/Desktop schon
+// kurz nach dem Kartenstart vorgeladen. Beim späteren Öffnen steht der letzte
+// erfolgreiche Stand sofort bereit und wird im Hintergrund erneut abgeglichen.
+window.setTimeout(()=>{initAnglingLeaderboardSpecies();loadAnglingLeaderboard();},700);
 anglingHallOfFameCredit?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAnglingCreatorEasterEgg();});
 anglingHallOfFameBack?.addEventListener('click',closeAnglingHallOfFame);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&anglingHallOfFameActive){e.preventDefault();closeAnglingHallOfFame();}});
@@ -24644,6 +24876,12 @@ document.addEventListener('pointerdown',e=>{
 anglingDrillPanel.addEventListener('pointerdown',e=>e.stopPropagation(),{passive:true});
 anglingDrillPanel.addEventListener('pointerup',e=>e.stopPropagation(),{passive:true});
 anglingDrillPanel.addEventListener('click',e=>e.stopPropagation());
+['contextmenu','selectstart','dragstart','gesturestart'].forEach(type=>{
+  anglingDrillPanel.addEventListener(type,e=>{
+    if(anglingState!=='drilling')return;
+    e.preventDefault();e.stopPropagation();
+  },{capture:true,passive:false});
+});
 
 anglingReelBtn.addEventListener('pointerdown',e=>{
   if(anglingState!=='drilling')return;
@@ -24653,6 +24891,17 @@ anglingReelBtn.addEventListener('pointerdown',e=>{
   if(anglingState!=='drilling')return;
   e.preventDefault();setAnglingReeling(false);
 }));
+// iOS erzeugt bei langem Halten trotz Pointer-Handlern gelegentlich seine
+// Textlupe. Die zusätzlichen nicht-passiven Touch-Handler blockieren nur die
+// Kurbel-Taste und lassen Bremse sowie übrige Spielsteuerung unangetastet.
+anglingReelBtn.addEventListener('touchstart',e=>{
+  if(anglingState!=='drilling')return;
+  e.preventDefault();e.stopPropagation();setAnglingReeling(true);
+},{capture:true,passive:false});
+['touchend','touchcancel'].forEach(type=>anglingReelBtn.addEventListener(type,e=>{
+  if(anglingState!=='drilling')return;
+  e.preventDefault();e.stopPropagation();setAnglingReeling(false);
+},{capture:true,passive:false}));
 anglingQte.addEventListener('pointerdown',e=>{
   if(anglingState!=='strike')return;
   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
