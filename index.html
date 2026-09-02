@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.99 · Predatorpit-Funfacts</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.101 · Mobile HiDPI &amp; Cloud-Restore</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3091,6 +3091,27 @@ html,body{
   }
 }
 
+/* V8.100: Eingebettete iPhone-Vorschauen können eine kleinere tatsächlich
+   sichtbare Höhe als 100svh melden. Der Viewer folgt deshalb auf Touchgeräten
+   der per visualViewport gemessenen Fläche; seine unteren Hauptbuttons bleiben
+   innerhalb des Bildes und oberhalb des iOS-Sicherheitsrandes. */
+@media (pointer:coarse), (max-height:650px){
+  html,body{
+    height:var(--aczo-visible-height,100dvh);
+    min-height:0;
+  }
+  .wrap{
+    height:var(--aczo-visible-height,100dvh);
+    min-height:0;
+  }
+  .fish-view-btn{
+    bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  }
+  .angling-start-btn{
+    bottom:calc(50px + env(safe-area-inset-bottom))!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3721,7 +3742,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.99 · PREDATORPIT-FUNFACTS';
+const VIEWER_VERSION='V8.101 · MOBILE-HIDPI-CLOUD-RESTORE';
 const VIEWER_BUILD='27.08.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -9000,6 +9021,11 @@ renderer.domElement.addEventListener('pointermove',e=>{
 });
 
 let lastViewerWidth=0,lastViewerHeight=0,viewerResizeQueued=false;
+function syncVisibleViewerHeight(){
+ const viewport=window.visualViewport;
+ const visibleHeight=Math.round((viewport&&viewport.height)||window.innerHeight||document.documentElement.clientHeight||0);
+ if(visibleHeight>0)document.documentElement.style.setProperty('--aczo-visible-height',visibleHeight+'px');
+}
 function resize(){
  const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);
  if(w===lastViewerWidth&&h===lastViewerHeight)return;
@@ -9013,6 +9039,7 @@ function scheduleViewerResize(){
  viewerResizeQueued=true;
  requestAnimationFrame(()=>{
    viewerResizeQueued=false;
+   syncVisibleViewerHeight();
    resize();
  });
 }
@@ -9020,7 +9047,9 @@ window.addEventListener('resize',scheduleViewerResize,{passive:true});
 window.addEventListener('orientationchange',()=>setTimeout(scheduleViewerResize,180),{passive:true});
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize',scheduleViewerResize,{passive:true});
+  window.visualViewport.addEventListener('scroll',scheduleViewerResize,{passive:true});
 }
+syncVisibleViewerHeight();
 resize();
 set3D();
 waterUniforms.cameraPos.value.copy(camera.position);
@@ -17544,7 +17573,9 @@ function anglingCloudSyncPayload(){
 }
 
 function scheduleAnglingCloudSync(delay=900){
-  if(!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return;
+  // V8.101: Eine ganz neue Browser-Installation darf vor Abschluss der
+  // Ersteinrichtung keinen anonymen Standardspieler im Sheet anlegen.
+  if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return;
   if(anglingCloudSyncTimer)window.clearTimeout(anglingCloudSyncTimer);
   anglingCloudSyncTimer=window.setTimeout(()=>{
     anglingCloudSyncTimer=null;
@@ -17673,7 +17704,7 @@ function applyAnglingCloudPlayer(player){
 }
 
 async function loadAnglingPlayerCloud(){
-  if(!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
+  if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
 
   try{
     const url=ANGLING_LEADERBOARD_ENDPOINT
@@ -17740,7 +17771,7 @@ async function loadAnglingPlayerCloud(){
 }
 
 async function syncAnglingPlayerCloud(){
-  if(!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
+  if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
   if(anglingCloudSyncInFlight){anglingCloudSyncPending=true;return false;}
   anglingCloudSyncInFlight=true;
 
@@ -17800,7 +17831,7 @@ async function syncAnglingPlayerCloud(){
 async function syncAnglingPlayerEp(){return syncAnglingPlayerCloud();}
 
 function flushAnglingCloudSync(){
-  if(!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return;
+  if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return;
   try{
     fetch(ANGLING_LEADERBOARD_ENDPOINT,{
       method:'POST',
@@ -17817,8 +17848,12 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden')flushAnglingCloudSync();
 });
 
-// Erst Cloud lesen, niemals beim Start blind lokale Defaults hochschreiben.
-window.setTimeout(()=>loadAnglingPlayerCloud(),650);
+// V8.101: Erst Cloud lesen, wenn dieses Browserprofil bereits eingerichtet ist.
+// Auf einem neuen Handy bleibt der Server unangetastet, bis der Spieler entweder
+// die Ersteinrichtung abschließt oder seinen vorhandenen Code wiederherstellt.
+window.setTimeout(()=>{
+  if(anglingSetupComplete)loadAnglingPlayerCloud();
+},650);
 
 
 
@@ -18432,6 +18467,48 @@ async function copyAnglingRecoveryCode(){
   }
 }
 
+// V8.101: Google Apps Script kann nach einer Ruhephase auf Mobilgeräten deutlich
+// länger als sieben Sekunden zum Aufwachen brauchen. Die Wiederherstellung ist
+// rein lesend und darf deshalb bei einem echten Timeout einmal sicher wiederholt
+// werden. Fachliche Antworten wie "Code nicht gefunden" werden nie wiederholt.
+async function fetchAnglingRecoveryPlayer(code){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    if(attempt>0){
+      anglingRecoveryStatus.textContent='Der Cloud-Dienst braucht länger. Zweiter Versuch läuft …';
+      await new Promise(resolve=>window.setTimeout(resolve,450));
+    }
+    try{
+      const res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'recoverPlayer',recoveryCode:code})
+      },attempt===0?18000:30000);
+      const data=await res.json().catch(()=>null);
+
+      if(!res.ok){
+        const error=new Error(data?.error||('HTTP '+res.status));
+        error.retryable=res.status>=500;
+        throw error;
+      }
+      if(!data){
+        const error=new Error('Leere Serverantwort');
+        error.retryable=true;
+        throw error;
+      }
+      if(data.ok===false||!data.player||!data.playerId){
+        throw new Error(data.error||'Spielstand nicht gefunden');
+      }
+      return data;
+    }catch(err){
+      lastError=err;
+      const retryable=err?.retryable===true||err?.name==='AbortError'||err instanceof TypeError;
+      if(!retryable||attempt===1)throw err;
+    }
+  }
+  throw lastError||new Error('Cloud-Spielstand konnte nicht geladen werden');
+}
+
 async function restoreAnglingPlayerFromCode(){
   const code=normalizeAnglingRecoveryCode(anglingRecoveryInput.value);
   if(code.replace(/-/g,'').length!==24){
@@ -18446,16 +18523,7 @@ async function restoreAnglingPlayerFromCode(){
   try{
     if(anglingCloudSyncTimer){window.clearTimeout(anglingCloudSyncTimer);anglingCloudSyncTimer=null;}
 
-    const res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'recoverPlayer',recoveryCode:code})
-    },7000);
-    const data=await res.json().catch(()=>null);
-
-    if(!res.ok||!data||data.ok===false||!data.player||!data.playerId){
-      throw new Error(data?.error||'Spielstand nicht gefunden');
-    }
+    const data=await fetchAnglingRecoveryPlayer(code);
 
     anglingPlayerProfile.id=String(data.playerId);
     if(data.player.name)anglingPlayerProfile.name=String(data.player.name).slice(0,30);
@@ -18464,7 +18532,11 @@ async function restoreAnglingPlayerFromCode(){
     anglingPlayerProfile.shareRecords=false;
     saveAnglingPlayerProfile();
     anglingCloudEnabled=true;
-    try{localStorage.setItem(ANGLING_CLOUD_ENABLED_KEY,'1');}catch(err){}
+    anglingSetupComplete=true;
+    try{
+      localStorage.setItem(ANGLING_CLOUD_ENABLED_KEY,'1');
+      localStorage.setItem(ANGLING_SETUP_COMPLETE_KEY,'1');
+    }catch(err){}
     saveAnglingRecoveryCode(code);
 
     applyAnglingCloudPlayer(data.player);
@@ -18474,7 +18546,10 @@ async function restoreAnglingPlayerFromCode(){
     updateAnglingRecoveryUi();
 
   }catch(err){
-    anglingRecoveryStatus.textContent='Wiederherstellung fehlgeschlagen: '+String(err?.message||'unbekannter Fehler');
+    const timeout=err?.name==='AbortError'||/aborted|timeout/i.test(String(err?.message||''));
+    anglingRecoveryStatus.textContent=timeout
+      ?'Wiederherstellung fehlgeschlagen: Der Cloud-Dienst antwortet auch nach dem zweiten Versuch nicht. Bitte Verbindung prüfen und erneut versuchen.'
+      :'Wiederherstellung fehlgeschlagen: '+String(err?.message||'unbekannter Fehler');
   }finally{
     anglingRecoveryRestoreBtn.disabled=false;
   }
@@ -23142,7 +23217,11 @@ function renderAnglingFloatCamera(){
   if(!anglingMode||!floatActive||!anglingUi.classList.contains('line-active'))return;
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return;
-  renderer.getDrawingBufferSize(anglingFloatBufferSize);
+  // V8.101: setScissor()/setViewport() erwarten logische Renderer-Pixel und
+  // wenden den devicePixelRatio intern selbst an. DrawingBuffer-Pixel hatten
+  // Retina-/HiDPI-Geräte daher doppelt skaliert: Das Bild lief aus dem Rahmen
+  // und der anschließende Hauptrender wurde sichtbar vergrößert/beschnitten.
+  renderer.getSize(anglingFloatBufferSize);
   const sx=anglingFloatBufferSize.x/Math.max(1,canvasRect.width),sy=anglingFloatBufferSize.y/Math.max(1,canvasRect.height);
   const x=Math.round((zoomRect.left-canvasRect.left+2)*sx),y=Math.round((canvasRect.bottom-zoomRect.bottom+2)*sy);
   const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
@@ -23184,7 +23263,9 @@ function renderAnglingReelCamera(){
 
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingReelZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return;
-  renderer.getDrawingBufferSize(anglingReelBufferSize);
+  // Dieselbe HiDPI-Korrektur wie bei der Schwimmerkamera. Sie gilt ebenso für
+  // Android-Geräte mit hoher Pixeldichte und für skalierte Desktop-Displays.
+  renderer.getSize(anglingReelBufferSize);
   const sx=anglingReelBufferSize.x/Math.max(1,canvasRect.width),sy=anglingReelBufferSize.y/Math.max(1,canvasRect.height);
   const x=Math.round((zoomRect.left-canvasRect.left+2)*sx),y=Math.round((canvasRect.bottom-zoomRect.bottom+2)*sy);
   const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
