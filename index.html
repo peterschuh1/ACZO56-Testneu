@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.106 · Mobile Ansicht, Deeper &amp; Hilfe</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.107 · Sicherer Unterwasserboden &amp; Koi Hall of Fame</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3562,6 +3562,32 @@ html,body{
   font-size:6.4px!important
 }
 
+/* V8.107: Während Kescher-Nahaufnahme und Fangkarte bleibt ausschließlich die
+   eigentliche Fangpräsentation sichtbar. So können weder Köder-/Tiefenanzeige,
+   Statusleiste, Lockfutter, Livefenster noch verspätete Statusmeldungen darüber
+   liegen – identisch auf Desktop und Telefonen. */
+.angling-ui.is-catch-sequence .angling-line-summary,
+.angling-ui.is-caught .angling-line-summary,
+.angling-ui.is-catch-sequence .angling-hud-panel,
+.angling-ui.is-caught .angling-hud-panel,
+.angling-ui.is-catch-sequence .angling-feed-controls,
+.angling-ui.is-caught .angling-feed-controls,
+.angling-ui.is-catch-sequence .angling-float-zoom,
+.angling-ui.is-caught .angling-float-zoom,
+.angling-ui.is-catch-sequence .angling-reel-zoom,
+.angling-ui.is-caught .angling-reel-zoom,
+.angling-ui.is-catch-sequence .angling-community-toast,
+.angling-ui.is-caught .angling-community-toast,
+.angling-ui.is-catch-sequence .angling-toast,
+.angling-ui.is-caught .angling-toast,
+.angling-ui.is-catch-sequence .angling-daily-quest-toast,
+.angling-ui.is-caught .angling-daily-quest-toast,
+.angling-ui.is-catch-sequence .angling-ep-popup,
+.angling-ui.is-caught .angling-ep-popup{
+  display:none!important;
+  visibility:hidden!important
+}
+
 </style>
 </head>
 <body>
@@ -3933,7 +3959,7 @@ html,body{
          <section><h3>⭐ EP & Shop</h3><p>Gefangene Fische bringen EP. Große und seltene Fische sind deutlich wertvoller; der einzigartige Koi bringt 1.000 EP. Gute Aktionen bringen Zusatz-EP, zum Beispiel ein perfekter Anhieb, eine präzise Pose im Futterplatz, sauberes Keschern, ein Fang am aktiven Futterplatz oder aktive Kunstköderführung. Ein gerissener Fisch zählt nur zu 50 % und erhält keine Fangboni. EP sind die ausgebbare Währung. Zusätzlich sammeln sich Gesamt-EP für deine dauerhafte Anglerstufe; Einkäufe senken diese Gesamt-EP nicht.</p></section>
          <section><h3>🎯 Tagesaufgaben</h3><p>Jeden Spieltag warten drei Aufgaben mit unterschiedlicher Schwierigkeit. Jede erledigte Aufgabe bringt EP; wer alle drei schafft, erhält den zusätzlichen Tagesbonus. Nach der kurzen Einblendung bleiben die Aufgaben jederzeit im Hauptmenü abrufbar.</p></section>
          <section><h3>☁️ Cloud-Spielstand</h3><p>EP, Gesamt-EP, Fortschritt, persönliche Bestwerte, Köderfische, gekaufte Köder und Futterbestände sowie die in der 3D-Unterwasseransicht entdeckten Fischarten werden automatisch online gespeichert. Das Fangbuch mit den einzelnen Fangereignissen bleibt ausschließlich lokal.</p></section><section><h3>🔑 Gerätewechsel</h3><p>Unter „Spielstand“ findest du einen privaten Wiederherstellungscode. Mit ihm kannst du deinen Cloud-Spielstand auf einem anderen Gerät übernehmen. Der übernommene Datensatz wird dem neuen Gerät zugeordnet; ein neu erzeugter Code macht den bisherigen Code ungültig.</p></section>
-         <section><h3>🏆 Highscore & Bestenliste</h3><p>Deine persönlichen Bestfänge stehen im Highscore. Wenn du einen Anzeigenamen festlegst und die Veröffentlichung aktivierst, werden deine freigegebenen Artenrekorde automatisch mit der öffentlichen Bestenliste abgeglichen. Die Liste lädt beim Öffnen selbstständig; ein Aktualisieren-Knopf ist nicht nötig.</p></section><section><h3>✨ Hall of Fame</h3><p>Die Hall of Fame besitzt im Hauptmenü einen eigenen Knopf und präsentiert öffentliche Rekorde über dem Weiher. Das Spiel pausiert während der Präsentation vollständig. „Zurück“ fliegt exakt in die zuvor gespeicherte Ansicht zurück. Während Biss, Drill, Kameraflug oder Kunstköder-Unterwasseransicht bleibt die Funktion gesperrt.</p></section>
+         <section><h3>🏆 Highscore & Bestenliste</h3><p>Deine persönlichen Bestfänge stehen im Highscore. Wenn du einen Anzeigenamen festlegst und die Veröffentlichung aktivierst, werden deine freigegebenen Artenrekorde automatisch mit der öffentlichen Bestenliste abgeglichen. Die Liste lädt beim Öffnen selbstständig; ein Aktualisieren-Knopf ist nicht nötig.</p></section><section><h3>✨ Hall of Fame</h3><p>Die Hall of Fame besitzt im Hauptmenü einen eigenen Knopf und präsentiert öffentliche Rekorde über dem Weiher. Öffentlich eingetragene Fänger des einzigen gelben Koi erhalten dort zusätzlich eine eigene Ehrenfolie. Das Spiel pausiert während der Präsentation vollständig. „Zurück“ fliegt exakt in die zuvor gespeicherte Ansicht zurück. Während Biss, Drill, Kameraflug oder Kunstköder-Unterwasseransicht bleibt die Funktion gesperrt.</p></section>
          <section><h3>🟢 Angler online</h3><p>Ist die Namenssichtbarkeit aktiviert, meldet eine kurze Einblendung andere gerade aktive Angler. Die Meldung verschwindet selbstständig und zeigt keine private Spieler-ID oder Wiederherstellungscodes.</p></section>
        </div>
      </div>
@@ -4197,7 +4223,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.106 · MOBILE-ANSICHT-DEEPER-HILFE';
+const VIEWER_VERSION='V8.107 · UNTERWASSERBODEN-KOI-HALL-OF-FAME';
 const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -19228,6 +19254,35 @@ function buildAnglingHallOfFameSlides(){
     const cm=Number(r.lengthCm ?? r.cm)||0,kg=Number(r.weightKg ?? r.kg)||0;
     slides.push({kicker:i===0?'🏆 GRÖSSTER ÖFFENTLICHER FANG':'TOP '+(i+1)+' · BESTENLISTE',title:String(r.name||'Anonym').slice(0,30),value:(fishDisplayNames[species]||species||'Fisch')+' · '+formatAnglingLength(cm)+(kg?' · '+formatAnglingWeight(kg):''),detail:i===0?'Aktueller Spitzenfang der öffentlichen Vereins-Bestenliste.':'Einer der größten veröffentlichten Fänge am Vereinsweiher.',fireworks:i===0?3:1});
   });
+  // Der einzige gelbe Koi bekommt unabhängig von seiner Größe eine eigene
+  // Ehrenfolie. Grundlage sind ausschließlich freiwillig veröffentlichte
+  // Bestenlisten-Einträge; private Fangbuchdaten werden nie verwendet.
+  const koiCatchers=[];
+  const seenKoiCatchers=new Set();
+  rows.forEach((r,index)=>{
+    const rawSpecies=String(r?.species||'').trim();
+    const species=ANGLING_LEADERBOARD_API_TO_SPECIES[rawSpecies]||rawSpecies.toLowerCase();
+    if(species!=='koi')return;
+    const name=String(r?.name||'Anonym').trim().slice(0,30)||'Anonym';
+    const identity=String(r?.playerId||r?.playerID||r?.id||name||('koi-'+index)).trim().toLowerCase();
+    if(seenKoiCatchers.has(identity))return;
+    seenKoiCatchers.add(identity);
+    koiCatchers.push({...r,name});
+  });
+  koiCatchers.forEach((r,index)=>{
+    const cm=Number(r.lengthCm ?? r.cm)||0;
+    const kg=Number(r.weightKg ?? r.kg)||anglingEstimatedKg('koi',cm);
+    const count=koiCatchers.length;
+    slides.push({
+      kicker:'🏅 FÄNGER DES GELBEN KOI'+(count>1?' · '+(index+1)+'/'+count:''),
+      title:r.name,
+      value:'Gelber Koi · '+formatAnglingLength(cm)+(kg?' · '+formatAnglingWeight(kg):''),
+      detail:count===1
+        ?'Der öffentlich eingetragene Fänger des einzigen gelben Koi im Vereinsweiher.'
+        :'Einer von '+count+' öffentlich eingetragenen Fängern des einzigen gelben Koi im Vereinsweiher.',
+      fireworks:3
+    });
+  });
   const info=anglingLevelInfo();
   slides.push({kicker:'DEIN ANGLER',title:'Stufe '+info.current.level+' · '+info.current.title,value:info.next?(info.within.toLocaleString('de-DE')+' / '+info.span.toLocaleString('de-DE')+' Gesamt-EP'):'Höchste Anglerstufe erreicht',detail:info.next?((info.span-info.within).toLocaleString('de-DE')+' EP bis „'+info.next.title+'“.'):'Du hast den Weihermeister erreicht.',progress:info.progress,fireworks:info.progress>.85?2:0});
   const best=anglingHallOfFameBestLocalRecord();
@@ -20542,6 +20597,79 @@ function showAnglingToast(text,duration=1500){
   anglingToast.classList.add('show');
   anglingToastTimer=window.setTimeout(()=>{clearAnglingToastClasses();anglingToast.textContent='';},duration);
 }
+
+// Fangbezogene Zusatzmeldungen warten bis Fangkarte und Kescher-Nahaufnahme
+// beendet sind. Ein gemeinsamer Zeitplan verhindert, dass Rekord, Level,
+// Online-Abgleich und Tagesaufgabe einander überdecken.
+let anglingPostCatchNoticeQueue=[];
+let anglingPostCatchNoticeNextAt=0;
+const anglingPostCatchNoticeTimers=new Set();
+let anglingDeferredOnlineRecordPrompt=null;
+let anglingDeferredOnlineRecordPromptTimer=0;
+function anglingCatchPresentationActive(){
+  return anglingState==='catch-reveal'||anglingState==='caught'
+    ||anglingUi.classList.contains('is-catch-sequence')
+    ||anglingUi.classList.contains('is-caught');
+}
+function scheduleAnglingPostCatchNotice(item){
+  if(!item?.text)return;
+  const now=performance.now();
+  const startAt=Math.max(now,anglingPostCatchNoticeNextAt);
+  const duration=Math.max(900,Number(item.duration)||1700);
+  anglingPostCatchNoticeNextAt=startAt+duration+260;
+  const timer=window.setTimeout(()=>{
+    anglingPostCatchNoticeTimers.delete(timer);
+    if(!anglingMode)return;
+    if(anglingCatchPresentationActive()){
+      anglingPostCatchNoticeQueue.push({text:item.text,duration});
+      return;
+    }
+    showAnglingToast(item.text,duration);
+  },Math.max(0,startAt-now));
+  anglingPostCatchNoticeTimers.add(timer);
+}
+function queueAnglingPostCatchNotice(text,duration=1700,forceDeferred=false){
+  const item={text:String(text||''),duration:Math.max(900,Number(duration)||1700)};
+  if(!item.text)return;
+  if(forceDeferred||anglingCatchPresentationActive())anglingPostCatchNoticeQueue.push(item);
+  else scheduleAnglingPostCatchNotice(item);
+}
+function flushAnglingPostCatchNotices(delay=520){
+  const now=performance.now();
+  anglingPostCatchNoticeNextAt=Math.max(anglingPostCatchNoticeNextAt,now+Math.max(0,Number(delay)||0));
+  const pending=anglingPostCatchNoticeQueue.splice(0);
+  pending.forEach(scheduleAnglingPostCatchNotice);
+  return Math.max(0,anglingPostCatchNoticeNextAt-now);
+}
+function reserveAnglingPostCatchWindow(duration=1500,delay=0){
+  const now=performance.now();
+  const startAt=Math.max(now+Math.max(0,Number(delay)||0),anglingPostCatchNoticeNextAt);
+  anglingPostCatchNoticeNextAt=startAt+Math.max(0,Number(duration)||0)+260;
+  return {delay:Math.max(0,startAt-now),end:Math.max(0,anglingPostCatchNoticeNextAt-now)};
+}
+function deferAnglingOnlineRecordPrompt(caught){
+  if(caught)anglingDeferredOnlineRecordPrompt={...caught};
+}
+function flushAnglingOnlineRecordPrompt(delay=900){
+  if(!anglingDeferredOnlineRecordPrompt)return;
+  window.clearTimeout(anglingDeferredOnlineRecordPromptTimer);
+  anglingDeferredOnlineRecordPromptTimer=window.setTimeout(()=>{
+    anglingDeferredOnlineRecordPromptTimer=0;
+    if(!anglingMode||anglingCatchPresentationActive()||anglingState!=='ready')return;
+    const caught=anglingDeferredOnlineRecordPrompt;
+    anglingDeferredOnlineRecordPrompt=null;
+    maybePromptAnglingOnlineRecord(caught);
+  },Math.max(0,Number(delay)||0));
+}
+function cancelAnglingPostCatchNotices(){
+  anglingPostCatchNoticeTimers.forEach(timer=>window.clearTimeout(timer));
+  anglingPostCatchNoticeTimers.clear();
+  anglingPostCatchNoticeQueue=[];
+  anglingPostCatchNoticeNextAt=0;
+  window.clearTimeout(anglingDeferredOnlineRecordPromptTimer);
+  anglingDeferredOnlineRecordPromptTimer=0;
+  anglingDeferredOnlineRecordPrompt=null;
+}
 function showAnglingMajorNotice(title,subtitle='',variant='warning',duration=1900){
   window.clearTimeout(anglingToastTimer);
   clearAnglingToastClasses();
@@ -20760,13 +20888,18 @@ function updateAnglingDeadwoodSnagDetection(){
 }
 let anglingEpPopupTimer=0,anglingEpCounterTimer=0;
 function showAnglingEpGain(gain,oldXp,newXp,snagged=false,detail=''){
-  if(!anglingEpPopup)return;
   window.clearTimeout(anglingEpPopupTimer);window.clearInterval(anglingEpCounterTimer);
-  anglingEpPopup.classList.remove('show');void anglingEpPopup.offsetWidth;
-  const sub=snagged?'Gerissener Fisch · 50 % Wertung':String(detail||'');
-  anglingEpPopup.innerHTML='+'+gain+' EP'+(sub?'<small>'+sub+'</small>':'');
-  anglingEpPopup.classList.add('show');
-  const counter=anglingEpBadge.querySelector('strong');counter.textContent=String(oldXp);
+  // Die Fangkarte nennt den vollständigen EP-Gewinn bereits gut lesbar.
+  // Der frühere zweite EP-Ballon lag dahinter bzw. darüber und bleibt deshalb
+  // aus; nur der Zähler im normalen Menü wird weiterhin weich aktualisiert.
+  if(anglingEpPopup){
+    anglingEpPopup.classList.remove('show');
+    anglingEpPopup.setAttribute('aria-hidden','true');
+    anglingEpPopup.textContent='';
+  }
+  const counter=anglingEpBadge?.querySelector('strong');
+  if(!counter)return;
+  counter.textContent=String(oldXp);
   anglingEpPopupTimer=window.setTimeout(()=>{
     const start=performance.now(),duration=620;
     anglingEpCounterTimer=window.setInterval(()=>{
@@ -20776,7 +20909,6 @@ function showAnglingEpGain(gain,oldXp,newXp,snagged=false,detail=''){
       if(t>=1){window.clearInterval(anglingEpCounterTimer);anglingEpCounterTimer=0;counter.textContent=String(newXp);anglingEpBadge.classList.remove('ep-pulse');void anglingEpBadge.offsetWidth;anglingEpBadge.classList.add('ep-pulse');}
     },32);
   },1450);
-  window.setTimeout(()=>anglingEpPopup.classList.remove('show'),3450);
 }
 function anglingLocalDayKey(ts=Date.now()){
   const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -21027,7 +21159,7 @@ function creditAnglingDailyQuestEp(amount){
   anglingProgress.xp+=amount;anglingProgress.lifetimeXp+=amount;
   const newLevel=anglingLevelInfo().current.level;
   saveAnglingProgress();updateAnglingSetupUi();updateAnglingDailyQuestMenuButton();
-  if(newLevel>oldLevel){const info=anglingLevelInfo();window.setTimeout(()=>showAnglingToast('⬆ Stufe '+newLevel+' · '+info.current.title,2100),1500);}
+  if(newLevel>oldLevel){const info=anglingLevelInfo();queueAnglingPostCatchNotice('⬆ Stufe '+newLevel+' · '+info.current.title,2100,true);}
 }
 function showAnglingDailyQuestCompletion(completedDefs,totalReward,dailyBonus){
   if(!anglingDailyQuestToast||!completedDefs.length)return;
@@ -21500,6 +21632,7 @@ function startAnglingMode(){
   clearAnglingFeedSpot(false);cancelAnglingFeedTargeting();
   resetAllAnglingUiOverlays();
   if(anglingMode||fishMode||is2D) return;
+  cancelAnglingPostCatchNotices();
   resetAnglingSessionTimeRules();
   // Im freien Himmelsblick zuerst sauber in die normale 3D-Steuerung zurueck.
   if(skyLookMode) leaveSkyLookMode(true);
@@ -23121,6 +23254,14 @@ function anglingCatchBonusInfo(caught,previousRecord){
 function finishAnglingCatch(){
   if(!anglingPendingCatch)return;
   const caught=anglingPendingCatch;
+  // Alte Kurzmeldungen verschwinden vor der Kescher-Nahaufnahme vollständig.
+  // Fangbezogene neue Meldungen werden weiter unten für die ruhige Uferansicht
+  // gepuffert, statt die Fangkarte zu überlagern.
+  window.clearTimeout(anglingToastTimer);clearAnglingToastClasses();anglingToast.textContent='';
+  if(anglingCommunityToastTimer){window.clearTimeout(anglingCommunityToastTimer);anglingCommunityToastTimer=null;}
+  anglingCommunityToast?.classList.remove('show');
+  window.clearTimeout(anglingDailyQuestToastTimer);
+  anglingDailyQuestToast?.classList.remove('show','complete');
   const previousRecord=anglingProgress.records[caught.species]?Number(anglingProgress.records[caught.species].cm):0;
   const newlyFound=discoverFish(caught.species);
   let baitBonus='';
@@ -23155,14 +23296,14 @@ function finishAnglingCatch(){
   processAnglingDailyQuestCatch(caught);
   if(newLevel>oldLevel){
     const levelInfo=anglingLevelInfo();
-    window.setTimeout(()=>showAnglingToast('⬆ Stufe '+newLevel+' · '+levelInfo.current.title,2100),1450);
+    queueAnglingPostCatchNotice('⬆ Stufe '+newLevel+' · '+levelInfo.current.title,2100,true);
   }
   if(isPersonalBest){
     // Der PB-Bonus soll nicht nur in einer langen Bonuszeile untergehen.
-    window.setTimeout(()=>showAnglingToast('🏆 Persönlicher Rekord · +20 EP',1900),320);
+    queueAnglingPostCatchNotice('🏆 Persönlicher Rekord · +20 EP',1900,true);
     if(anglingPlayerProfile.shareRecords&&anglingPlayerProfile.name){
       submitAnglingPersonalBest(caught).then(ok=>{
-        window.setTimeout(()=>showAnglingToast(ok?'🏆 Online-Rekord gespeichert.':'⚠️ PB gespeichert · Online-Abgleich später erneut.',1700),1450);
+        queueAnglingPostCatchNotice(ok?'🏆 Online-Rekord gespeichert.':'⚠️ PB gespeichert · Online-Abgleich später erneut.',1700);
       });
     }
   }
@@ -23220,9 +23361,7 @@ function showAnglingCatchCard(){
   }
   anglingCatchCard.classList.add('show');
   if(isPersonalBest&&!anglingPlayerProfile.shareRecords){
-    window.setTimeout(()=>{
-      if(anglingState==='caught')maybePromptAnglingOnlineRecord(caught);
-    },850);
+    deferAnglingOnlineRecordPrompt(caught);
   }
 }
 
@@ -23571,6 +23710,15 @@ function resetAllAnglingUiOverlays(){
   anglingOnlinePrompt?.classList.remove('show');
   hideAnglingDailyQuestIntro(false);
   anglingDailyQuestToast?.classList.remove('show','complete');
+  window.clearTimeout(anglingToastTimer);clearAnglingToastClasses();
+  if(anglingToast)anglingToast.textContent='';
+  window.clearTimeout(anglingEpPopupTimer);anglingEpPopupTimer=0;
+  window.clearInterval(anglingEpCounterTimer);anglingEpCounterTimer=0;
+  if(anglingEpPopup){anglingEpPopup.classList.remove('show');anglingEpPopup.setAttribute('aria-hidden','true');anglingEpPopup.textContent='';}
+  const epCounter=anglingEpBadge?.querySelector('strong');
+  if(epCounter&&anglingProgress)epCounter.textContent=String(Math.max(0,Math.floor(Number(anglingProgress.xp)||0)));
+  if(anglingCommunityToastTimer){window.clearTimeout(anglingCommunityToastTimer);anglingCommunityToastTimer=null;}
+  anglingCommunityToast?.classList.remove('show');
   hideAnglingSnagPrompt();
   anglingObstacleSnag=null;
  closeAnglingGamePanels();
@@ -23640,9 +23788,17 @@ function resetAnglingCast(){
   anglingExitBtn.disabled=false;anglingExitBtn.textContent='Angelplatz wechseln';
   anglingActionBtn.disabled=true;anglingActionBtn.textContent='Ziel wählen';
   if(anglingReturnLossMessage){anglingReturnLossMessage='';}
-  // Erst jetzt ist Kescher-/Fangkarten-UI verschwunden. Die Questmeldung bekommt
-  // ihren eigenen Moment in der normalen Uferansicht.
-  flushAnglingDailyQuestCompletion(520);
+  // Erst jetzt ist Kescher-/Fangkarten-UI verschwunden. Rekord-, Level- und
+  // Online-Meldungen laufen nacheinander; die Questmeldung und ein möglicher
+  // Bestenlisten-Hinweis erhalten danach ebenfalls ihren eigenen Moment.
+  const hadDailyQuestNotice=!!anglingDailyQuestPendingCompletion;
+  let postCatchNoticeDuration=flushAnglingPostCatchNotices(520);
+  if(hadDailyQuestNotice){
+    const dailySlot=reserveAnglingPostCatchWindow(2850,180);
+    flushAnglingDailyQuestCompletion(dailySlot.delay);
+    postCatchNoticeDuration=dailySlot.end;
+  }
+  flushAnglingOnlineRecordPrompt(postCatchNoticeDuration+720);
 }
 
 function setAnglingDrillRodFromPointer(clientX,clientY){
@@ -24092,6 +24248,7 @@ function returnAnglingToShoreForRecast(){
 function beginLeaveAngling(){
   resetAllAnglingUiOverlays();
   if(!anglingMode||anglingState==='exit-flight'||!anglingSaved) return;
+  cancelAnglingPostCatchNotices();
   anglingState='exit-flight';anglingStateTime=0;anglingWaterTarget=0;
   anglingUi.style.display='none';
   closeAnglingLog();
@@ -24163,12 +24320,66 @@ function finishLeaveAngling(){
   anglingWelcomeBackShownForSession=false;
   anglingMode=false;anglingState='idle';anglingSelection=null;anglingSaved=null;anglingPhotoHorizon.visible=false;
   anglingPendingCatch=null;anglingCandidateEntries=[];setAnglingReeling(false);stopAnglingActionHold?.();
+  cancelAnglingPostCatchNotices();
   resetAnglingSurfaceEffects();
   anglingCameraTransition=null;anglingWaterTarget=0;
   anglingPointerStarts.clear();window.clearTimeout(anglingToastTimer);clearAnglingToastClasses();
   updateButtons();
 }
 
+
+function keepAnglingUnderwaterPointInside(point,anchor,margin=.28){
+  const directDepth=pondDepthAt(point.x,point.y);
+  if(Number.isFinite(directDepth))return directDepth;
+  const anchorDepth=pondDepthAt(anchor.x,anchor.y);
+  if(!Number.isFinite(anchorDepth))return null;
+  const dx=point.x-anchor.x,dy=point.y-anchor.y;
+  const span=Math.hypot(dx,dy);
+  if(span<.001){point.x=anchor.x;point.y=anchor.y;return anchorDepth;}
+  // Vom sicher im Wasser liegenden Köder aus bis zur gewünschten Position
+  // gehen und den letzten gültigen Punkt knapp innerhalb der Uferkante wählen.
+  let lo=0,hi=1;
+  for(let i=0;i<13;i++){
+    const mid=(lo+hi)*.5;
+    const depth=pondDepthAt(anchor.x+dx*mid,anchor.y+dy*mid);
+    if(Number.isFinite(depth))lo=mid;else hi=mid;
+  }
+  const t=Math.max(0,lo-Math.max(0,margin)/span);
+  point.x=anchor.x+dx*t;
+  point.y=anchor.y+dy*t;
+  const clippedDepth=pondDepthAt(point.x,point.y);
+  return Number.isFinite(clippedDepth)?clippedDepth:anchorDepth;
+}
+function constrainAnglingUnderwaterColumn(point,anchor,role='camera',floorOnly=false){
+  const target=role==='target';
+  const depth=keepAnglingUnderwaterPointInside(point,anchor,target ? .30 : .24);
+  if(!Number.isFinite(depth))return null;
+  const surface=anglingSurfaceZ(point.x,point.y);
+  const floor=-Math.max(.025,depth)*exaggeration;
+  const column=Math.max(.025,surface-floor);
+  // In sehr flachem Wasser schrumpft der Sicherheitsabstand proportional,
+  // bleibt aber immer innerhalb der tatsächlich vorhandenen Wassersäule.
+  const floorClearance=Math.min(
+    target ? .16 : .30,
+    Math.max(target ? .04 : .08,column*(target ? .10 : .18)),
+    column*(target ? .24 : .32)
+  );
+  const minZ=floor+floorClearance;
+  point.z=Math.max(point.z,minZ);
+  if(!floorOnly){
+    const desiredSubmerge=target
+      ?THREE.MathUtils.clamp(depth-.30,.55,.92)
+      :THREE.MathUtils.clamp(depth-.34,.62,1.08);
+    const submerge=Math.min(
+      desiredSubmerge,
+      column*(target ? .78 : .68),
+      Math.max(.015,column-floorClearance)
+    );
+    const maxZ=surface-submerge;
+    point.z=minZ<=maxZ?THREE.MathUtils.clamp(point.z,minZ,maxZ):(surface+floor)*.5;
+  }
+  return depth;
+}
 
 function updateAnglingCinematicCamera(dt){
  if(!anglingSelection)return false;
@@ -24206,18 +24417,11 @@ function updateAnglingCinematicCamera(dt){
    anglingCinematicPos.z+=THREE.MathUtils.clamp(.42+lureDepthNow*.035+extraTopAngle,.42,.78);
    anglingCinematicTarget.copy(anglingLure.position).addScaledVector(toShore,THREE.MathUtils.lerp(3.45,2.70,distanceLift*highRod));
    anglingCinematicTarget.z=anglingLure.position.z-.16-.18*distanceLift*highRod;
-   const camSurface=anglingSurfaceZ(anglingCinematicPos.x,anglingCinematicPos.y);
-   const camWaterDepth=Math.max(.55,pondDepthAt(anglingCinematicPos.x,anglingCinematicPos.y)||1.4);
-   // Harte Unterwasser-Decke: Die Kamera darf nicht in die obere klare
-   // Übergangszone unter der Wasseroberfläche steigen.
-   const safeSubmerge=THREE.MathUtils.clamp(camWaterDepth-.34,.62,1.08);
-   anglingCinematicPos.z=Math.min(anglingCinematicPos.z,camSurface-safeSubmerge);
-   // Auch die Blickrichtung bleibt unterhalb dieser Zone. Sonst würde die
-   // Kamera zwar tiefer stehen, aber trotzdem nach oben durch die klare Schicht schauen.
-   const targetSurface=anglingSurfaceZ(anglingCinematicTarget.x,anglingCinematicTarget.y);
-   const targetWaterDepth=Math.max(.55,pondDepthAt(anglingCinematicTarget.x,anglingCinematicTarget.y)||1.4);
-   const safeLookDepth=THREE.MathUtils.clamp(targetWaterDepth-.30,.55,.92);
-   anglingCinematicTarget.z=Math.min(anglingCinematicTarget.z,targetSurface-safeLookDepth);
+   // Kamera und Blickpunkt bleiben innerhalb der echten Weiherkontur und in
+   // der lokal vorhandenen Wassersäule. Damit kann weder in flachem Wasser
+   // noch direkt am Ufer der Himmel unter dem Gewässer sichtbar werden.
+   constrainAnglingUnderwaterColumn(anglingCinematicPos,anglingLure.position,'camera');
+   constrainAnglingUnderwaterColumn(anglingCinematicTarget,anglingLure.position,'target');
  }else if(anglingCinematicView==='return'){
    anglingCinematicBlend=Math.min(1,anglingCinematicBlend+dt/1.05);
    const u=anglingEase(anglingCinematicBlend);
@@ -24262,7 +24466,14 @@ function updateAnglingCinematicCamera(dt){
  if(active){
    const camRate=anglingCinematicView==='flight'?9:(anglingCinematicView==='underwater'?4.4:5.5);
    const s=Math.min(1,dt*camRate);
-   camera.position.lerp(anglingCinematicPos,s);controls.target.lerp(anglingCinematicTarget,s);camera.up.set(0,0,1);camera.lookAt(controls.target);
+   camera.position.lerp(anglingCinematicPos,s);controls.target.lerp(anglingCinematicTarget,s);
+   if(under){
+     // Auch während der Interpolation darf der ansteigende Boden die Kamera
+     // nicht überholen. Diese Untergrenze ist für iPhone, Android und Desktop identisch.
+     constrainAnglingUnderwaterColumn(camera.position,anglingLure.position,'camera',true);
+     constrainAnglingUnderwaterColumn(controls.target,anglingLure.position,'target',true);
+   }
+   camera.up.set(0,0,1);camera.lookAt(controls.target);
  }
  return under;
 }
