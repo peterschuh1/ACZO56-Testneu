@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.101 · Mobile HiDPI &amp; Cloud-Restore</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.102 · Mobile Bedienung &amp; Kompaktmenü</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3112,6 +3112,97 @@ html,body{
   }
 }
 
+/* V8.102: Mobile Spielbedienung. Das Ausrüstungsmenü belegt weniger von der
+   Szene; während des aktiven Spiels kann iOS weder Texte markieren noch sein
+   Kontextmenü über die gedrückt gehaltene Spielfläche legen. */
+.wrap.angling-mode #viewer > canvas,
+.angling-ui.is-active:not(.game-panel-open),
+.angling-ui.is-active:not(.game-panel-open) *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+.angling-ui.game-panel-open input,
+.angling-ui.game-panel-open textarea,
+.angling-ui.game-panel-open [contenteditable="true"]{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  -webkit-touch-callout:default!important;
+}
+
+@media (pointer:coarse) and (max-width:680px){
+  .angling-setup{
+    top:5px!important;
+    width:calc(100% - 10px)!important;
+    padding:4px 5px 5px!important;
+    border-radius:11px!important;
+  }
+  .angling-game-menu-row{
+    gap:4px!important;
+    margin:0 0 2px!important;
+    flex-wrap:wrap!important;
+  }
+  #anglingBaitBoxBtn{order:1}
+  #anglingShopBtn{order:2}
+  #anglingTimeBtn{order:3}
+  #anglingEpBadge{order:4}
+  .angling-game-menu-row > #anglingBaitBoxBtn,
+  .angling-game-menu-row > #anglingShopBtn{
+    flex:1 1 calc(50% - 2px)!important;
+    min-width:calc(50% - 2px)!important;
+  }
+  .angling-game-menu-row > #anglingTimeBtn,
+  .angling-game-menu-row > #anglingEpBadge{
+    flex:1 1 calc(50% - 2px)!important;
+    min-width:calc(50% - 2px)!important;
+    height:31px!important;
+    min-height:31px!important;
+  }
+  .angling-game-menu-btn{
+    height:39px!important;
+    min-height:39px!important;
+    padding:3px 6px!important;
+    gap:5px!important;
+    border-radius:10px!important;
+  }
+  .angling-game-menu-row > #anglingTimeBtn{
+    height:31px!important;
+    min-height:31px!important;
+  }
+  .angling-ep-badge{
+    flex-direction:row!important;
+    justify-content:center!important;
+    gap:5px!important;
+    border-radius:10px!important;
+  }
+  .game-menu-icon{font-size:14px!important}
+  .game-menu-copy small{font-size:6.8px!important;line-height:1!important}
+  .game-menu-copy strong{font-size:8.5px!important;line-height:1.08!important}
+  .game-menu-hint{display:none!important}
+  .angling-ep-badge small{font-size:7px!important}
+  .angling-ep-badge strong{font-size:12px!important}
+  .angling-level-progress{
+    gap:4px!important;
+    margin:2px 0 1px!important;
+    padding:3px 5px!important;
+    border-radius:8px!important;
+  }
+  .angling-level-progress strong{font-size:7.7px!important}
+  .angling-level-progress small{font-size:6.5px!important}
+  .angling-level-track{height:5px!important}
+  .angling-setup > .angling-setup-row:not(.angling-game-menu-row){
+    gap:3px!important;
+    margin:1px 0!important;
+  }
+  .angling-setup-label{font-size:7.8px!important}
+  .angling-distance-value{font-size:8.7px!important}
+  .angling-setup-hint{
+    margin-top:1px!important;
+    font-size:7.2px!important;
+    line-height:1.2!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3470,7 +3561,7 @@ html,body{
          <section><h3>🎒 Köder- & Tacklebox</h3><p>Alle Köder besitzen einen echten Bestand. Die Standardrute mit 50 m Wurfweite gehört von Beginn an dir. Die mittlere Rute wirft 75 m und die beste 100 m. Weitere Ruten, Kescher und der Deeper werden nach dem Kauf dauerhaft in deiner Tacklebox gespeichert. Lockfutter wird dort mit seinem aktuellen Vorrat angezeigt. Nicht vorhandene kaufbare Artikel sind ausgegraut und führen direkt in den Tackle-Shop.</p></section>
          <section><h3>🌽 Naturköder</h3><p>Wurm, Made, Mais und Spezial-Naturköder werden beim erfolgreichen Anhieb verbraucht. Bei einem verpassten Anhieb besteht eine kleinere Chance auf Köderverlust. Einfaches Einholen verbraucht keinen Naturköder.</p></section>
          <section><h3>🐟 Köderfisch</h3><p>Geeignete gefangene Kleinfische erhöhen deinen Köderfischbestand. Ein Köderfisch wird bei einer Raubfischattacke verbraucht. Er kann nicht gekauft werden.</p></section>
-         <section><h3>🌀 Kunstköder</h3><p>Blinker und Gummifisch fangen nur in Bewegung. Klick oder Tipp holt etwa 0,5 m ein, Halten kurbelt kontinuierlich. Desktop: Rechtsklick holt schnell komplett ein. Maus- oder Fingerbewegung nach oben/unten verändert die Rutenhöhe und Lauftiefe; links/rechts gibt einen kleinen seitlichen Impuls.</p></section>
+         <section><h3>🌀 Kunstköder</h3><p>Blinker und Gummifisch fangen nur in Bewegung. Klick oder Tipp holt etwa 0,5 m ein, Halten kurbelt kontinuierlich. Mobil holt ein Doppeltipp schnell komplett ein; am Desktop bleibt es der Rechtsklick. Maus- oder Fingerbewegung nach oben/unten verändert die Rutenhöhe und Lauftiefe; links/rechts gibt einen kleinen seitlichen Impuls.</p></section>
          <section><h3>🐊 Spezialköder</h3><p>Premium- und artspezifische Köder erhöhen die Gewichtung bestimmter Fischarten, garantieren aber keinen Biss. Standort, Tiefe, Aktivität und Zufall bleiben relevant.</p></section>
          <section><h3>⚡ Biss & Anhieb</h3><p>Beim Posenangeln zeigt der Schwimmer zuerst den Biss. Danach läuft das Reaktions-QTE zweimal vollständig. Ein exakt mittiger Treffer gilt als perfekter Anhieb und bringt beim Fang +8 EP. Triff den grünen beziehungsweise besonders guten Bereich. Ein früher Fehlversuch beendet nicht sofort den gesamten Versuch.</p></section>
          <section><h3>🎣 Drill</h3><p>Beobachte Schnurspannung, Fisch-Ausdauer und Entfernung. Kurbeln gewinnt Schnur, erhöht aber die Belastung. Bei zu hoher Spannung droht Schnurbruch. Ein montierter Kunstköder geht bei Schnurbruch verloren.</p></section>
@@ -3742,7 +3833,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.101 · MOBILE-HIDPI-CLOUD-RESTORE';
+const VIEWER_VERSION='V8.102 · MOBILE-BEDIENUNG-KOMPAKTMENUE';
 const VIEWER_BUILD='27.08.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -15955,6 +16046,19 @@ const anglingPointerStarts=new Map();
 const anglingSpotPressure=new Map();
 const ANGLING_MIN_CAST_DISTANCE=1; // Nahangeln bis direkt vor dem Ufer zulassen
 const ANGLING_MAX_CAST_DISTANCE=100; // physisches Systemlimit; die aktive Rute begrenzt darunter individuell
+const ANGLING_SHORE_FOV=46;
+const ANGLING_PHONE_SHORE_FOV=43;
+let anglingLastFastTapAt=0,anglingLastFastTapX=0,anglingLastFastTapY=0;
+
+// V8.102: Auf einem echten Telefon wird nur der Bildwinkel leicht enger.
+// Position, Ziel und Uferachse der Kamera bleiben dabei vollständig identisch.
+function anglingShoreFieldOfView(){
+  const coarse=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
+  const viewport=window.visualViewport;
+  const width=Math.max(1,(viewport&&viewport.width)||window.innerWidth||host.clientWidth||1);
+  const height=Math.max(1,(viewport&&viewport.height)||window.innerHeight||host.clientHeight||1);
+  return coarse&&Math.min(width,height)<=680?ANGLING_PHONE_SHORE_FOV:ANGLING_SHORE_FOV;
+}
 
 // V8.35 Lockfutter-System: maximal zwei voneinander getrennte Angelstellen.
 // anglingFeedActive bleibt als Kompatibilitäts-Alias auf den aktuell relevanten Spot erhalten.
@@ -16325,7 +16429,7 @@ function updateAnglingTimeAvailability(){
 function updateAnglingTimeUi(){if(!anglingTimeHours)return;updateAnglingTimeAvailability();const h=Math.trunc(Number(anglingTimeHours.value)||0),abs=Math.abs(h),allow=anglingTimeAllowance(),forwardLeft=Math.max(0,allow-anglingTimeUsedForward),backwardLeft=Math.max(0,allow-anglingTimeUsedBackward);anglingTimeChoice.textContent=h===0?'0 Stunden':(h>0?'+':'−')+abs+' '+(abs===1?'Stunde':'Stunden');anglingTimeDuration.textContent='Dauer '+(abs*.5).toFixed(1).replace('.',',')+' Sekunden · Kosten '+abs+' EP';anglingTimeForwardLeft.textContent='Vorwärts: '+forwardLeft+' verfügbar';anglingTimeBackwardLeft.textContent='Zurück: '+backwardLeft+' verfügbar';const directionOk=h>0?forwardLeft>0:h<0?backwardLeft>0:false;anglingTimeStart.disabled=abs<1||!directionOk||anglingProgress.xp<abs||!!anglingTimeShiftActive||!!anglingTimeShiftPending;anglingTimeStart.textContent=anglingProgress.xp<abs?'Nicht genug EP':'Zeitraffer starten';}
 function openAnglingTimePanel(){if(!anglingTimeAvailableNow()||guardAnglingMenuOpen())return;closeAnglingGamePanels();updateAnglingTimeUi();markAnglingGamePanelOpen(anglingTimePanel);}
 function setSeasonTimeFromAbsoluteHours(absHours){const totalDays=365;let dayIndex=Math.floor(absHours/24),hour=absHours-dayIndex*24;while(dayIndex<0)dayIndex+=totalDays;dayIndex%=totalDays;if(hour<0){hour+=24;dayIndex=(dayIndex-1+totalDays)%totalDays;}seasonTestDay=dayIndex+1;seasonTestHour=hour;setSeasonTimeAnchor(seasonDateFromDayHour(seasonTestDay,seasonTestHour));}
-function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.5,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=46;camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAnglingTimeUi();}
+function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.5,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAnglingTimeUi();}
 function requestAnglingTimeShift(){
   const hours=Math.trunc(Number(anglingTimeHours.value)||0),cost=Math.abs(hours);
   if(!hours)return;
@@ -21066,7 +21170,7 @@ function confirmAnglingShore(){
   anglingWaterTarget=1;
   camera.near=.045;camera.updateProjectionMatrix();
   beginAnglingCamera(
-    anglingSelection.cameraPos,anglingSelection.lookTarget,46,1.55,()=>{
+    anglingSelection.cameraPos,anglingSelection.lookTarget,anglingShoreFieldOfView(),1.55,()=>{
       anglingState='ready';anglingStateTime=0;
   anglingLureEntryTime=0;anglingUnderwaterEntry.classList.remove('show');anglingUnderwaterEntry.style.opacity='0';
   anglingLureSteerX=anglingLureSteerY=anglingLureSteerTargetX=anglingLureSteerTargetY=0;anglingCinematicView='shore';waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;
@@ -22036,6 +22140,7 @@ function startAnglingCast(){
   if(anglingUsesDeeper()&&!fishWorldBuilt)buildFishWorld();
   if(anglingUsesArtificialLure())ensureAnglingLureUnderwaterWorld();
   if(!anglingMode||anglingState!=='ready'||!anglingSelection) return;
+  resetAnglingFastTap();
   if(!anglingAimLocked){showAnglingToast('Zuerst die Angelstelle mit einem Tipp festlegen.');return;}
   if(anglingUsesArtificialLure()&&anglingLureStock(anglingSelectedLureId)<1){
     showAnglingToast(anglingEmptyBaitMessage(anglingActiveLure().type),2200);openAnglingShop();return;
@@ -22068,7 +22173,7 @@ function startAnglingCast(){
   // erzwingen. Der gespeicherte Rückkehr-/Livebild-Blick kann damit nicht aus
   // einem älteren oder seitlich verschobenen Target stammen.
   applyAnglingStraightShoreCamera(true);
-  camera.fov=46;camera.updateProjectionMatrix();
+  camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();
   camera.updateMatrixWorld(true);anglingRodTip.getWorldPosition(anglingCastStart);
   anglingCastEnd.copy(anglingSelection.aim);
   const side=anglingCurrentDirection(new THREE.Vector3()).applyAxisAngle(anglingUp,Math.PI/2);
@@ -22772,7 +22877,7 @@ function beginAnglingLureAttack(){
 
 function anglingRetrieveHint(){
   const touch=window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;
-  return touch?'Tippen: +0,5 m · halten: einholen':'Klick: +0,5 m · halten: einholen · Rechtsklick: neu';
+  return touch?'Tippen: +0,5 m · halten: einholen · Doppeltipp: ganz einholen':'Klick: +0,5 m · halten: einholen · Rechtsklick: neu';
 }
 function setAnglingLureSteerFromPointer(clientX,clientY){
   if(!anglingUsesArtificialLure()||!anglingUi.classList.contains('line-active'))return;
@@ -22845,8 +22950,30 @@ function anglingRodDepthLabel(){
 }
 function anglingCanManualRetrieve(){return ['waiting','approach','lure-waiting','deeper-waiting'].includes(anglingState);}
 function anglingCanFastAbort(){return ['waiting','approach','retrieving','lure-waiting','lure-retrieving','lure-missed','deeper-waiting','deeper-retrieving'].includes(anglingState);}
+function resetAnglingFastTap(){
+  anglingLastFastTapAt=0;anglingLastFastTapX=0;anglingLastFastTapY=0;
+}
+function handleAnglingFastRetrieveDoubleTap(e,start){
+  if(e.pointerType!=='touch'||!start||start.moved||!anglingUi.classList.contains('line-active')||!anglingCanFastAbort()){
+    if(e.pointerType==='touch'&&start?.moved)resetAnglingFastTap();
+    return false;
+  }
+  const now=performance.now();
+  if(now-(start.startedAt||now)>320){resetAnglingFastTap();return false;}
+  const secondTap=anglingLastFastTapAt>0
+    &&now-anglingLastFastTapAt<=380
+    &&Math.hypot(e.clientX-anglingLastFastTapX,e.clientY-anglingLastFastTapY)<=34;
+  if(secondTap){
+    resetAnglingFastTap();
+    beginFastAnglingRetrieve();
+    return true;
+  }
+  anglingLastFastTapAt=now;anglingLastFastTapX=e.clientX;anglingLastFastTapY=e.clientY;
+  return false;
+}
 function beginFastAnglingRetrieve(){
   if(!anglingSelection||!anglingCanFastAbort())return;
+  resetAnglingFastTap();
   resetAnglingRetrieveWake();
   stopAnglingActionHold?.();anglingPendingCatch=null;anglingFishShadow.visible=false;anglingFishVisual.visible=false;
   anglingQte.classList.remove('show','now','second-lap');
@@ -22971,6 +23098,7 @@ function resetAnglingCast(){
   resetAnglingRetrieveWake();
   resetAnglingDeeperScan();
   if(!anglingMode||!anglingSelection) return;
+  resetAnglingFastTap();
   resetAnglingUnderwaterState(false);
 
   // V6.35: Nach Drill/Keschern/Fangkarte immer exakt zur zuvor gespeicherten
@@ -22983,7 +23111,7 @@ function resetAnglingCast(){
   camera.position.copy(anglingShoreCameraPos);
   controls.target.copy(anglingShoreCameraTarget);
   camera.up.set(0,0,1);
-  camera.fov=46;
+  camera.fov=anglingShoreFieldOfView();
   camera.near=.045;
   camera.updateProjectionMatrix();
   applyAnglingStraightShoreCamera(false);
@@ -23681,7 +23809,7 @@ function updateAnglingMode(dt){
   // zurückgesetzt. Keine andere Hilfs-/Zielberechnung darf einen Restwinkel addieren.
   if(anglingState==='ready'&&!anglingCameraTransition&&anglingCinematicView==='shore'){
     applyAnglingStraightShoreCamera(true);
-    camera.fov=46;camera.updateProjectionMatrix();
+    camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();
   }
   setAnglingMobilePerformance(cinematicUnderwater&&anglingUsesArtificialLure());
   anglingLureSteerX+=(anglingLureSteerTargetX-anglingLureSteerX)*Math.min(1,dt*6.2);
@@ -24324,6 +24452,17 @@ function setAnglingLandingNetFromPointer(clientX){
   const nx=THREE.MathUtils.clamp(((clientX-rect.left)/Math.max(1,rect.width)-.5)*2,-1,1);
   anglingLandingNetTarget=-nx*ANGLING_LANDING_NET_MAX_OFFSET;
 }
+function anglingTextSelectionAllowed(target){
+  return target instanceof Element&&!!target.closest('input,textarea,[contenteditable="true"]');
+}
+document.addEventListener('selectstart',e=>{
+  if(!anglingMode||anglingGamePanelOpen()||anglingTextSelectionAllowed(e.target))return;
+  e.preventDefault();
+},{capture:true});
+document.addEventListener('dragstart',e=>{
+  if(!anglingMode||anglingGamePanelOpen()||anglingTextSelectionAllowed(e.target))return;
+  e.preventDefault();
+},{capture:true});
 renderer.domElement.addEventListener('contextmenu',e=>{
   if(anglingGamePanelOpen())return;
   if(anglingFeedMode){e.preventDefault();cancelAnglingFeedTargeting();return;}
@@ -24377,7 +24516,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     anglingActionHeld=true;anglingActionHoldPointer=e.pointerId;anglingActionHoldStartedAt=performance.now();
     renderer.domElement.setPointerCapture?.(e.pointerId);retrieveAnglingLine();
   }
-  anglingPointerStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,dragX:0,moved:false});
+  anglingPointerStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,dragX:0,moved:false,startedAt:performance.now()});
   e.preventDefault();e.stopImmediatePropagation();
 },{capture:true,passive:false});
 
@@ -24423,6 +24562,10 @@ renderer.domElement.addEventListener('pointerup',e=>{
     if(anglingState==='drilling')setAnglingReeling(false);
     stopAnglingActionHold();
   }
+  if(handleAnglingFastRetrieveDoubleTap(e,start)){
+    try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch(err){}
+    e.preventDefault();e.stopImmediatePropagation();return;
+  }
   if(start&&anglingState==='selecting'&&!start.moved&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<10)selectAnglingShore(e.clientX,e.clientY);
   else if(start&&anglingState==='ready'){
     setAnglingAimFromPointer(e.clientX,e.clientY,false,0);anglingAimLocked=true;anglingUi.classList.add('aim-locked');
@@ -24434,7 +24577,7 @@ renderer.domElement.addEventListener('pointerup',e=>{
 renderer.domElement.addEventListener('pointercancel',e=>{
   if(!anglingMode||anglingGamePanelOpen())return;
   if(anglingActionHoldPointer===e.pointerId){if(anglingState==='drilling')setAnglingReeling(false);stopAnglingActionHold();}
-  anglingPointerStarts.delete(e.pointerId);e.preventDefault();e.stopImmediatePropagation();
+  anglingPointerStarts.delete(e.pointerId);if(e.pointerType==='touch')resetAnglingFastTap();e.preventDefault();e.stopImmediatePropagation();
 },{capture:true,passive:false});
 
 renderer.domElement.addEventListener('wheel',e=>{
