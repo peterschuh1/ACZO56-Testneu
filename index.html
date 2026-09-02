@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.102 · Mobile Bedienung &amp; Kompaktmenü</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.103 · Mobile Abstand, Kompaktmenüs &amp; Profilbereinigung</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3203,6 +3203,168 @@ html,body{
   }
 }
 
+/* V8.103: Die Telefon-Erkennung kommt zusätzlich aus JavaScript. Das ist
+   absichtlich nicht nur eine CSS-Media-Query: iOS-Vorschauen und eingebettete
+   Browser melden Pointer und Viewport nicht immer in derselben Kombination. */
+.aczo-phone-layout .angling-fixed-menu-btn{
+  top:7px!important;left:7px!important;width:38px!important;min-width:38px!important;
+  height:35px!important;min-height:35px!important;padding:0!important;
+  border-radius:10px!important;font-size:15px!important
+}
+.aczo-phone-layout .angling-clock-display{
+  top:7px!important;right:7px!important;padding:3px 7px!important;
+  border-radius:999px!important;font-size:8.5px!important
+}
+
+/* Menü und Uhr bekommen eine eigene freie Kopfzeile. Kein Bedienfeld darf
+   mehr unter ihnen beginnen. */
+.aczo-phone-layout .angling-select-panel{
+  top:49px!important;width:calc(100% - 24px)!important;padding:6px 7px!important;
+  border-radius:11px!important
+}
+.aczo-phone-layout .angling-select-title{font-size:11px!important;margin-bottom:1px!important}
+.aczo-phone-layout .angling-select-text{font-size:7.6px!important;line-height:1.22!important}
+.aczo-phone-layout .angling-select-actions{gap:4px!important;margin-top:5px!important;flex-wrap:nowrap!important}
+.aczo-phone-layout .angling-select-actions button{
+  flex:1 1 0!important;min-width:0!important;min-height:28px!important;
+  padding:3px 6px!important;font-size:8.2px!important
+}
+
+.aczo-phone-layout .angling-setup{
+  top:49px!important;width:calc(100% - 24px)!important;padding:4px 5px!important;
+  border-radius:11px!important
+}
+.aczo-phone-layout .angling-game-menu-row{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  grid-template-rows:35px 28px!important;gap:3px!important;margin:0 0 2px!important
+}
+.aczo-phone-layout #anglingBaitBoxBtn{grid-column:1;grid-row:1}
+.aczo-phone-layout #anglingShopBtn{grid-column:2;grid-row:1}
+.aczo-phone-layout #anglingTimeBtn{grid-column:1;grid-row:2}
+.aczo-phone-layout #anglingEpBadge{grid-column:2;grid-row:2}
+.aczo-phone-layout .angling-game-menu-row > #anglingBaitBoxBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingShopBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingTimeBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingEpBadge{
+  order:initial!important;box-sizing:border-box!important;width:100%!important;
+  min-width:0!important;max-width:none!important;margin:0!important
+}
+.aczo-phone-layout .angling-game-menu-row > #anglingBaitBoxBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingShopBtn{
+  height:35px!important;min-height:35px!important;padding:2px 5px!important;
+  border-radius:9px!important;gap:4px!important
+}
+.aczo-phone-layout .angling-game-menu-row > #anglingTimeBtn,
+.aczo-phone-layout .angling-game-menu-row > #anglingEpBadge{
+  height:28px!important;min-height:28px!important;flex-basis:auto!important;
+  border-radius:9px!important
+}
+.aczo-phone-layout .angling-game-menu-row > #anglingTimeBtn{padding:2px 5px!important;gap:4px!important}
+.aczo-phone-layout .angling-game-menu-row > #anglingEpBadge{
+  flex-direction:row!important;justify-content:center!important;gap:5px!important
+}
+.aczo-phone-layout .game-menu-icon{font-size:12.5px!important}
+.aczo-phone-layout .game-menu-copy small{font-size:6.1px!important;line-height:1!important}
+.aczo-phone-layout .game-menu-copy strong{font-size:7.8px!important;line-height:1.06!important}
+.aczo-phone-layout .game-menu-hint{display:none!important}
+.aczo-phone-layout .angling-ep-badge small{font-size:6.3px!important}
+.aczo-phone-layout .angling-ep-badge strong{font-size:10.5px!important}
+.aczo-phone-layout .angling-level-progress{
+  gap:4px!important;margin:1px 0!important;padding:2px 5px!important;border-radius:7px!important
+}
+.aczo-phone-layout .angling-level-progress strong{font-size:7.1px!important}
+.aczo-phone-layout .angling-level-progress small{font-size:6.1px!important}
+.aczo-phone-layout .angling-level-track{height:4px!important}
+.aczo-phone-layout .angling-setup > .angling-setup-row:not(.angling-game-menu-row){
+  gap:3px!important;margin:1px 0!important
+}
+.aczo-phone-layout .angling-setup-label{font-size:7.2px!important}
+.aczo-phone-layout .angling-distance-value{font-size:8px!important}
+.aczo-phone-layout .angling-setup-hint{margin-top:0!important;font-size:6.7px!important;line-height:1.16!important}
+
+.aczo-phone-layout .angling-drill-panel{
+  top:49px!important;width:calc(100% - 24px)!important;padding:5px 7px!important;border-radius:11px!important
+}
+.aczo-phone-layout .angling-drill-title{font-size:10.5px!important;margin-bottom:3px!important}
+.aczo-phone-layout .angling-drill-row{
+  grid-template-columns:72px 1fr 48px!important;gap:4px!important;margin:3px 0!important;font-size:7.5px!important
+}
+.aczo-phone-layout .angling-drill-help{font-size:7.2px!important;margin:2px 0 4px!important}
+.aczo-phone-layout .angling-reel-btn{
+  min-width:148px!important;min-height:35px!important;padding:4px 12px!important;
+  gap:6px!important;font-size:9px!important
+}
+.aczo-phone-layout .angling-reel-icon{width:22px!important;height:22px!important}
+
+/* Einblendungen und Verwaltungsfenster bleiben lesbar, verdecken auf dem
+   Telefon aber deutlich weniger von der eigentlichen 3D-Szene. */
+.aczo-phone-layout .angling-daily-quest-intro{width:min(84vw,460px)!important}
+.aczo-phone-layout .angling-daily-quest-intro-card{padding:10px 9px 9px!important;border-radius:14px!important}
+.aczo-phone-layout .angling-daily-quest-intro-head{margin-bottom:7px!important}
+.aczo-phone-layout .angling-daily-quest-intro-head small{font-size:7px!important}
+.aczo-phone-layout .angling-daily-quest-intro-head strong{font-size:22px!important;margin-top:2px!important}
+.aczo-phone-layout .angling-daily-quest-date{font-size:8.5px!important;margin-top:3px!important}
+.aczo-phone-layout .angling-daily-quest-list{gap:5px!important}
+.aczo-phone-layout .angling-daily-quest-item{
+  grid-template-columns:23px 1fr auto!important;gap:5px!important;padding:6px!important;border-radius:9px!important
+}
+.aczo-phone-layout .angling-daily-quest-icon{font-size:15px!important}
+.aczo-phone-layout .angling-daily-quest-copy strong{font-size:9px!important}
+.aczo-phone-layout .angling-daily-quest-copy span{font-size:7.5px!important;line-height:1.25!important}
+.aczo-phone-layout .angling-daily-quest-reward{font-size:8px!important}
+.aczo-phone-layout .angling-daily-quest-progress{font-size:7px!important;margin-top:1px!important}
+.aczo-phone-layout .angling-daily-quest-footer{
+  gap:6px!important;margin-top:7px!important;padding-top:6px!important;font-size:7.4px!important
+}
+.aczo-phone-layout .angling-daily-quest-intro-hint{margin-top:5px!important;font-size:6.8px!important}
+
+.aczo-phone-layout .angling-game-panel{
+  width:calc(100% - 28px)!important;max-height:76%!important;padding:7px!important;border-radius:13px!important
+}
+.aczo-phone-layout .angling-game-panel-head{
+  top:-7px!important;margin:-7px -7px 6px!important;padding:7px 82px 6px 8px!important
+}
+.aczo-phone-layout .angling-game-panel-head small{font-size:6.8px!important}
+.aczo-phone-layout .angling-game-panel-head strong{font-size:13px!important}
+.aczo-phone-layout .angling-category{margin-bottom:8px!important}
+.aczo-phone-layout .angling-category-head{
+  min-height:30px!important;padding:5px 7px!important;gap:5px!important;font-size:9px!important
+}
+.aczo-phone-layout .angling-category-head strong{font-size:9px!important}
+.aczo-phone-layout .angling-category-head > span:first-child{font-size:13px!important}
+.aczo-phone-layout .angling-category-head small{font-size:6.8px!important;padding:2px 5px!important}
+.aczo-phone-layout .angling-category-grid{gap:6px!important}
+.aczo-phone-layout .angling-item-card{min-height:80px!important;padding:7px 8px!important;border-radius:10px!important}
+.aczo-phone-layout .angling-item-top{gap:7px!important;padding-right:34px!important}
+.aczo-phone-layout .angling-item-icon{flex-basis:42px!important;width:42px!important;height:32px!important}
+.aczo-phone-layout .angling-item-icon svg{width:40px!important;height:30px!important}
+.aczo-phone-layout .angling-item-title{font-size:10.5px!important}
+.aczo-phone-layout .angling-item-desc{font-size:8px!important;line-height:1.28!important;margin-top:3px!important}
+.aczo-phone-layout .angling-item-stock{right:7px!important;top:7px!important;font-size:7.5px!important;padding:3px 5px!important}
+.aczo-phone-layout .angling-item-tag{margin-top:4px!important;font-size:7px!important;padding:2px 5px!important}
+.aczo-phone-layout .angling-item-action{margin-top:5px!important;min-height:28px!important;font-size:8px!important;padding:3px 6px!important}
+
+.aczo-phone-layout .angling-main-menu{padding:9px!important}
+.aczo-phone-layout .angling-main-card{
+  width:calc(100% - 10px)!important;max-height:calc(100% - 18px)!important;
+  padding:9px!important;border-radius:13px!important
+}
+.aczo-phone-layout .angling-main-head{gap:7px!important;margin-bottom:7px!important}
+.aczo-phone-layout .angling-main-head small{font-size:7px!important}
+.aczo-phone-layout .angling-main-head strong{font-size:16px!important}
+.aczo-phone-layout .angling-main-head p{font-size:8.5px!important;line-height:1.32!important;margin-top:3px!important}
+.aczo-phone-layout .angling-main-grid{gap:6px!important}
+.aczo-phone-layout .angling-main-section{padding:8px!important;border-radius:11px!important}
+.aczo-phone-layout .angling-main-section-title{margin-bottom:6px!important}
+.aczo-phone-layout .angling-main-section-title > div small{font-size:6.8px!important}
+.aczo-phone-layout .angling-main-section-title h3{font-size:11px!important}
+.aczo-phone-layout .angling-main-section-title > p{font-size:8px!important;line-height:1.3!important}
+.aczo-phone-layout .angling-main-actions{gap:4px!important}
+.aczo-phone-layout .angling-main-btn{min-height:34px!important;padding:5px 7px!important;font-size:8.5px!important}
+.aczo-phone-layout .angling-main-profile-options{gap:4px!important;margin-top:4px!important}
+.aczo-phone-layout .angling-main-profile-options label{padding:5px 6px!important;font-size:8px!important}
+.aczo-phone-layout .angling-main-status{font-size:8px!important;line-height:1.3!important;padding:5px 7px!important;margin-top:5px!important}
+
 </style>
 </head>
 <body>
@@ -3833,7 +3995,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.102 · MOBILE-BEDIENUNG-KOMPAKTMENUE';
+const VIEWER_VERSION='V8.103 · MOBILE-ABSTAND-KOMPAKTMENUES-PROFILBEREINIGUNG';
 const VIEWER_BUILD='27.08.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -9116,6 +9278,7 @@ function syncVisibleViewerHeight(){
  const viewport=window.visualViewport;
  const visibleHeight=Math.round((viewport&&viewport.height)||window.innerHeight||document.documentElement.clientHeight||0);
  if(visibleHeight>0)document.documentElement.style.setProperty('--aczo-visible-height',visibleHeight+'px');
+ if(typeof syncAnglingPhoneLayoutClass==='function')syncAnglingPhoneLayoutClass();
 }
 function resize(){
  const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);
@@ -16047,17 +16210,36 @@ const anglingSpotPressure=new Map();
 const ANGLING_MIN_CAST_DISTANCE=1; // Nahangeln bis direkt vor dem Ufer zulassen
 const ANGLING_MAX_CAST_DISTANCE=100; // physisches Systemlimit; die aktive Rute begrenzt darunter individuell
 const ANGLING_SHORE_FOV=46;
-const ANGLING_PHONE_SHORE_FOV=43;
+const ANGLING_PHONE_SHORE_FOV=46;
+const ANGLING_PHONE_CAMERA_ZOOM=.82;
 let anglingLastFastTapAt=0,anglingLastFastTapX=0,anglingLastFastTapY=0;
 
-// V8.102: Auf einem echten Telefon wird nur der Bildwinkel leicht enger.
-// Position, Ziel und Uferachse der Kamera bleiben dabei vollständig identisch.
-function anglingShoreFieldOfView(){
+// V8.103: Telefonerkennung nicht allein von einer Media-Query abhängig machen.
+// Textastic, Safari und eingebettete iOS-Vorschauen liefern teils verschiedene
+// Kombinationen aus Pointertyp, Viewport und Bildschirmgröße.
+function anglingPhoneLayoutActive(){
   const coarse=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
+  const touch=(Number(navigator.maxTouchPoints)||0)>0;
   const viewport=window.visualViewport;
   const width=Math.max(1,(viewport&&viewport.width)||window.innerWidth||host.clientWidth||1);
   const height=Math.max(1,(viewport&&viewport.height)||window.innerHeight||host.clientHeight||1);
-  return coarse&&Math.min(width,height)<=680?ANGLING_PHONE_SHORE_FOV:ANGLING_SHORE_FOV;
+  const screenWidth=Math.max(1,Number(globalThis.screen&&globalThis.screen.width)||width);
+  const screenHeight=Math.max(1,Number(globalThis.screen&&globalThis.screen.height)||height);
+  return (coarse||touch)&&Math.min(width,height,screenWidth,screenHeight)<=720;
+}
+function syncAnglingPhoneLayoutClass(){
+  document.documentElement.classList.toggle('aczo-phone-layout',anglingPhoneLayoutActive());
+}
+function anglingGameCameraZoom(){
+  return anglingPhoneLayoutActive()?ANGLING_PHONE_CAMERA_ZOOM:1;
+}
+syncAnglingPhoneLayoutClass();
+
+// Position, Ziel, Uferachse und alle vorhandenen Kamerafahrten bleiben identisch.
+// Der kleinere Projektions-Zoom zeigt auf Telefonen in sämtlichen Spielsichten
+// lediglich mehr von derselben Szene, damit insbesondere die ganze Rute sichtbar ist.
+function anglingShoreFieldOfView(){
+  return anglingPhoneLayoutActive()?ANGLING_PHONE_SHORE_FOV:ANGLING_SHORE_FOV;
 }
 
 // V8.35 Lockfutter-System: maximal zwei voneinander getrennte Angelstellen.
@@ -18613,6 +18795,50 @@ async function fetchAnglingRecoveryPlayer(code){
   throw lastError||new Error('Cloud-Spielstand konnte nicht geladen werden');
 }
 
+// V8.103: Hat ein neues Gerät vor der Wiederherstellung bereits ein vollständig
+// leeres Cloud-Profil angelegt, würde dessen anonyme Sheet-Zeile sonst dauerhaft
+// zurückbleiben. Nur ein zweifelsfrei unbenutztes Profil darf automatisch weg.
+function captureDisposableAnglingProfileBeforeRecovery(){
+  const records=anglingProgress.records&&typeof anglingProgress.records==='object'
+    ?Object.keys(anglingProgress.records).length:0;
+  const catches=Array.isArray(anglingProgress.catches)?anglingProgress.catches.length:0;
+  const found=(typeof fishFoundSpecies!=='undefined'&&fishFoundSpecies)
+    ?fishFoundSpecies.size:0;
+  const recoveryCode=normalizeAnglingRecoveryCode(anglingRecoveryCode);
+  return {
+    playerId:String(anglingPlayerProfile?.id||''),
+    recoveryCode,
+    disposable:!!anglingSetupComplete&&!!anglingCloudEnabled
+      && !String(anglingPlayerProfile?.name||'').trim()
+      && Math.max(0,Math.floor(Number(anglingProgress.xp)||0))===0
+      && Math.max(0,Math.floor(Number(anglingProgress.lifetimeXp)||0))===0
+      && Math.max(0,Math.floor(Number(anglingProgress.totalCatches)||0))===0
+      && Math.max(0,Math.floor(Number(anglingProgress.baitfish)||0))===0
+      && records===0&&catches===0&&found===0
+      && recoveryCode.replace(/-/g,'').length===24
+  };
+}
+
+async function deleteDisposableAnglingProfileAfterRecovery(previous,newPlayerId){
+  if(!previous?.disposable||!previous.playerId||previous.playerId===String(newPlayerId||''))return false;
+  try{
+    const res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({
+        action:'deletePlayer',
+        playerId:previous.playerId,
+        recoveryCode:previous.recoveryCode
+      })
+    },12000);
+    const data=await res.json().catch(()=>null);
+    return !!(res.ok&&data&&data.ok!==false&&data.deleted===true);
+  }catch(err){
+    console.warn('Leeres Geräteprofil konnte nach der Wiederherstellung nicht entfernt werden.',err);
+    return false;
+  }
+}
+
 async function restoreAnglingPlayerFromCode(){
   const code=normalizeAnglingRecoveryCode(anglingRecoveryInput.value);
   if(code.replace(/-/g,'').length!==24){
@@ -18627,6 +18853,7 @@ async function restoreAnglingPlayerFromCode(){
   try{
     if(anglingCloudSyncTimer){window.clearTimeout(anglingCloudSyncTimer);anglingCloudSyncTimer=null;}
 
+    const previousProfile=captureDisposableAnglingProfileBeforeRecovery();
     const data=await fetchAnglingRecoveryPlayer(code);
 
     anglingPlayerProfile.id=String(data.playerId);
@@ -18644,8 +18871,11 @@ async function restoreAnglingPlayerFromCode(){
     saveAnglingRecoveryCode(code);
 
     applyAnglingCloudPlayer(data.player);
+    const removedTemporaryProfile=await deleteDisposableAnglingProfileAfterRecovery(previousProfile,data.playerId);
     anglingRecoveryInput.value='';
-    anglingRecoveryStatus.textContent='Spielstand erfolgreich wiederhergestellt. Das lokale Fangbuch blieb erhalten.';
+    anglingRecoveryStatus.textContent=removedTemporaryProfile
+      ?'Spielstand erfolgreich wiederhergestellt. Das leere Geräteprofil wurde aus der Cloud entfernt; das lokale Fangbuch blieb erhalten.'
+      :'Spielstand erfolgreich wiederhergestellt. Das lokale Fangbuch blieb erhalten.';
     showAnglingToast('Cloud-Spielstand wiederhergestellt.',1500);
     updateAnglingRecoveryUi();
 
@@ -20730,7 +20960,7 @@ function showAnglingIntroSlogan(){
   window.setTimeout(()=>{anglingIntroSlogan?.classList.remove('show');anglingIntroSlogan?.setAttribute('aria-hidden','true');},2400);
 }
 
-function beginAnglingCamera(toPosition,toTarget,toFov,duration,onComplete,toUp=null){
+function beginAnglingCamera(toPosition,toTarget,toFov,duration,onComplete,toUp=null,toZoom=null){
   const startTarget=controls.target.clone();
   if(skyLookMode){
     camera.getWorldDirection(anglingTmpA);
@@ -20742,7 +20972,11 @@ function beginAnglingCamera(toPosition,toTarget,toFov,duration,onComplete,toUp=n
     fromPosition:camera.position.clone(),toPosition:toPosition.clone(),
     fromTarget:startTarget,toTarget:toTarget.clone(),
     fromUp:camera.up.clone().normalize(),toUp:targetUp,
-    fromFov:camera.fov,toFov,onComplete,
+    fromFov:camera.fov,toFov,
+    fromZoom:Number(camera.zoom)||1,
+    toZoom:toZoom!==null&&toZoom!==undefined&&Number.isFinite(Number(toZoom))
+      ?Number(toZoom):(Number(camera.zoom)||1),
+    onComplete,
     fromQuaternion:camera.quaternion.clone(),toQuaternion:null,
     safeShoreFlight:false,flightShore:null,flightInward:null,overviewIntro:false,overviewTour:false,
     introAscentPath:null,introAscentLookPath:null
@@ -20962,6 +21196,7 @@ function updateAnglingCameraTransition(dt){
     }
   }
   camera.fov=THREE.MathUtils.lerp(tr.fromFov,tr.toFov,u);
+  camera.zoom=THREE.MathUtils.lerp(tr.fromZoom,tr.toZoom,u);
   if(tr.overviewIntro&&!tr.overviewTour)camera.fov+=Math.sin(Math.PI*rawU)*3.3;
   camera.updateProjectionMatrix();
 
@@ -20977,7 +21212,7 @@ function updateAnglingCameraTransition(dt){
     camera.position.copy(tr.toPosition);
     controls.target.copy(tr.toTarget);
     camera.up.copy(tr.toUp);
-    camera.fov=tr.toFov;camera.updateProjectionMatrix();
+    camera.fov=tr.toFov;camera.zoom=tr.toZoom;camera.updateProjectionMatrix();
     if(tr.safeShoreFlight&&tr.flightInward){
       camera.quaternion.copy(tr.toQuaternion||anglingCanonicalShoreQuaternion(tr.flightInward,anglingCanonicalQuatTmp));
       anglingStraightLookTarget(camera.position,tr.flightInward,controls.target);
@@ -21027,7 +21262,7 @@ function startAnglingMode(){
   updateAnglingSetupUi();
   anglingSaved={
     position:camera.position.clone(),target:controls.target.clone(),quaternion:camera.quaternion.clone(),
-    up:camera.up.clone(),fov:camera.fov,near:camera.near,controlsEnabled:controls.enabled,sceneFog:scene.fog,
+    up:camera.up.clone(),fov:camera.fov,zoom:Number(camera.zoom)||1,near:camera.near,controlsEnabled:controls.enabled,sceneFog:scene.fog,
     waterVisible,moselWaterVisible:typeof moselWaterSurface!=='undefined'?moselWaterSurface.visible:false,
     locationVisible:locationGroup.visible,measureVisible:measureGroup.visible,
     depthPinVisible:depthPinGroup.visible,depthPinGuideVisible:depthPinGuide.visible,depthLabelDisplay:depthPinLabel.style.display,
@@ -21057,7 +21292,7 @@ function startAnglingMode(){
       enforceAnglingSurfaceOnly();
       anglingSelectTitle.textContent='🎣 Angelplatz wählen';
       showAnglingDailyQuestIntroIfNeeded();
-    },new THREE.Vector3(0,1,0)
+    },new THREE.Vector3(0,1,0),anglingGameCameraZoom()
   );
   if(anglingCameraTransition){
     // Erster Einstieg wieder nur als leichter Anhebe-/Überblickszoom, ohne Fahnenrundflug.
@@ -23605,7 +23840,7 @@ function beginLeaveAngling(){
   // und Sichtbarkeitswerte bis zum naechsten Start im Speicher.
   if(anglingOverviewCrossfadeState)finishAnglingOverviewCrossfade();
   beginAnglingExitCrossfade();
-  beginAnglingCamera(anglingSaved.position,anglingSaved.target,anglingSaved.fov,2.15,finishLeaveAngling,anglingSaved.up);
+  beginAnglingCamera(anglingSaved.position,anglingSaved.target,anglingSaved.fov,2.15,finishLeaveAngling,anglingSaved.up,anglingSaved.zoom);
 }
 
 function finishLeaveAngling(){
@@ -23620,7 +23855,7 @@ function finishLeaveAngling(){
   finishAnglingExitCrossfade();
   camera.position.copy(saved.position);controls.target.copy(saved.target);
   camera.up.copy(saved.up);camera.quaternion.copy(saved.quaternion);
-  camera.fov=saved.fov;camera.near=saved.near;camera.updateProjectionMatrix();
+  camera.fov=saved.fov;camera.zoom=Number(saved.zoom)||1;camera.near=saved.near;camera.updateProjectionMatrix();
   controls.enabled=saved.controlsEnabled;
   // Angel-/Unterwasser-Shader sofort vollständig verlassen. Kein langsames Nachblenden.
   anglingWaterTarget=0;waterUniforms.anglingView.value=0;waterUniforms.underwaterView.value=0;waterUniforms.anglingIntroFade.value=1;
