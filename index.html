@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.109 · Kescher- und EP-Anzeigen getrennt</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.111 · Mobile Typografie</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3642,6 +3642,185 @@ html,body{
   text-align:center
 }
 
+/* V8.111: Durchgängige mobile Typografie. Ausschließlich Schriftgröße,
+   Schriftstärke, Zeilenhöhe und Textüberlauf werden angepasst. Abmessungen,
+   Positionen und Innenabstände aller Menüs, Fenster und Buttons bleiben exakt
+   bei den Werten aus V8.110. */
+.aczo-phone-layout .angling-ui,
+.aczo-phone-layout .angling-main-menu,
+.aczo-phone-layout .angling-hof{
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility
+}
+
+/* Kartenansicht und allgemeine Viewer-Hinweise. */
+.aczo-phone-layout .controls button{font-size:9.4px!important;font-weight:900!important;line-height:1.05!important;letter-spacing:-.1px!important}
+.aczo-phone-layout .legend{font-size:8.3px!important;font-weight:800!important}
+.aczo-phone-layout .astro-time{font-size:11px!important;font-weight:950!important}
+.aczo-phone-layout .astro-sub{font-size:9px!important;font-weight:750!important;line-height:1.25!important}
+.aczo-phone-layout .control-hint{font-size:9.5px!important;font-weight:800!important}
+.aczo-phone-layout .depth-pin-label,
+.aczo-phone-layout .measure-label{font-size:10.5px!important;font-weight:900!important}
+.aczo-phone-layout .fish-view-btn,
+.aczo-phone-layout .angling-start-btn{font-size:10px!important;font-weight:950!important}
+.aczo-phone-layout .fish-view-info,
+.aczo-phone-layout .fish-collection-progress{font-size:8.8px!important;font-weight:850!important}
+.aczo-phone-layout .fish-collection-item span{font-size:7.4px!important;font-weight:850!important;line-height:1.05!important}
+.aczo-phone-layout .help-card h2{font-size:17px!important;font-weight:950!important}
+.aczo-phone-layout .help-card .help-intro{font-size:11px!important;font-weight:700!important}
+.aczo-phone-layout .help-item strong{font-size:11px!important;font-weight:950!important}
+.aczo-phone-layout .help-item span{font-size:10.2px!important;font-weight:700!important;line-height:1.38!important}
+.aczo-phone-layout .help-note{font-size:10px!important;font-weight:700!important}
+
+/* Feste Kopfzeile, Stellenauswahl und laufende Angelansicht. */
+.aczo-phone-layout .angling-clock-display{font-size:9.8px!important;font-weight:950!important}
+.aczo-phone-layout .angling-select-title{font-size:11.8px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-select-text{font-size:8.5px!important;font-weight:850!important;line-height:1.08!important}
+.aczo-phone-layout .angling-select-actions button{font-size:9.3px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-line-summary{font-size:9.3px!important;font-weight:950!important;line-height:1.05!important}
+.aczo-phone-layout .angling-status{font-size:9.2px!important;font-weight:900!important;line-height:1.12!important}
+.aczo-phone-layout .angling-status strong{font-size:11px!important;font-weight:1000!important;line-height:1.05!important}
+.aczo-phone-layout .angling-hud-panel button{font-size:9.8px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-aim-reticle span{font-size:9.5px!important;font-weight:1000!important}
+
+/* Oberes Ausrüstungsmenü: zwei Textzeilen passen weiterhin in dieselben
+   festen Zeilenhöhen, sind aber deutlich kräftiger und größer. */
+.aczo-phone-layout .game-menu-copy small{font-size:7.2px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .game-menu-copy strong{font-size:9.2px!important;font-weight:1000!important;line-height:1.02!important}
+.aczo-phone-layout .angling-ep-badge small{font-size:7.2px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-ep-badge strong{font-size:11.2px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-level-progress strong{font-size:7.6px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-level-progress small{font-size:7px!important;font-weight:900!important;line-height:1!important}
+.aczo-phone-layout .angling-setup-label{font-size:7.9px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-distance-value{font-size:9.2px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-setup-hint{font-size:7.6px!important;font-weight:850!important;line-height:1.08!important}
+.aczo-phone-layout .angling-submenu-row .angling-option{font-size:8.8px!important;font-weight:950!important;line-height:1!important}
+
+/* Livefenster, Futter und Sonar. */
+.aczo-phone-layout .angling-float-zoom::before{font-size:8px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-float-caption,
+.aczo-phone-layout .angling-reel-zoom .angling-float-caption{font-size:8.8px!important;font-weight:1000!important;line-height:1.05!important}
+.aczo-phone-layout .angling-feed-btn{font-size:8px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-feed-cursor span{font-size:8.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-feed-timer{font-size:8.6px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-ui.deeper-active .angling-deeper-footer{font-size:7.8px!important;font-weight:900!important;line-height:1.05!important}
+.aczo-phone-layout .angling-ui.deeper-active .angling-deeper-save{font-size:8.2px!important;font-weight:1000!important;line-height:1!important}
+
+/* Drill und Kescher. */
+.aczo-phone-layout .angling-drill-title{font-size:11px!important;font-weight:1000!important;line-height:1.05!important}
+.aczo-phone-layout .angling-drill-direction{font-size:10.5px!important;font-weight:1000!important;line-height:1.05!important}
+.aczo-phone-layout .angling-drill-brake .angling-option{font-size:8.2px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-drill-row{font-size:8.2px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-drill-help{font-size:7.8px!important;font-weight:850!important;line-height:1.08!important}
+.aczo-phone-layout .angling-reel-btn{font-size:9.6px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-ui.is-landing .angling-landing-btn{font-size:11px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-catch-sequence{font-size:12.5px!important;font-weight:1000!important;line-height:1.15!important}
+
+/* Köderbox, Shop, Hilfe, Fangbuch und Bestenliste. */
+.aczo-phone-layout .angling-game-panel-head small{font-size:8.2px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-game-panel-head strong{font-size:15px!important;font-weight:1000!important;line-height:1.08!important}
+.aczo-phone-layout .angling-game-panel-head .angling-panel-close small{font-size:8.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-category-head{font-size:10px!important;font-weight:1000!important;line-height:1.05!important}
+.aczo-phone-layout .angling-category-head strong{font-size:10px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-category-head small{font-size:8px!important;font-weight:900!important;line-height:1!important}
+.aczo-phone-layout .angling-item-title{font-size:11.5px!important;font-weight:1000!important;line-height:1.08!important}
+.aczo-phone-layout .angling-item-desc{font-size:9.2px!important;font-weight:750!important;line-height:1.25!important}
+.aczo-phone-layout .angling-item-stock{font-size:8.5px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-item-tag{font-size:8px!important;font-weight:950!important;line-height:1!important}
+.aczo-phone-layout .angling-item-action{font-size:9.5px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-help-content h3{font-size:11px!important;font-weight:1000!important;line-height:1.1!important}
+.aczo-phone-layout .angling-help-content p{font-size:9.4px!important;font-weight:750!important;line-height:1.35!important}
+.aczo-phone-layout .angling-leaderboard-toolbar label,
+.aczo-phone-layout .angling-leaderboard-state,
+.aczo-phone-layout .angling-leaderboard-note,
+.aczo-phone-layout .angling-leaderboard-profile>label:first-child,
+.aczo-phone-layout .angling-leaderboard-consent{font-size:9.4px!important;font-weight:850!important;line-height:1.3!important}
+.aczo-phone-layout .angling-log-summary{font-size:9.5px!important;font-weight:900!important}
+.aczo-phone-layout .angling-log-record{font-size:8.8px!important;font-weight:900!important;line-height:1.2!important}
+.aczo-phone-layout .angling-log-record strong{font-size:9.8px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-log-entry{font-size:9.2px!important;font-weight:900!important;line-height:1.15!important}
+.aczo-phone-layout .angling-log-empty{font-size:10px!important;font-weight:850!important}
+.aczo-phone-layout .angling-log-panel button{font-size:10px!important;font-weight:1000!important}
+
+/* Hauptmenü, Profil und Wiederherstellung. Die Karten bleiben unverändert und
+   können wie bisher innerhalb ihres festen Fensters gescrollt werden. */
+.aczo-phone-layout .angling-main-head small{font-size:8.3px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-main-head strong{font-size:18px!important;font-weight:1000!important;line-height:1.03!important}
+.aczo-phone-layout .angling-main-head p{font-size:9.7px!important;font-weight:800!important;line-height:1.27!important}
+.aczo-phone-layout .angling-main-section-title > div small{font-size:8px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-main-section-title h3{font-size:13px!important;font-weight:1000!important;line-height:1.08!important}
+.aczo-phone-layout .angling-main-section-title > p,
+.aczo-phone-layout .angling-main-section p{font-size:9.4px!important;font-weight:750!important;line-height:1.3!important}
+.aczo-phone-layout .angling-main-btn{font-size:10.2px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-main-field label{font-size:9.5px!important;font-weight:950!important}
+.aczo-phone-layout .angling-main-profile-options label{font-size:9.3px!important;font-weight:900!important;line-height:1.2!important}
+.aczo-phone-layout .angling-main-toggle{font-size:10px!important;font-weight:950!important;line-height:1.15!important}
+.aczo-phone-layout .angling-main-status{font-size:9.2px!important;font-weight:850!important;line-height:1.25!important}
+.aczo-phone-layout .angling-cloud-state{font-size:9.5px!important;font-weight:850!important;line-height:1.28!important}
+.aczo-phone-layout .angling-main-explain,
+.aczo-phone-layout .angling-main-details summary,
+.aczo-phone-layout .angling-main-details p,
+.aczo-phone-layout .angling-main-reset-card>p,
+.aczo-phone-layout .angling-main-recovery-block p{font-size:9.3px!important;font-weight:800!important;line-height:1.32!important}
+.aczo-phone-layout .angling-main-toggle-note{font-size:8.7px!important;font-weight:750!important;line-height:1.25!important}
+.aczo-phone-layout .angling-main-subheading,
+.aczo-phone-layout .angling-main-reset-card>strong{font-size:10.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-main-link-btn{font-size:9.7px!important;font-weight:900!important;line-height:1.2!important}
+.aczo-phone-layout .angling-main-action-link,
+.aczo-phone-layout .angling-community-item,
+.aczo-phone-layout .angling-main-community-box h4{font-size:9.6px!important;font-weight:900!important;line-height:1.2!important}
+.aczo-phone-layout .angling-community-item small{font-size:8.7px!important;font-weight:750!important}
+.aczo-phone-layout .angling-recovery-card h3{font-size:12.5px!important;font-weight:1000!important;line-height:1.08!important}
+.aczo-phone-layout .angling-recovery-card p{font-size:9.4px!important;font-weight:750!important;line-height:1.32!important}
+.aczo-phone-layout .angling-recovery-code-row button,
+.aczo-phone-layout .angling-recovery-action{font-size:9.7px!important;font-weight:1000!important;line-height:1!important}
+.aczo-phone-layout .angling-recovery-warning,
+.aczo-phone-layout .angling-recovery-status{font-size:8.8px!important;font-weight:800!important;line-height:1.25!important}
+
+/* Zeitraffer, Tagesaufgaben, Hall of Fame und kurze Meldungen. */
+.aczo-phone-layout .angling-time-slider span,
+.aczo-phone-layout .angling-time-choice small,
+.aczo-phone-layout .angling-time-meta div{font-size:9.2px!important;font-weight:900!important;line-height:1.15!important}
+.aczo-phone-layout .angling-time-note{font-size:8.8px!important;font-weight:750!important;line-height:1.32!important}
+.aczo-phone-layout .angling-daily-quest-intro-head small{font-size:8.4px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-daily-quest-date{font-size:9.8px!important;font-weight:900!important}
+.aczo-phone-layout .angling-daily-quest-copy strong{font-size:10.5px!important;font-weight:1000!important;line-height:1.08!important}
+.aczo-phone-layout .angling-daily-quest-copy span{font-size:8.8px!important;font-weight:750!important;line-height:1.2!important}
+.aczo-phone-layout .angling-daily-quest-reward{font-size:9.3px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-daily-quest-progress{font-size:8.2px!important;font-weight:950!important}
+.aczo-phone-layout .angling-daily-quest-footer{font-size:8.5px!important;font-weight:850!important;line-height:1.2!important}
+.aczo-phone-layout .angling-daily-quest-intro-hint{font-size:8px!important;font-weight:750!important}
+.aczo-phone-layout .angling-daily-quest-panel-summary{font-size:9.5px!important;font-weight:800!important;line-height:1.32!important}
+.aczo-phone-layout .angling-community-toast{font-size:9.5px!important;font-weight:950!important;line-height:1.1!important}
+.aczo-phone-layout .angling-hof-back{font-size:10.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-brand small{font-size:8.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-brand strong{font-size:16px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-kicker{font-size:9px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-detail{font-size:10.5px!important;font-weight:800!important;line-height:1.35!important}
+.aczo-phone-layout .angling-hof-credit{font-size:8.5px!important;font-weight:900!important}
+.aczo-phone-layout .angling-hof-creator-story small{font-size:8.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-creator-story strong{font-size:13.5px!important;font-weight:1000!important}
+.aczo-phone-layout .angling-hof-creator-story p{font-size:9.8px!important;font-weight:800!important;line-height:1.32!important}
+
+/* Nur tatsächlich zu lange einzeilige Texte bewegen sich langsam hin und her.
+   Kurze Texte bleiben vollkommen ruhig. Die Animation verändert nie die Größe
+   ihres Buttons oder Menüs. */
+.aczo-phone-layout .aczo-phone-text-pan{overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important}
+.aczo-phone-layout .aczo-phone-text-track{display:inline-block;max-width:none;white-space:nowrap;will-change:transform;pointer-events:none}
+.aczo-phone-layout .aczo-phone-text-pan>.aczo-phone-text-track{
+  animation:aczoPhoneTextPan var(--aczo-phone-pan-duration,7s) ease-in-out .8s infinite
+}
+@keyframes aczoPhoneTextPan{
+  0%,18%{transform:translateX(var(--aczo-phone-pan-start,0px))}
+  48%,68%{transform:translateX(var(--aczo-phone-pan-end,0px))}
+  100%{transform:translateX(var(--aczo-phone-pan-start,0px))}
+}
+@media(prefers-reduced-motion:reduce){
+  .aczo-phone-layout .aczo-phone-text-pan>.aczo-phone-text-track{
+    animation:none!important;transform:none!important;max-width:100%;overflow:hidden;text-overflow:ellipsis
+  }
+}
+
 </style>
 </head>
 <body>
@@ -4277,7 +4456,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.109 · EP-KESCHER-ANZEIGEN-GETRENNT';
+const VIEWER_VERSION='V8.111 · MOBILE-TYPOGRAFIE';
 const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -16510,13 +16689,102 @@ function anglingPhoneLayoutActive(){
   const screenHeight=Math.max(1,Number(globalThis.screen&&globalThis.screen.height)||height);
   return (coarse||touch)&&Math.min(width,height,screenWidth,screenHeight)<=720;
 }
+
+// V8.111: Nur einzeilige Beschriftungen, die nach der größeren mobilen Schrift
+// tatsächlich nicht in ihre unveränderte Fläche passen, erhalten eine ruhige
+// Hin-und-her-Bewegung. Alle kurzen Texte bleiben statisch.
+var ACZO_PHONE_TEXT_PAN_SELECTOR=[
+  '.controls button',
+  '.fish-view-btn',
+  '.angling-start-btn',
+  '.angling-select-actions button',
+  '.game-menu-copy strong',
+  '.angling-option',
+  '.angling-feed-btn',
+  '.angling-hud-panel button',
+  '.angling-reel-btn',
+  '.angling-landing-btn',
+  '.angling-catch-card button',
+  '.angling-item-action',
+  '.angling-main-btn',
+  '.angling-main-link-btn',
+  '.angling-recovery-code-row button',
+  '.angling-recovery-action',
+  '.angling-time-start',
+  '.angling-online-prompt button',
+  '.angling-deeper-save',
+  '.angling-jump-quick button'
+].join(',');
+var aczoPhoneTypographyFrame=0;
+function aczoPhoneTextTrack(element){
+  const existing=element.firstElementChild;
+  if(existing&&existing.classList.contains('aczo-phone-text-track')&&element.children.length===1)return existing;
+  if(element.children.length!==0)return null;
+  const label=String(element.textContent||'').trim();
+  if(!label)return null;
+  const track=document.createElement('span');
+  track.className='aczo-phone-text-track';
+  track.textContent=label;
+  element.textContent='';
+  element.appendChild(track);
+  return track;
+}
+function updateAczoPhoneTypography(){
+  aczoPhoneTypographyFrame=0;
+  const phone=anglingPhoneLayoutActive();
+  if(!phone){
+    document.querySelectorAll('.aczo-phone-text-track').forEach(track=>{
+      const parent=track.parentElement;
+      if(parent&&parent.children.length===1)parent.textContent=track.textContent;
+    });
+    return;
+  }
+  document.querySelectorAll(ACZO_PHONE_TEXT_PAN_SELECTOR).forEach(element=>{
+    element.classList.remove('aczo-phone-text-pan');
+    element.style.removeProperty('--aczo-phone-pan-start');
+    element.style.removeProperty('--aczo-phone-pan-end');
+    element.style.removeProperty('--aczo-phone-pan-duration');
+    const track=aczoPhoneTextTrack(element);
+    if(!track||element.clientWidth<2)return;
+    const style=getComputedStyle(element);
+    const padLeft=parseFloat(style.paddingLeft)||0;
+    const padRight=parseFloat(style.paddingRight)||0;
+    const available=Math.max(1,element.clientWidth-padLeft-padRight);
+    const excess=Math.ceil(track.scrollWidth-available);
+    if(excess<=3)return;
+    const travel=excess+4;
+    const align=style.textAlign;
+    let start=0,end=-travel;
+    if(align==='center'){
+      start=travel*.5;
+      end=-travel*.5;
+    }else if(align==='right'||align==='end'){
+      start=travel;
+      end=0;
+    }
+    element.style.setProperty('--aczo-phone-pan-start',start.toFixed(1)+'px');
+    element.style.setProperty('--aczo-phone-pan-end',end.toFixed(1)+'px');
+    element.style.setProperty('--aczo-phone-pan-duration',Math.min(11,Math.max(6,6+travel/24)).toFixed(2)+'s');
+    element.classList.add('aczo-phone-text-pan');
+  });
+}
+function scheduleAczoPhoneTypography(){
+  if(aczoPhoneTypographyFrame)return;
+  aczoPhoneTypographyFrame=requestAnimationFrame(updateAczoPhoneTypography);
+}
 function syncAnglingPhoneLayoutClass(){
   document.documentElement.classList.toggle('aczo-phone-layout',anglingPhoneLayoutActive());
+  if(ACZO_PHONE_TEXT_PAN_SELECTOR)scheduleAczoPhoneTypography();
 }
 function anglingGameCameraZoom(){
   return anglingPhoneLayoutActive()?ANGLING_PHONE_CAMERA_ZOOM:1;
 }
 syncAnglingPhoneLayoutClass();
+window.addEventListener('resize',scheduleAczoPhoneTypography,{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(scheduleAczoPhoneTypography,180),{passive:true});
+setInterval(()=>{
+  if(document.documentElement.classList.contains('aczo-phone-layout'))scheduleAczoPhoneTypography();
+},1200);
 
 // V8.106: Position, Ziel, Uferachse, FOV und sämtliche Kamerafahrten bleiben
 // identisch. Nur der mobile Projektionszoom wird weiter geöffnet, damit Rute,
@@ -22812,34 +23080,40 @@ function updateAnglingFeedSystem(dt){
    if(p.z>-1&&p.z<1){
      let screenX=(p.x*.5+.5)*rect.width;
      let screenY=(-.5*p.y+.5)*rect.height;
-     let referenceLeft=screenX,referenceRight=screenX,referenceY=screenY;
-     if(!anglingUsesArtificialLure()&&anglingUi.classList.contains('line-active')){
-       const bob=anglingBobber.position.clone().project(camera);
-       if(bob.z>-1&&bob.z<1){
-         const bobX=(bob.x*.5+.5)*rect.width;
-         const bobY=(-.5*bob.y+.5)*rect.height;
-         const dist=Math.hypot(screenX-bobX,screenY-bobY);
-         if(dist<180){
-           referenceLeft=Math.min(screenX,bobX);
-           referenceRight=Math.max(screenX,bobX);
-           referenceY=bobY;
-         }
-       }
+     // V8.110: Die Anzeige gehört ausschließlich zum festen Futterplatzring.
+     // Seine projizierten Ränder bestimmen die Position; Pose und Angel haben
+     // keinerlei Einfluss. Der feste Katalogradius verhindert zudem, dass die
+     // Anzeige mit der leichten Pulsanimation des Rings mitwackelt.
+     let ringLeft=screenX,ringRight=screenX,ringTop=screenY;
+     const ringRadius=cfg?cfg.radius:2.6;
+     const ringOffsets=[[-ringRadius,0],[ringRadius,0],[0,-ringRadius],[0,ringRadius]];
+     for(const offset of ringOffsets){
+       const edge=mesh.position.clone();
+       edge.x+=offset[0];
+       edge.y+=offset[1];
+       edge.project(camera);
+       if(edge.z<=-1||edge.z>=1)continue;
+       const edgeX=(edge.x*.5+.5)*rect.width;
+       const edgeY=(-.5*edge.y+.5)*rect.height;
+       ringLeft=Math.min(ringLeft,edgeX);
+       ringRight=Math.max(ringRight,edgeX);
+       ringTop=Math.min(ringTop,edgeY);
      }
      // Erst sichtbar schalten, damit die tatsächliche Breite auf Desktop und
-     // Mobil gemessen werden kann. Noch im selben Bild wird es links neben
-     // Futterplatz und gegebenenfalls Schwimmer gesetzt.
+     // Mobil gemessen werden kann. Noch im selben Bild wird sie links oberhalb
+     // außerhalb des Futterplatzrings gesetzt.
      timer.classList.add('show');
      const phone=anglingPhoneLayoutActive();
      const labelWidth=Math.max(1,timer.offsetWidth);
      const labelHeight=Math.max(1,timer.offsetHeight);
      const gap=phone?7:10,safe=phone?6:8;
-     let desiredX=referenceLeft-gap-labelWidth*.5;
-     if(desiredX-labelWidth*.5<safe)desiredX=referenceRight+gap+labelWidth*.5;
+     let desiredX=ringLeft-gap-labelWidth*.5;
+     if(desiredX-labelWidth*.5<safe)desiredX=ringRight+gap+labelWidth*.5;
+     const desiredY=ringTop-gap-labelHeight*.5-i*(labelHeight+4);
      const minX=safe+labelWidth*.5;
      const maxX=Math.max(minX,rect.width-safe-labelWidth*.5);
      screenX=THREE.MathUtils.clamp(desiredX,minX,maxX);
-     screenY=THREE.MathUtils.clamp(referenceY-(phone?7:9)-i*(labelHeight+4),safe+labelHeight*.5,Math.max(safe+labelHeight*.5,rect.height-safe-labelHeight*.5));
+     screenY=THREE.MathUtils.clamp(desiredY,safe+labelHeight*.5,Math.max(safe+labelHeight*.5,rect.height-safe-labelHeight*.5));
      timer.style.left=screenX+'px';
      timer.style.top=screenY+'px';
    }else timer.classList.remove('show');
