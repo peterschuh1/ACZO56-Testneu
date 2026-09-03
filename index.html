@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.112 · Futter, Sonar und Uhr</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.113 · Realistischer Tagmond</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4471,8 +4471,8 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.112 · FUTTER-SONAR-UHR';
-const VIEWER_BUILD='02.09.2026';
+const VIEWER_VERSION='V8.113 · REALISTISCHER-TAGMOND';
+const VIEWER_BUILD='03.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -6445,7 +6445,8 @@ const moonDisc=new THREE.Sprite(new THREE.SpriteMaterial({
   depthTest:false
 }));
 moonDisc.renderOrder=CELESTIAL_DISC_RENDER_ORDER;
-moonDisc.scale.set(34,34,1);
+moonDisc.scale.set(25,25,1);
+moonDisc.userData.visualOpacity=1;
 
 scene.add(moonDisc);
 // Die astronomischen Lichtquellen arbeiten auch unter Wasser weiter. Der
@@ -6476,10 +6477,20 @@ function enforceCelestialDiscVisibility(){
   }
 
   const sunAllowed=!!sunDisc.userData.astronomicallyVisible;
-  const moonAllowed=!!moonDisc.userData.astronomicallyVisible;
+  const moonOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
+    ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
+    : 1;
+  const moonAllowed=!!moonDisc.userData.astronomicallyVisible&&moonOpacity>.035;
   sunDisc.visible=sunAllowed;
   moonDisc.visible=moonAllowed;
-  if(typeof moonGlow!=='undefined')moonGlow.visible=moonAllowed;
+  if(moonDisc.material)moonDisc.material.opacity=moonOpacity;
+  if(typeof moonGlow!=='undefined'){
+    const glowOpacity=Number.isFinite(moonGlow.userData.visualOpacity)
+      ? THREE.MathUtils.clamp(moonGlow.userData.visualOpacity,0,1)
+      : moonOpacity;
+    moonGlow.visible=moonAllowed&&glowOpacity>.01;
+    if(moonGlow.material)moonGlow.material.opacity=glowOpacity;
+  }
 }
 
 // V42: weicher Lichtschein um den Mond
@@ -6501,7 +6512,8 @@ const moonGlow=new THREE.Sprite(new THREE.SpriteMaterial({
   blending:THREE.AdditiveBlending
 }));
 moonGlow.renderOrder=CELESTIAL_GLOW_RENDER_ORDER;
-moonGlow.scale.set(62,62,1);
+moonGlow.scale.set(50,50,1);
+moonGlow.userData.visualOpacity=.82;
 scene.add(moonGlow);
 
 
@@ -7948,9 +7960,12 @@ function updateOneDirectCelestialReflection(source,astronomicallyVisible,materia
   let strength;
   if(isMoon){
     const phase=THREE.MathUtils.clamp(cachedMoonFraction||0,0,1);
+    const visualOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
+      ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
+      : 1;
     // V8.81: Mondreflex klarer und groesser, damit er im ruhigen Spiegelwasser
     // auf Weiher und Mosel wirklich lesbar bleibt.
-    strength=(.42+.90*phase)*THREE.MathUtils.lerp(.20,1.0,night)*clearSky;
+    strength=(.42+.90*phase)*THREE.MathUtils.lerp(.20,1.0,night)*clearSky*visualOpacity;
     material.uniforms.coreRadius.value=THREE.MathUtils.lerp(2.55,1.62,altNorm);
     material.uniforms.trailLength.value=THREE.MathUtils.lerp(20.5,8.2,altNorm);
     material.uniforms.trailWidth.value=THREE.MathUtils.lerp(2.65,1.28,altNorm);
@@ -9095,15 +9110,39 @@ function updateAstronomy(){
 
   const twilight=sunPos.altitude>-0.12;
 
+  // V8.113: Der Mond bleibt astronomisch korrekt, wird optisch aber wie am
+  // echten Himmel behandelt. Tagsüber ist er kleiner und blasser, in den
+  // letzten Grad über dem Horizont blendet er weich aus und geschlossene
+  // Bewölkung kann Scheibe und Schein vollständig verdecken. Diese Werte
+  // gelten gemeinsam für Desktop und die responsive Mobilansicht.
+  const moonCloud=THREE.MathUtils.clamp((liveWeather?.cloud||0)/100,0,1);
+  const moonDaylight=THREE.MathUtils.smoothstep(sunPos.altitude,-.08,.18);
+  const moonHorizonVisibility=THREE.MathUtils.smoothstep(moonPos.altitude,0,.18);
+  const moonCloudTransmission=THREE.MathUtils.clamp(1-.97*Math.pow(moonCloud,1.35),0,1);
+  const moonVisualOpacity=moonUp
+    ? THREE.MathUtils.clamp(
+        moonHorizonVisibility*THREE.MathUtils.lerp(1,.46,moonDaylight)*moonCloudTransmission,
+        0,1
+      )
+    : 0;
+  const moonVisualScale=THREE.MathUtils.lerp(25,20,moonDaylight);
+  moonDisc.userData.visualOpacity=moonVisualOpacity;
+  moonDisc.scale.set(moonVisualScale,moonVisualScale,1);
+  if(typeof moonGlow!=='undefined'){
+    const moonGlowScale=THREE.MathUtils.lerp(50,35,moonDaylight);
+    moonGlow.userData.visualOpacity=moonVisualOpacity*THREE.MathUtils.lerp(.82,.12,moonDaylight);
+    moonGlow.scale.set(moonGlowScale,moonGlowScale,1);
+  }
+
   sun.visible=sunUp;
   sunDisc.userData.astronomicallyVisible=sunUp;
   moonDisc.userData.astronomicallyVisible=moonUp;
   sunDisc.visible=sunUp && !is2D && celestialDiscAllowedForView();
   // V8.57: Der Mond ist nur sichtbar, wenn er astronomisch tatsächlich über
   // dem Horizont steht. Das gilt nachts genauso wie am Tag.
-  moonDisc.visible=moonUp && !is2D && celestialDiscAllowedForView();
+  moonDisc.visible=moonUp && moonVisualOpacity>.035 && !is2D && celestialDiscAllowedForView();
   if(sunDisc.material) sunDisc.material.opacity=1.0;
-  if(moonDisc.material) moonDisc.material.opacity=1.0;
+  if(moonDisc.material) moonDisc.material.opacity=moonVisualOpacity;
 
   const altNorm=Math.max(0,Math.min(1,Math.sin(Math.max(0,sunPos.altitude))));
   sun.intensity=sunUp ? (0.72+0.95*altNorm) : 0;
@@ -9154,15 +9193,14 @@ function updateAstronomy(){
 
   if(typeof applyWeatherScene==='function') applyWeatherScene();
 
-  // Wetter darf die Scheiben nicht ausblenden. Diese Zuweisung steht bewusst
-  // nach applyWeatherScene(), da dort nur die Beleuchtung gedämpft werden soll.
+  // Wetter und Horizont dürfen den Mond nun realistisch abschwächen. Die
+  // zentrale Sichtbarkeitsfunktion setzt die berechnete Deckkraft nach allen
+  // Wettereffekten erneut durch.
   sunDisc.visible=sunUp && !is2D && celestialDiscAllowedForView();
-  moonDisc.visible=moonUp && !is2D && celestialDiscAllowedForView();
   if(sunDisc.material) sunDisc.material.opacity=1.0;
-  if(moonDisc.material) moonDisc.material.opacity=1.0;
+  enforceCelestialDiscVisibility();
   if(typeof moonGlow!=='undefined'){
     moonGlow.position.copy(moonDisc.position);
-    moonGlow.visible=moonDisc.visible;
   }
 
   // V44: vorhandene einfache Mondgrafik abschließend durch korrekte Phase ersetzen.
@@ -25805,7 +25843,10 @@ function updateCelestialLensFlare(){
     &&!(typeof fishMode!=='undefined'&&fishMode)
     &&inFront&&nearFrame>.015;
   const clearSky=1-cloud*.88;
-  const strength=(useMoon?.30:.84)*clearSky*Math.pow(nearFrame,.58)*centerBoost;
+  const moonVisualOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
+    ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
+    : 1;
+  const strength=(useMoon?.30*moonVisualOpacity:.84)*clearSky*Math.pow(nearFrame,.58)*centerBoost;
   setInlineStyle(celestialLensFlare,'opacity',allowed?strength.toFixed(3):'0');
   celestialLensFlare.classList.toggle('moon',useMoon);
   if(!allowed||lensFlareParts.length<5)return;
@@ -25914,12 +25955,13 @@ const clock=new THREE.Clock();
      waterUniforms.moonDir.value.copy(moonLight.position).sub(moonLight.target.position).normalize();
      const moonFraction=cachedMoonFraction;
      const moonCloud=1-Math.max(0,Math.min(1,(liveWeather.cloud||0)/100))*.68;
-     // Die Wasserreflexion bleibt auch bei dichter Bewölkung erkennbar.
-     // Ihre Stärke ist getrennt vom sehr schwachen Gelände-Mondlicht.
-     // Sichtbarkeit der Mondscheibe hängt unter Wasser vom Blickwinkel ab;
-     // die physikalische Reflexion bleibt davon unabhängig aktiv.
+     const moonVisualOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
+       ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
+       : 1;
+     // Scheibe, Schein, Linsenreflex und Wasserreflex folgen derselben
+     // Tages-, Horizont- und Wolkendämpfung. Klare Nächte bleiben unverändert.
      waterUniforms.moonStrength.value=(moonDisc.userData.astronomicallyVisible && simulationEnabled)
-       ? Math.min(.74,(.30+.52*moonFraction)*moonCloud)
+       ? Math.min(.74,(.30+.52*moonFraction)*moonCloud)*moonVisualOpacity
        : 0.0;
    }
 
