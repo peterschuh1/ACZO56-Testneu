@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.111 · Mobile Typografie</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.112 · Futter, Sonar und Uhr</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -2028,7 +2028,16 @@ html,body{
   padding:4px 7px;border-radius:999px;background:rgba(73,58,10,.78);border:1px solid rgba(255,235,139,.82);
   color:#fff5bb;font-size:8px;font-weight:950;white-space:nowrap;box-shadow:0 2px 7px rgba(0,0,0,.25)
 }
-.angling-feed-timer.show{display:block}
+.angling-feed-timer.show{
+  display:block;
+  animation:anglingFeedTimerCycle 9s ease-in-out infinite;
+  animation-delay:var(--angling-feed-timer-delay,0s)
+}
+@keyframes anglingFeedTimerCycle{
+  0%{opacity:0}
+  8%,34%{opacity:1}
+  43%,100%{opacity:0}
+}
 @media(max-width:700px){
   .angling-feed-controls{bottom:112px;gap:3px;width:calc(100% - 10px)}
   .angling-feed-btn{font-size:7.2px!important;padding:4px 6px!important;min-height:28px!important}
@@ -3517,12 +3526,15 @@ html,body{
 #anglingLeaderboardRefresh{display:none!important}
 .angling-leaderboard-toolbar label{width:100%}
 
-/* V8.106: Die Lockfutterauswahl sitzt auf Telefonen in der schmalen freien
-   Zeile zwischen Live-Posenfenster und unterer Statusleiste. Dadurch ragt sie
-   weder in das Livebild noch in die Spielbedienung hinein. */
+/* V8.112: Die mobile Futterauswahl beginnt erst rechts neben dem 104 px
+   breiten Live-Posenfenster. Die äußeren Größen der drei Buttons bleiben
+   unverändert; nur die verfügbare Zeile wird sauber aufgeteilt. */
 .aczo-phone-layout .angling-feed-controls{
   bottom:51px!important;
-  width:min(340px,calc(100% - 28px))!important;
+  left:116px!important;
+  right:7px!important;
+  width:auto!important;
+  transform:none!important;
   gap:3px!important;
   flex-wrap:nowrap!important
 }
@@ -3546,7 +3558,7 @@ html,body{
   right:7px!important;
   bottom:52px!important;
   width:min(58vw,225px)!important;
-  height:150px!important;
+  height:178px!important;
   grid-template-rows:minmax(0,1fr) 27px!important;
   border-radius:11px!important
 }
@@ -3672,8 +3684,11 @@ html,body{
 .aczo-phone-layout .help-item span{font-size:10.2px!important;font-weight:700!important;line-height:1.38!important}
 .aczo-phone-layout .help-note{font-size:10px!important;font-weight:700!important}
 
-/* Feste Kopfzeile, Stellenauswahl und laufende Angelansicht. */
-.aczo-phone-layout .angling-clock-display{font-size:9.8px!important;font-weight:950!important}
+/* Feste Kopfzeile, Stellenauswahl und laufende Angelansicht. Die Uhr behält
+   auf Desktop ihr Symbol; mobil wird nur der Textknoten davor auf Größe null
+   gesetzt und die eigentliche Zeit im vorhandenen Span wieder eingeblendet. */
+.aczo-phone-layout .angling-clock-display{font-size:0!important;font-weight:950!important}
+.aczo-phone-layout .angling-clock-display span{font-size:9.8px!important}
 .aczo-phone-layout .angling-select-title{font-size:11.8px!important;font-weight:1000!important;line-height:1!important}
 .aczo-phone-layout .angling-select-text{font-size:8.5px!important;font-weight:850!important;line-height:1.08!important}
 .aczo-phone-layout .angling-select-actions button{font-size:9.3px!important;font-weight:950!important;line-height:1!important}
@@ -4456,7 +4471,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.111 · MOBILE-TYPOGRAFIE';
+const VIEWER_VERSION='V8.112 · FUTTER-SONAR-UHR';
 const VIEWER_BUILD='02.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
@@ -22920,6 +22935,7 @@ function cancelAnglingFeedTargeting(){
 function updateAnglingFeedUi(){
  pruneAnglingFeedSpots();
  const artificial=anglingUsesArtificialLure();
+ const phone=anglingPhoneLayoutActive();
  const poseActive=anglingMode&&!artificial&&anglingUi.classList.contains('line-active')&&['waiting','approach'].includes(anglingState);
  if(artificial){
    anglingFeedCastFeedback='';
@@ -22933,7 +22949,10 @@ function updateAnglingFeedUi(){
  anglingFeedButtons.forEach(btn=>{
    const id=btn.dataset.feed;
    btn.disabled=anglingFeedStock(id)<1||!canCreate;
-   btn.textContent=(ANGLING_FEED_CATALOG[id]?.name||id)+' ×'+anglingFeedStock(id);
+   const fullName=ANGLING_FEED_CATALOG[id]?.name||id;
+   const displayName=phone?fullName.replace(/^Lockfutter\b/,'Futter'):fullName;
+   const label=displayName+' ×'+anglingFeedStock(id);
+   if(btn.textContent!==label)btn.textContent=label;
  });
 }
 function beginAnglingFeedTargeting(id){
@@ -23102,13 +23121,13 @@ function updateAnglingFeedSystem(dt){
      // Erst sichtbar schalten, damit die tatsächliche Breite auf Desktop und
      // Mobil gemessen werden kann. Noch im selben Bild wird sie links oberhalb
      // außerhalb des Futterplatzrings gesetzt.
+     timer.style.setProperty('--angling-feed-timer-delay',i?'-4.5s':'0s');
      timer.classList.add('show');
      const phone=anglingPhoneLayoutActive();
      const labelWidth=Math.max(1,timer.offsetWidth);
      const labelHeight=Math.max(1,timer.offsetHeight);
      const gap=phone?7:10,safe=phone?6:8;
-     let desiredX=ringLeft-gap-labelWidth*.5;
-     if(desiredX-labelWidth*.5<safe)desiredX=ringRight+gap+labelWidth*.5;
+     const desiredX=ringLeft-gap-labelWidth*.5;
      const desiredY=ringTop-gap-labelHeight*.5-i*(labelHeight+4);
      const minX=safe+labelWidth*.5;
      const maxX=Math.max(minX,rect.width-safe-labelWidth*.5);
