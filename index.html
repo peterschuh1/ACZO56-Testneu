@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 Interaktive Tiefenkarte V8.113 · Realistischer Tagmond</title>
+<title>ACZO56 Interaktive Tiefenkarte V8.115 · 2D-Angelstart & Mobile-Kartenansicht</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -172,20 +172,6 @@ button.on{background:#176d3d;color:white;border-color:#176d3d}
   color:#7d1e1e;
   font-size:13px;
   line-height:1.4;
-}
-
-
-.dpad{
-    grid-template-columns:34px 34px 34px;
-    grid-template-rows:34px 34px 34px;
-  }
-  .camera-pad button{
-    min-width:34px;width:34px;height:34px;min-height:34px;
-    font-size:16px;border-radius:9px
-  }
-  .zoom-row{grid-template-columns:34px 52px 34px}
-  .zoom-row button{width:34px}
-  .zoom-row .top-btn{width:52px;font-size:11px}
 }
 
 
@@ -4463,16 +4449,14 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
    <div id="controlHint" class="control-hint">☝️ drehen · ✌️ zoomen/verschieben</div>
    </div>
  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.113 · REALISTISCHER-TAGMOND';
-const VIEWER_BUILD='03.09.2026';
+const VIEWER_VERSION='V8.115 · 2D-ANGELSTART · MOBILE-KARTENANSICHT';
+const VIEWER_BUILD='04.09.2026';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -7178,14 +7162,19 @@ function updateWeatherText(){
   weatherSub.textContent=icon+' '+t+' · '+desc+' · '+cloud+' · 💨 '+wind+rain;
 }
 
-async function loadLiveWeather(){
-  try{
+let liveWeatherRequestInFlight=null;
+function loadLiveWeather(){
+  if(liveWeatherRequestInFlight)return liveWeatherRequestInFlight;
+  const request=(async()=>{
+    const controller=new AbortController();
+    const timeout=window.setTimeout(()=>controller.abort(),12000);
+    try{
     const url='https://api.open-meteo.com/v1/forecast'
       +'?latitude=49.7099668&longitude=6.5774617'
       +'&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m'
       +'&timezone=Europe%2FBerlin';
 
-    const response=await fetch(url,{cache:'no-store'});
+    const response=await fetch(url,{cache:'no-store',signal:controller.signal});
     if(!response.ok) throw new Error('HTTP '+response.status);
     const data=await response.json();
     const c=data.current||{};
@@ -7197,10 +7186,18 @@ async function loadLiveWeather(){
     // updateAstronomy wendet die Wetterszene bereits mit denselben Daten an.
     // Nur ohne geladene Astronomie-Bibliothek ist der direkte Ersatz noetig.
     if(typeof SunCalc==='undefined')applyWeatherScene();
-  }catch(err){
-    weatherSub.textContent='🌦️ Wetterdaten momentan nicht verfügbar';
-    console.warn('Wetterdaten:',err);
-  }
+    }catch(err){
+      weatherSub.textContent='🌦️ Wetterdaten momentan nicht verfügbar';
+      console.warn('Wetterdaten:',err);
+    }finally{
+      window.clearTimeout(timeout);
+    }
+  })();
+  liveWeatherRequestInFlight=request;
+  request.finally(()=>{
+    if(liveWeatherRequestInFlight===request)liveWeatherRequestInFlight=null;
+  });
+  return request;
 }
 
 function updateSimulationButton(){
@@ -7272,7 +7269,8 @@ loadLiveWeather();
 updateSimulationButton();
 
 
-// BETA 3.5 PERFORMANCE: Darstellung wie BETA 3.4, Unterwasser-Assets lazy und unnötige Wasser-Geometrieberechnungen entfernt.\n// Bewegte, transparente Wasseroberfläche auf Höhe 0.
+// BETA 3.5 PERFORMANCE: Darstellung wie BETA 3.4, Unterwasser-Assets lazy und unnötige Wasser-Geometrieberechnungen entfernt.
+// Bewegte, transparente Wasseroberfläche auf Höhe 0.
 // Sie liegt innerhalb der Gewässermaske; ein zusätzlicher flacher Randring
 // erweitert sie leicht unter das Satellitenbild, ohne über das Luftbild zu laufen.
 // BETA 3.4: separate EXAKTE ReefMaster-Maske nur für die Wasseroberfläche.
@@ -8325,6 +8323,23 @@ function updateDepthScale(){
  refreshPinnedPointHeight();
 }
 
+// V8.115: Die Kartenansicht bekommt im schmalen Telefon-Hochformat etwas
+// mehr sichtbaren Raum. Desktop bleibt exakt bei Zoom 1. Die Anpassung wirkt
+// nur beim Wechsel/Reset der normalen 2D-/3D-Karte und verändert keine
+// Angelspiel-Kamerafahrt.
+function aczoMapViewZoom(mode){
+  if(typeof anglingPhoneLayoutActive!=='function'||!anglingPhoneLayoutActive()) return 1;
+  const viewport=window.visualViewport;
+  const w=Math.max(1,(viewport&&viewport.width)||window.innerWidth||host.clientWidth||1);
+  const h=Math.max(1,(viewport&&viewport.height)||window.innerHeight||host.clientHeight||1);
+  const aspect=w/h;
+  if(aspect>=.95) return 1;
+  const t=THREE.MathUtils.clamp((aspect-.45)/.50,0,1);
+  return mode==='2d'
+    ? THREE.MathUtils.lerp(.74,.90,t)
+    : THREE.MathUtils.lerp(.82,.94,t);
+}
+
 function set3D(){
  if(skyLookMode){
    skyLookMode=false;
@@ -8341,6 +8356,7 @@ function set3D(){
  sky.visible=true;
  cloudGroup.visible=true;
  camera.fov=38;
+ camera.zoom=aczoMapViewZoom('3d');
  camera.updateProjectionMatrix();
 
  // Bewährte Neigung und Zoom beibehalten; nur geographisch korrekt ausrichten.
@@ -8418,6 +8434,7 @@ function set2D(){
  sky.visible=false;
  cloudGroup.visible=false;
  camera.fov=34;
+ camera.zoom=aczoMapViewZoom('2d');
  camera.updateProjectionMatrix();
  camera.position.set(0,0,Math.max(D.sceneW,D.sceneH)*2.25);
  controls.target.set(0,0,0);
@@ -8536,8 +8553,10 @@ function updateButtons(){
  s2.classList.toggle('on',exaggeration===2);
  if(anglingStartBtn){
    const underwaterActive=document.querySelector('.wrap').classList.contains('fish-mode');
-   anglingStartBtn.style.display=(is2D||underwaterActive||anglingMode)?'none':'';
-   anglingStartBtn.disabled=is2D||underwaterActive||anglingMode;
+   // V8.115: „Angeln“ steht wie „Unterwasser-Modus“ auch in der 2D-Karte
+   // bereit. Beim Start wird intern sauber in die 3D-Spielszene gewechselt.
+   anglingStartBtn.style.display=(underwaterActive||anglingMode)?'none':'';
+   anglingStartBtn.disabled=underwaterActive||anglingMode;
  }
 }
 
@@ -18341,7 +18360,7 @@ function renderAnglingShop(){
 function openAnglingShop(){if(guardAnglingMenuOpen())return;closeAnglingGamePanels();renderAnglingShop();markAnglingGamePanelOpen(anglingShopPanel);}
 
 
-const ANGLING_LEADERBOARD_ENDPOINT='https://script.google.com/macros/s/AKfycbyJ1_6pwlsyKAXjyojruOEDNvZOuYii3wMJbVY0NX5yxneShEHu9pq3uYfR-0LGXQ/exec'; // Nächster Schritt: Google Apps Script Web-App URL eintragen.
+const ANGLING_LEADERBOARD_ENDPOINT='https://script.google.com/macros/s/AKfycbyJ1_6pwlsyKAXjyojruOEDNvZOuYii3wMJbVY0NX5yxneShEHu9pq3uYfR-0LGXQ/exec';
 const ANGLING_PLAYER_KEY='aczo56-angling-player-v1';
 const ANGLING_RECOVERY_KEY='aczo56-angling-recovery-v1';
 const ANGLING_CLOUD_ENABLED_KEY='aczo56-angling-cloud-enabled-v1';
@@ -18439,6 +18458,7 @@ function anglingCloudSyncPayload(){
   return {
     action:'syncPlayer',
     playerId:anglingPlayerProfile.id,
+    recoveryCode:anglingRecoveryCode||'',
     name:anglingPlayerProfile.name||'',
     revision:Math.max(0,Math.floor(Number(anglingProgress.xpRevision)||0)),
     xp:s.xp,
@@ -18599,15 +18619,31 @@ async function loadAnglingPlayerCloud(){
   if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
 
   try{
-    const url=ANGLING_LEADERBOARD_ENDPOINT
-      +(ANGLING_LEADERBOARD_ENDPOINT.includes('?')?'&':'?')
-      +'action=player&playerId='+encodeURIComponent(anglingPlayerProfile.id);
-
-    const res=await anglingLeaderboardFetch(url,{method:'GET',cache:'no-store'},7000);
+    let res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({
+        action:'getPlayer',
+        playerId:anglingPlayerProfile.id,
+        recoveryCode:anglingRecoveryCode||''
+      }),
+      cache:'no-store'
+    },7000);
+    let data=await res.json().catch(()=>null);
+    // Übergangsweg für die kurze Zeit, in der das neue HTML bereits online ist,
+    // aber noch die vorherige Backend-Version läuft. Nach V12 wird ausschließlich
+    // der geschützte POST-Zugriff verwendet.
+    if(res.ok&&data?.ok===false&&data?.error==='Name fehlt.'){
+      const legacyUrl=ANGLING_LEADERBOARD_ENDPOINT
+        +(ANGLING_LEADERBOARD_ENDPOINT.includes('?')?'&':'?')
+        +'action=player&playerId='+encodeURIComponent(anglingPlayerProfile.id)
+        +'&recoveryCode='+encodeURIComponent(anglingRecoveryCode||'');
+      res=await anglingLeaderboardFetch(legacyUrl,{method:'GET',cache:'no-store'},7000);
+      data=await res.json().catch(()=>null);
+    }
     if(!res.ok)throw new Error('HTTP '+res.status);
-
-    const data=await res.json().catch(()=>null);
     if(!data||data.ok===false)throw new Error(data?.error||'Cloud-Lesefehler');
+    captureAnglingRecoveryCode(data);
 
     // Noch kein Online-Spielstand: kompletten lokalen Stand anlegen.
     if(!data.player){
@@ -18924,7 +18960,7 @@ function updateAnglingActiveToast(players){
 }
 
 async function sendAnglingPresence(){
-  if(!anglingMode||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
+  if(!anglingMode||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id||!anglingRecoveryCode)return false;
   try{
     const data=await anglingLeaderboardJson(ANGLING_LEADERBOARD_ENDPOINT,{
       method:'POST',
@@ -18932,6 +18968,7 @@ async function sendAnglingPresence(){
       body:JSON.stringify({
         action:'presence',
         playerId:anglingPlayerProfile.id,
+        recoveryCode:anglingRecoveryCode||'',
         name:anglingPlayerProfile.name||'',
         presenceNameVisible:!!anglingPresenceNamed
       })
@@ -19071,9 +19108,11 @@ function saveAnglingMainProfile(){
 
   if(anglingCloudEnabled){
     anglingMainStatus.textContent='☁️ Einstellungen gespeichert. Cloud-Spielstand wird abgeglichen …';
-    loadAnglingPlayerCloud().then(()=>{
+    loadAnglingPlayerCloud().then(ok=>{
       updateAnglingMainMenuUi();
-      anglingMainStatus.textContent='☁️ Cloud-Spielstand ist aktiviert und abgeglichen.';
+      anglingMainStatus.textContent=ok
+        ?'☁️ Cloud-Spielstand ist aktiviert und abgeglichen.'
+        :'⚠️ Cloud ist aktiviert, der Abgleich konnte aber noch nicht bestätigt werden.';
     });
   }else{
     if(anglingCloudSyncTimer){window.clearTimeout(anglingCloudSyncTimer);anglingCloudSyncTimer=null;}
@@ -19639,7 +19678,7 @@ function buildAnglingHallOfFameSlides(){
     const species=ANGLING_LEADERBOARD_API_TO_SPECIES[rawSpecies]||rawSpecies.toLowerCase();
     if(species!=='koi')return;
     const name=String(r?.name||'Anonym').trim().slice(0,30)||'Anonym';
-    const identity=String(r?.playerId||r?.playerID||r?.id||name||('koi-'+index)).trim().toLowerCase();
+    const identity=String(r?.publicId||r?.playerId||r?.playerID||r?.id||name||('koi-'+index)).trim().toLowerCase();
     if(seenKoiCatchers.has(identity))return;
     seenKoiCatchers.add(identity);
     koiCatchers.push({...r,name});
@@ -20433,6 +20472,7 @@ function anglingLeaderboardPayload(caught){
  const cm=Number((Number(caught.cm)||0).toFixed(1));
  return {
    playerId:anglingPlayerProfile.id,
+   recoveryCode:anglingRecoveryCode||'',
    name:anglingPlayerProfile.name,
    species:ANGLING_LEADERBOARD_SPECIES_TO_API[caught.species]||caught.species,
    lengthCm:cm,
@@ -20443,6 +20483,10 @@ function anglingLeaderboardPayload(caught){
 async function submitAnglingPersonalBest(caught){
  if(!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile.shareRecords||!anglingPlayerProfile.name)return false;
  try{
+   if(!anglingRecoveryCode){
+     await syncAnglingPlayerCloud();
+     if(!anglingRecoveryCode)return false;
+   }
    await anglingLeaderboardJson(ANGLING_LEADERBOARD_ENDPOINT,{
      method:'POST',
      headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -22028,11 +22072,31 @@ function updateAnglingRodAnchor(){
 function startAnglingMode(){
   clearAnglingFeedSpot(false);cancelAnglingFeedTargeting();
   resetAllAnglingUiOverlays();
-  if(anglingMode||fishMode||is2D) return;
+  if(anglingMode||fishMode) return;
   cancelAnglingPostCatchNotices();
   resetAnglingSessionTimeRules();
   // Im freien Himmelsblick zuerst sauber in die normale 3D-Steuerung zurueck.
   if(skyLookMode) leaveSkyLookMode(true);
+
+  // V8.115: Auch aus 2D starten. Vor dem internen Wechsel nach 3D wird die
+  // komplette Kartenansicht gesichert, damit „Angelspiel verlassen“ später
+  // exakt zur vorherigen 2D-Position, Drehung und Zoomstufe zurückkehrt.
+  const anglingMapViewBeforeStart={
+    is2D:!!is2D,
+    position:camera.position.clone(),target:controls.target.clone(),quaternion:camera.quaternion.clone(),
+    up:camera.up.clone(),fov:camera.fov,zoom:Number(camera.zoom)||1,near:camera.near,controlsEnabled:controls.enabled,sceneFog:scene.fog,
+    waterVisible,moselWaterVisible:typeof moselWaterSurface!=='undefined'?moselWaterSurface.visible:false,
+    locationVisible:locationGroup.visible,measureVisible:measureGroup.visible,
+    depthPinVisible:depthPinGroup.visible,depthPinGuideVisible:depthPinGuide.visible,depthLabelDisplay:depthPinLabel.style.display,
+    measureLabelDisplay:measureLabel.style.display,
+    contourVisible:contourGroup.visible,pondVisible:pond.visible,pondNeutralVisible:pondNeutral.visible,
+    pondNightLiftVisible:pondNightLift.visible,pondCelestialDepthLiftVisible:pondCelestialDepthLift.visible
+  };
+  if(is2D){
+    set3D();
+    updateButtons();
+  }
+
   anglingMode=true;anglingState='overview-flight';anglingStateTime=0;anglingSelectedDrag='medium';
   anglingUi.classList.add('is-active');
   showAnglingWelcomeBackIfNeeded();
@@ -22055,16 +22119,7 @@ function startAnglingMode(){
   anglingSelectTitle.textContent='🎣 Angelplatz wählen';
   anglingSelectText.textContent='Tippe auf oder nahe an die Uferkante. Auch ein Tipp knapp auf der Wasserseite wird sauber an die echte Uferkante gesetzt.';
   updateAnglingSetupUi();
-  anglingSaved={
-    position:camera.position.clone(),target:controls.target.clone(),quaternion:camera.quaternion.clone(),
-    up:camera.up.clone(),fov:camera.fov,zoom:Number(camera.zoom)||1,near:camera.near,controlsEnabled:controls.enabled,sceneFog:scene.fog,
-    waterVisible,moselWaterVisible:typeof moselWaterSurface!=='undefined'?moselWaterSurface.visible:false,
-    locationVisible:locationGroup.visible,measureVisible:measureGroup.visible,
-    depthPinVisible:depthPinGroup.visible,depthPinGuideVisible:depthPinGuide.visible,depthLabelDisplay:depthPinLabel.style.display,
-    measureLabelDisplay:measureLabel.style.display,
-    contourVisible:contourGroup.visible,pondVisible:pond.visible,pondNeutralVisible:pondNeutral.visible,
-    pondNightLiftVisible:pondNightLift.visible,pondCelestialDepthLiftVisible:pondCelestialDepthLift.visible
-  };
+  anglingSaved=anglingMapViewBeforeStart;
   controls.enabled=false;
   locationGroup.visible=false;measureGroup.visible=false;depthPinGroup.visible=false;depthPinGuide.visible=false;
   depthPinLabel.style.display='none';measureLabel.style.display='none';tip.style.display='none';
@@ -24706,10 +24761,18 @@ function finishLeaveAngling(){
   resetAnglingUnderwaterState(false);
   const saved=anglingSaved;
   finishAnglingExitCrossfade();
+
+  // V8.115: Wurde das Spiel aus 2D gestartet, zuerst die 2D-Bedienlogik
+  // (Pan/Zoom/Touch-Drehung) wieder aktivieren und danach exakt die zuvor
+  // gespeicherte Kartenposition zurücksetzen.
+  if(saved.is2D){
+    set2D();
+  }
   camera.position.copy(saved.position);controls.target.copy(saved.target);
   camera.up.copy(saved.up);camera.quaternion.copy(saved.quaternion);
   camera.fov=saved.fov;camera.zoom=Number(saved.zoom)||1;camera.near=saved.near;camera.updateProjectionMatrix();
   controls.enabled=saved.controlsEnabled;
+  controls.update();
   // Angel-/Unterwasser-Shader sofort vollständig verlassen. Kein langsames Nachblenden.
   anglingWaterTarget=0;waterUniforms.anglingView.value=0;waterUniforms.underwaterView.value=0;waterUniforms.anglingIntroFade.value=1;
   scene.fog=saved.sceneFog||null;
