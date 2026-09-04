@@ -3661,6 +3661,18 @@ html,body{
 .aczo-phone-layout .measure-label{font-size:10.5px!important;font-weight:900!important}
 .aczo-phone-layout .fish-view-btn,
 .aczo-phone-layout .angling-start-btn{font-size:10px!important;font-weight:950!important}
+
+/* V8.116: Die Gestenhilfe lag im Telefonlayout mittig ganz unten und damit
+   teilweise HINTER den beiden linken Hauptbuttons. Sie sitzt nun oberhalb
+   der Buttonleiste und bleibt vollständig lesbar. */
+.aczo-phone-layout .control-hint{
+  left:50%!important;
+  right:auto!important;
+  bottom:calc(92px + env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+  z-index:39!important;
+  max-width:calc(100% - 24px);
+}
 .aczo-phone-layout .fish-view-info,
 .aczo-phone-layout .fish-collection-progress{font-size:8.8px!important;font-weight:850!important}
 .aczo-phone-layout .fish-collection-item span{font-size:7.4px!important;font-weight:850!important;line-height:1.05!important}
@@ -16745,7 +16757,13 @@ const ANGLING_MIN_CAST_DISTANCE=1; // Nahangeln bis direkt vor dem Ufer zulassen
 const ANGLING_MAX_CAST_DISTANCE=100; // physisches Systemlimit; die aktive Rute begrenzt darunter individuell
 const ANGLING_SHORE_FOV=46;
 const ANGLING_PHONE_SHORE_FOV=46;
-const ANGLING_PHONE_CAMERA_ZOOM=.70;
+// V8.116: Auf schmalen Mobilbildschirmen wird die Perspektive nicht mehr mit
+// einem starren Zoomwert geöffnet. Die horizontale Bildwirkung wird an das
+// Seitenverhältnis angepasst, damit Rute, Rolle und Griff ungefähr so groß
+// erscheinen wie in der Desktopansicht, ohne die Kameraposition zu verändern.
+const ANGLING_PHONE_CAMERA_REFERENCE_ASPECT=1.28;
+const ANGLING_PHONE_CAMERA_ZOOM_MIN=.46;
+const ANGLING_PHONE_CAMERA_ZOOM_MAX=.78;
 let anglingLastFastTapAt=0,anglingLastFastTapX=0,anglingLastFastTapY=0;
 
 // V8.103: Telefonerkennung nicht allein von einer Media-Query abhängig machen.
@@ -16849,7 +16867,16 @@ function syncAnglingPhoneLayoutClass(){
   if(ACZO_PHONE_TEXT_PAN_SELECTOR)scheduleAczoPhoneTypography();
 }
 function anglingGameCameraZoom(){
-  return anglingPhoneLayoutActive()?ANGLING_PHONE_CAMERA_ZOOM:1;
+  if(!anglingPhoneLayoutActive())return 1;
+  const viewport=window.visualViewport;
+  const w=Math.max(1,(viewport&&viewport.width)||window.innerWidth||host.clientWidth||1);
+  const h=Math.max(1,(viewport&&viewport.height)||window.innerHeight||host.clientHeight||1);
+  const aspect=w/h;
+  return THREE.MathUtils.clamp(
+    aspect/ANGLING_PHONE_CAMERA_REFERENCE_ASPECT,
+    ANGLING_PHONE_CAMERA_ZOOM_MIN,
+    ANGLING_PHONE_CAMERA_ZOOM_MAX
+  );
 }
 syncAnglingPhoneLayoutClass();
 window.addEventListener('resize',scheduleAczoPhoneTypography,{passive:true});
