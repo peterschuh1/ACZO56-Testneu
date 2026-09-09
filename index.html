@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.38 · Performante Schatten und flüssige Kamerafahrten</title>
+<title>ACZO56 V2.3.40 · Himmelslauf, Sterne und leichtere Schatten</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4522,7 +4522,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.165 · V2.3.38 · PERFORMANTE SCHATTEN UND FLÜSSIGE KAMERAFAHRTEN';
+const VIEWER_VERSION='V8.167 · V2.3.40 · HIMMELSLAUF, STERNE UND LEICHTERE SCHATTEN';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4686,7 +4686,11 @@ renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+// V2.3.40 PERFORMANCE: iPhone-GPUs muessen den Schattenvergleich auf sehr
+// vielen Blatt-, Land- und Wasserpixeln ausfuehren. PCF bleibt dort weich
+// genug fuer Natur- und Baumschatten, benoetigt aber weniger Samples als der
+// PCFSoft-Pfad. Desktop behaelt die bisherige weiche Qualitaet unveraendert.
+renderer.shadowMap.type=ACZO_COARSE_POINTER?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
 // V2.3.33 PERFORMANCE: Die komplette 2048er-Schattenkarte wurde zuvor in
 // jedem Bild neu berechnet. Statische Gebäude/Wälder benötigen das nicht;
 // Licht-/Wetterwechsel und die kurze Torfahrt werden unten ereignisgesteuert
@@ -4701,6 +4705,7 @@ renderer.shadowMap.needsUpdate=true;
 let anglingMobilePerfActive=false;
 let aczoFishPerfActive=false;
 let aczoMotionPerfActive=false;
+let aczoMotionPixelRatioRestoreAt=0;
 let aczoAppliedPixelRatio=ACZO_BASE_PIXEL_RATIO;
 function aczoApplyRenderPixelRatio(){
   let target=ACZO_BASE_PIXEL_RATIO;
@@ -4710,7 +4715,7 @@ function aczoApplyRenderPixelRatio(){
   if(aczoFishPerfActive)target=Math.min(target,ACZO_COARSE_POINTER?1.00:1.18);
   // Nur waehrend Drehen, Zoomen oder einer programmierten Kamerafahrt: weniger
   // Pixel, gleiche Geometrie. Nach kurzer Ruhe kommt die volle Schaerfe zurueck.
-  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .96 : 1.10);
+  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : 1.10);
   if(Math.abs(target-aczoAppliedPixelRatio)<.001)return;
   aczoAppliedPixelRatio=target;
   renderer.setPixelRatio(target);
@@ -5895,23 +5900,33 @@ function setContourVisibilityFade(v){contourVisibilityFade=Math.max(0,Math.min(1
 
 // FINAL V4.8: Nachtkontrast ausschließlich am Material der bereits vorhandenen
 // Konturen ändern. Keine zweite Geometrie, kein Overlay und kein Höhenversatz.
+// V2.3.39 PERFORMANCE: Im Zeitraffer änderte sich der Nachtwert in jedem Bild.
+// Dadurch wurden alle Konturmaterialien bis zu 60-mal pro Sekunde neu markiert.
+// 64 optisch gleichmäßige Helligkeitsstufen genügen für den kompletten Tag-
+// Nacht-Übergang; reine Farb-/Deckkraftänderungen brauchen keine Shader-
+// Neukompilierung über material.needsUpdate.
+let aczoContourNightKey=-1;
+const aczoContourDayColor=new THREE.Color(0x17242b);
+const aczoContourNightColor=new THREE.Color(0xe7eef1);
 function updateContourNightContrast(nightFactor){
   const nf=THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(Number(nightFactor)||0,0,1),.18,.92);
-  const dayColor=new THREE.Color(0x17242b);
-  const nightColor=new THREE.Color(0xe7eef1);
+  const nightKey=Math.round(nf*64);
+  if(nightKey===aczoContourNightKey)return;
+  aczoContourNightKey=nightKey;
+  const steppedNf=nightKey/64;
   contourGroup.children.forEach(line=>{
     const level=Number(line.userData.level)||0;
     // Am steilen Ufer liegen viele 20-cm-Linien auf engem Raum. Wenn nachts
     // alle gleich weiss werden, entsteht der bisherige leuchtende Rand. Ab
     // etwa 1 m Tiefe bekommen die Linien dagegen die volle Nachtlesbarkeit.
     const depthWeight=THREE.MathUtils.smoothstep(level,.35,1.10);
-    line.material.color.copy(dayColor).lerp(nightColor,nf);
+    line.material.color.copy(aczoContourDayColor).lerp(aczoContourNightColor,steppedNf);
     const dayOpacity=1.00;
     const nightOpacity=THREE.MathUtils.lerp(.82,1.00,depthWeight);
-    line.userData.baseOpacity=THREE.MathUtils.lerp(dayOpacity,nightOpacity,nf);
+    line.userData.baseOpacity=THREE.MathUtils.lerp(dayOpacity,nightOpacity,steppedNf);
     line.material.opacity=line.userData.baseOpacity;
-    line.material.needsUpdate=true;
   });
+  aczoContourLodKey='';
   updateContourDistanceLod();
 }
 
@@ -6814,6 +6829,10 @@ const sunDisc=new THREE.Sprite(
 sunDisc.position.copy(sun.position);
 sunDisc.scale.set(48,48,1);
 sunDisc.renderOrder=CELESTIAL_DISC_RENDER_ORDER;
+// Die Scheibe wird fuer jeden Hauptframe relativ zur Kamera neu positioniert.
+// Explizit ohne Frustum-Culling verhindert Safari, dass der schnelle
+// Horizontlauf mit einem Bounding-State der vorigen Position verschwindet.
+sunDisc.frustumCulled=false;
 scene.add(sunDisc);
 
 const moonLight=new THREE.DirectionalLight(0xa8c8ff,0.0);
@@ -6839,7 +6858,10 @@ function aczoConfigureUnderwaterShadowLight(light){
   // Natur-Schatten optisch ausreichend. Gegenüber 768 sinkt die pro Update
   // zu rasternde Fläche um 56 %, sodass Vögel häufiger und damit flüssiger
   // aktualisiert werden können, ohne die GPU dauerhaft auszulasten.
-  const shadowMapSize=512;
+  // V2.3.40: 384 px auf Touch-Geraeten reduziert die beim Lichtwechsel neu zu
+  // rasternde Schattenflaeche um rund 44 %. Die bewusst weichen Baumkronen
+  // kaschieren die geringere Texeldichte; Desktop bleibt bei 512 px.
+  const shadowMapSize=ACZO_COARSE_POINTER?384:512;
   light.shadow.mapSize.set(shadowMapSize,shadowMapSize);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
@@ -6873,12 +6895,31 @@ scene.add(aczoStructureShadowLight.target);
 scene.add(aczoStructureShadowLight);
 aczoConfigureUnderwaterShadowLight(aczoStructureShadowLight);
 let aczoUnderwaterShadowKey='',aczoLastShadowRefreshAt=0;
+// Gewuenschte, um ein Drittel kuerzere Projektion. Nur die horizontale
+// Komponente des separaten Schattenlichts wird komprimiert; Azimut, sichtbare
+// Sonne/Mond und deren Wasserreflexionen bleiben astronomisch unveraendert.
+const ACZO_SHADOW_LENGTH_SCALE=2/3;
+function aczoSetShortenedShadowDirection(sourcePosition){
+  const target=aczoStructureShadowLight.target.position;
+  aczoStructureShadowLight.position.set(
+    target.x+(sourcePosition.x-target.x)*ACZO_SHADOW_LENGTH_SCALE,
+    target.y+(sourcePosition.y-target.y)*ACZO_SHADOW_LENGTH_SCALE,
+    sourcePosition.z
+  );
+}
 function updateUnderwaterObstacleShadows(submerged){
   const below=!!submerged;
   const anglingUnderwater=typeof anglingMode!=='undefined'&&anglingMode
     &&typeof anglingCinematicView!=='undefined'&&anglingCinematicView==='underwater';
   const surface=!!(!is2D&&!below&&!anglingUnderwater&&ground&&ground.visible);
   const active=below||surface;
+  // Die Schattenkarte selbst ist statisch, ihre vier grossflaechigen
+  // Empfaenger muessen sie aber sonst in jedem Kamerabild erneut abtasten.
+  // Auf Touch-Geraeten werden nur waehrend schneller Bewegung diese
+  // Zusatzlagen pausiert; sobald das Bild ruht, sind alle Schatten wieder da.
+  const suppressMotionShadowReceivers=!!(
+    ACZO_COARSE_POINTER&&aczoMotionPerfActive&&!below
+  );
   const night=THREE.MathUtils.clamp(Number(sceneNightFactor)||0,0,1);
   // LIVE folgt Sonne/Mond und Bewoelkung. NEUTRAL ist ein fester klarer Tag,
   // wirft aber ebenfalls echte Schatten und erbt nie den letzten Nachtzustand.
@@ -6903,8 +6944,8 @@ function updateUnderwaterObstacleShadows(submerged){
   const shadowSource=useMoon?moonLight:sun;
   const structureActive=useSun||useMoon;
   if(structureActive){
-    if(useSun&&!simulationEnabled)aczoStructureShadowLight.position.copy(aczoNeutralShadowSunPosition);
-    else aczoStructureShadowLight.position.copy(shadowSource.position);
+    if(useSun&&!simulationEnabled)aczoSetShortenedShadowDirection(aczoNeutralShadowSunPosition);
+    else aczoSetShortenedShadowDirection(shadowSource.position);
     aczoStructureShadowLight.color.copy(shadowSource.color);
     // Auch bei dichter Bewoelkung bleibt ein weicher, aber erkennbarer
     // Strukturkontrast erhalten; NEUTRAL nutzt ohne Wetterfaktor einen klaren
@@ -6934,22 +6975,22 @@ function updateUnderwaterObstacleShadows(submerged){
     +'|'+Math.round(cloud*20)+'|a'+Math.round((Number.isFinite(sourceAltitude)?sourceAltitude:0)*90/Math.PI)
     +'|z'+Math.round((Number.isFinite(sourceAzimuth)?sourceAzimuth:0)*60/Math.PI);
   if(aczoLandShadowReceiver){
-    aczoLandShadowReceiver.visible=surface&&(useSun||useMoon);
+    aczoLandShadowReceiver.visible=surface&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
     if(typeof aczoLandShadowMat!=='undefined')aczoLandShadowMat.opacity=useMoon
       ?.20:THREE.MathUtils.lerp(.62,.20,Math.pow(cloud,.78));
   }
   if(aczoWaterStructureShadowReceiver&&aczoWaterStructureShadowMat){
-    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
+    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
     aczoWaterStructureShadowMat.opacity=useMoon
       ?.13:THREE.MathUtils.lerp(.44,.13,Math.pow(cloud,.78));
   }
   if(aczoMoselStructureShadowReceiver&&aczoMoselStructureShadowMat){
-    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
+    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
     aczoMoselStructureShadowMat.opacity=useMoon
       ?.12:THREE.MathUtils.lerp(.38,.12,Math.pow(cloud,.78));
   }
   if(typeof aczoPondStructureShadowReceiver!=='undefined'){
-    aczoPondStructureShadowReceiver.visible=!is2D&&active&&(useSun||useMoon);
+    aczoPondStructureShadowReceiver.visible=!is2D&&active&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
     // Der echte Projektionsschatten bleibt unter Wasser klar erkennbar, aber
     // nicht mehr tiefschwarz durch das ganze Gewaesser hindurch.
     aczoPondStructureShadowMat.opacity=below
@@ -6960,7 +7001,7 @@ function updateUnderwaterObstacleShadows(submerged){
     updateAczoOpticalStructureShadows(structureActive,below,cloud,night);
   }
   const shadowNow=performance.now();
-  // V2.3.38 PERFORMANCE: Eine Kamerabewegung veraendert die Lichtprojektion
+  // V2.3.39 PERFORMANCE: Eine Kamerabewegung veraendert die Lichtprojektion
   // NICHT. Die alte Routine renderte trotzdem den kompletten Wald samt allen
   // Gebaeuden im Stillstand alle 0,6/0,7 s und bei einem Vogel sogar 20–30-mal
   // pro Sekunde neu. Statische Schatten werden nun ausschliesslich bei einer
@@ -6977,11 +7018,20 @@ function updateUnderwaterObstacleShadows(submerged){
   if(shifting)refreshGap=phone?220:150;
   else if(dynamicCasterMoving)refreshGap=phone?280:190;
   if(!lightChanged&&!Number.isFinite(refreshGap))return;
-  // Waehrend einer Drehung/Zoomfahrt bleibt die vorhandene Schattenkarte
-  // korrekt und wird eingefroren. Das nimmt den teuersten Zusatzpass genau aus
-  // den Frames, in denen die Hauptkamera ohnehin die meiste Fuellrate braucht.
-  if(!lightChanged&&typeof aczoHighMotionActive==='function'&&aczoHighMotionActive(shadowNow))return;
-  if(!lightChanged&&shadowNow-aczoLastShadowRefreshAt<refreshGap)return;
+  // V2.3.39: Die Zeitraffer-Grenze muss auch dann gelten, wenn sich der
+  // quantisierte Sonnen-/Mondwinkel geändert hat. V2.3.38 prüfte den Abstand
+  // nur bei unverändertem Licht-Key; im Zeitraffer war lightChanged praktisch
+  // in jedem Bild wahr und die teure 512er Wald-/Gebäude-Schattenkarte lief
+  // deshalb wieder mit voller Bildrate. Der letzte gerenderte Key bleibt bis
+  // zum nächsten erlaubten Pass stehen, sodass keine Änderung verloren geht.
+  if(Number.isFinite(refreshGap)&&aczoLastShadowRefreshAt
+    &&shadowNow-aczoLastShadowRefreshAt<refreshGap)return;
+  // Waehrend einer Drehung, Zoomfahrt oder des Zeitraffers bleibt die letzte
+  // Schattenkarte stehen – auch wenn der quantisierte Sonnenwinkel inzwischen
+  // weitergezogen ist. Der geaenderte Key wird absichtlich noch nicht
+  // uebernommen; nach der Bewegung folgt genau ein aktueller Abschluss-Pass.
+  if(typeof aczoHighMotionActive==='function'&&aczoHighMotionActive(shadowNow)
+    &&!dynamicCasterMoving)return;
   if(lightChanged)aczoUnderwaterShadowKey=key;
   aczoLastShadowRefreshAt=shadowNow;
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
@@ -7136,6 +7186,7 @@ const moonDisc=new THREE.Sprite(new THREE.SpriteMaterial({
 moonDisc.renderOrder=CELESTIAL_DISC_RENDER_ORDER;
 moonDisc.scale.set(25,25,1);
 moonDisc.userData.visualOpacity=1;
+moonDisc.frustumCulled=false;
 
 scene.add(moonDisc);
 // Die astronomischen Lichtquellen arbeiten auch unter Wasser weiter. Der
@@ -7203,6 +7254,7 @@ const moonGlow=new THREE.Sprite(new THREE.SpriteMaterial({
 moonGlow.renderOrder=CELESTIAL_GLOW_RENDER_ORDER;
 moonGlow.scale.set(50,50,1);
 moonGlow.userData.visualOpacity=.82;
+moonGlow.frustumCulled=false;
 scene.add(moonGlow);
 
 
@@ -7409,26 +7461,33 @@ CLOUD_FIELDS.forEach(c=>{
 });
 
 // Tages-/Nachtfarbe und Transparenz der sichtbaren Wolken.
+const aczoCloudDayCoreClear=new THREE.Color(0xf0f2f2);
+const aczoCloudDayCoreOvercast=new THREE.Color(0xb9c0c3);
+const aczoCloudDayEdgeClear=new THREE.Color(0xe8ecec);
+const aczoCloudDayEdgeOvercast=new THREE.Color(0xaeb7bb);
+const aczoCloudNightCore=new THREE.Color(0x4d5968);
+const aczoCloudNightEdge=new THREE.Color(0x596675);
+const aczoCloudDayCoreWork=new THREE.Color();
+const aczoCloudDayEdgeWork=new THREE.Color();
 function updateCloudAppearance(cloudFraction,nightFactor){
   const cf=THREE.MathUtils.clamp(cloudFraction,0,1);
   const nf=THREE.MathUtils.clamp(nightFactor,0,1);
 
-  let moonFraction=0;
-  let moonVisible=false;
-  try{
-    const now=viewerNow();
-    moonFraction=SunCalc.getMoonIllumination(now).fraction;
-    moonVisible=SunCalc.getMoonPosition(now,SITE_LAT,SITE_LON).altitude>0;
-  }catch(e){}
+  // V2.3.39: updateAstronomy hat diese Werte bereits für dasselbe Bild
+  // berechnet. Zwei zusätzliche SunCalc-Durchläufe je Zeitrafferbild waren
+  // unnötig und ließen Wolken, Mond und Wasser zeitlich leicht auseinanderlaufen.
+  const moonFraction=Number.isFinite(cachedMoonFraction)
+    ? THREE.MathUtils.clamp(cachedMoonFraction,0,1)
+    : 0;
+  const moonVisible=typeof moonDisc!=='undefined'
+    &&!!moonDisc.userData.astronomicallyVisible;
 
   // Tagsüber weiß/grau; nachts transparent dunkel-blaugrau.
-  const dayCore=new THREE.Color(0xf0f2f2).lerp(new THREE.Color(0xb9c0c3),cf*.62);
-  const dayEdge=new THREE.Color(0xe8ecec).lerp(new THREE.Color(0xaeb7bb),cf*.58);
-  const nightCore=new THREE.Color(0x4d5968);
-  const nightEdge=new THREE.Color(0x596675);
+  aczoCloudDayCoreWork.copy(aczoCloudDayCoreClear).lerp(aczoCloudDayCoreOvercast,cf*.62);
+  aczoCloudDayEdgeWork.copy(aczoCloudDayEdgeClear).lerp(aczoCloudDayEdgeOvercast,cf*.58);
 
-  cloudNormalCoreColor.copy(dayCore).lerp(nightCore,nf);
-  cloudNormalEdgeColor.copy(dayEdge).lerp(nightEdge,nf);
+  cloudNormalCoreColor.copy(aczoCloudDayCoreWork).lerp(aczoCloudNightCore,nf);
+  cloudNormalEdgeColor.copy(aczoCloudDayEdgeWork).lerp(aczoCloudNightEdge,nf);
 
   // Transparenz bleibt optisch erhalten. Der Hilfswert rechnet die bisherige
   // Vorder-/Rueckseitenmischung in exakt einen Zeichenpass um.
@@ -7505,7 +7564,11 @@ function pointInsideWaterMask(x,y){
 }
 
 function updateRealCloudReflections(){
-  const enabled=waterVisible && !is2D && simulationEnabled && cloudGroup.visible;
+  // 27 grosse transparente Sprites verursachen auf Tile-GPUs viel Overdraw.
+  // Beim schnellen Drehen bleiben Hauptwasser und echte Himmelswolken aktiv;
+  // nur deren kaum verfolgbare Zusatz-Sprites ruhen bis zum Ausschwingen.
+  const motionReduced=!!(ACZO_COARSE_POINTER&&aczoMotionPerfActive);
+  const enabled=waterVisible && !is2D && simulationEnabled && cloudGroup.visible&&!motionReduced;
   cloudReflectionGroup.visible=enabled;
   if(!enabled) return;
 
@@ -7669,6 +7732,7 @@ function weatherDescription(code){
 }
 
 // V36: gemeinsame Helligkeit für Luftbild, Kartenhintergrund und HTML-Umgebung.
+let aczoLastDaylightGray=-1;
 function applyDayLightLevel(level,skyColor){
   const l=Math.max(0.10,Math.min(1,level));
   if(satUniforms && satUniforms.dayLight) satUniforms.dayLight.value=l;
@@ -7683,11 +7747,26 @@ function applyDayLightLevel(level,skyColor){
 
   // Auch der weiße Rahmen/Seitenbereich darf nachts nicht weiter leuchten.
   const gray=Math.round(255*(0.34+0.66*l));
-  document.documentElement.style.backgroundColor=`rgb(${gray},${gray},${gray})`;
-  document.body.style.backgroundColor=`rgb(${gray},${gray},${gray})`;
-  const wrap=document.querySelector('.wrap');
-  if(wrap) wrap.style.backgroundColor=`rgb(${gray},${gray},${gray})`;
+  if(gray!==aczoLastDaylightGray){
+    aczoLastDaylightGray=gray;
+    const color=`rgb(${gray},${gray},${gray})`;
+    document.documentElement.style.backgroundColor=color;
+    document.body.style.backgroundColor=color;
+    const wrap=document.querySelector('.wrap');
+    if(wrap) wrap.style.backgroundColor=color;
+  }
 }
+
+// Wiederverwendete Farbzustaende vermeiden kurzlebige THREE.Color-Objekte in
+// jedem Zeitrafferbild und damit periodische Garbage-Collector-Pausen.
+const aczoWeatherDayTop=new THREE.Color(0x9fd8f5);
+const aczoWeatherDuskTop=new THREE.Color(0x627181);
+const aczoWeatherNightTop=new THREE.Color(0x111d2b);
+const aczoWeatherDayBottom=new THREE.Color(0xfafdfd);
+const aczoWeatherDuskBottom=new THREE.Color(0x7b858e);
+const aczoWeatherNightBottom=new THREE.Color(0x202c38);
+const aczoWeatherBgDay=new THREE.Color(0xeaf6fb);
+const aczoWeatherBgNight=new THREE.Color(0x141d27);
 
 function applyWeatherScene(){
   // FINAL V2: Nur die farbigen Füllungen reagieren im Auto-Modus auf Licht/Wetter.
@@ -7738,9 +7817,14 @@ function applyWeatherScene(){
   // 75 % zeigt daher deutlich mehr zusammenhängende Wolkenfelder als bisher.
   const cloudVisibility=Math.pow(fraction,0.62);
   const visibleCount=Math.round(cloudVisibility*cloudChildren.length);
-  cloudChildren.forEach((c,i)=>c.visible=i<visibleCount);
+  // Wettermenge ändert sich nur beim Wetterabruf bzw. im Testlabor. Im
+  // Zeitraffer dieselben 27 Sichtbarkeitswerte pro Bild erneut zu schreiben,
+  // bringt keinen optischen Nutzen.
+  if(applyWeatherScene.lastCloudVisibleCount!==visibleCount){
+    cloudChildren.forEach((c,i)=>c.visible=i<visibleCount);
+    applyWeatherScene.lastCloudVisibleCount=visibleCount;
+  }
   cloudGroup.visible=!is2D && visibleCount>0;
-  updateCloudAppearance(fraction,sceneNightFactor);
 
   // Bewölkung schwächt nur das Sonnenlicht auf der Szene ab. Die sichtbare
   // Sonnenscheibe bleibt unabhängig vom Bewölkungsgrad vollständig erhalten.
@@ -7775,14 +7859,16 @@ function applyWeatherScene(){
   // V41: Keine orange Dämmerungsfärbung der Umgebung.
   // Himmel und Hintergrund werden nur über Helligkeit verändert.
   if(simulationEnabled){
-    const now=viewerNow();
     let neutralDark=0;
-    if(typeof SunCalc!=='undefined'){
+    const cachedSunAltitude=Number(sun?.userData?.astronomicalAltitudeRad);
+    if(Number.isFinite(cachedSunAltitude)){
+      const alt=cachedSunAltitude*180/Math.PI;
+      // 0 bei hellerem Tag, ansteigend über Dämmerung bis Nacht.
+      neutralDark=THREE.MathUtils.clamp((8-alt)/18,0,1);
+    }else if(typeof SunCalc!=='undefined'){
       try{
-        const pos=SunCalc.getPosition(now,49.70997,6.57746);
-        const alt=pos.altitude*180/Math.PI;
-        // 0 bei hellerem Tag, ansteigend über Dämmerung bis Nacht.
-        neutralDark=THREE.MathUtils.clamp((8-alt)/18,0,1);
+        const pos=SunCalc.getPosition(viewerNow(),49.70997,6.57746);
+        neutralDark=THREE.MathUtils.clamp((8-pos.altitude*180/Math.PI)/18,0,1);
       }catch(e){}
     }
 
@@ -7803,39 +7889,28 @@ function applyWeatherScene(){
     if(viewerWrap) viewerWrap.classList.toggle('night-readable',neutralDark>0.35);
 
     // Neutral blau-grauer Himmel statt warmem Orange.
-    const dayTop=new THREE.Color(0x9fd8f5);
-    const duskTop=new THREE.Color(0x627181);
-    const nightTop=new THREE.Color(0x111d2b);
-    const dayBottom=new THREE.Color(0xfafdfd);
-    const duskBottom=new THREE.Color(0x7b858e);
-    const nightBottom=new THREE.Color(0x202c38);
-
     if(skyMat && skyMat.uniforms){
       if(neutralDark<0.55){
         const u=neutralDark/0.55;
-        skyMat.uniforms.topColor.value.copy(dayTop).lerp(duskTop,u);
-        skyMat.uniforms.bottomColor.value.copy(dayBottom).lerp(duskBottom,u);
+        skyMat.uniforms.topColor.value.copy(aczoWeatherDayTop).lerp(aczoWeatherDuskTop,u);
+        skyMat.uniforms.bottomColor.value.copy(aczoWeatherDayBottom).lerp(aczoWeatherDuskBottom,u);
       }else{
         const u=(neutralDark-0.55)/0.45;
-        skyMat.uniforms.topColor.value.copy(duskTop).lerp(nightTop,u);
-        skyMat.uniforms.bottomColor.value.copy(duskBottom).lerp(nightBottom,u);
+        skyMat.uniforms.topColor.value.copy(aczoWeatherDuskTop).lerp(aczoWeatherNightTop,u);
+        skyMat.uniforms.bottomColor.value.copy(aczoWeatherDuskBottom).lerp(aczoWeatherNightBottom,u);
       }
     }
 
     // Äußerer Szenenhintergrund ebenfalls neutral abdunkeln.
-    const bgDay=new THREE.Color(0xeaf6fb);
-    const bgNight=new THREE.Color(0x141d27);
-    
-    scene.background.copy(bgDay).lerp(bgNight,neutralDark);
+    scene.background.copy(aczoWeatherBgDay).lerp(aczoWeatherBgNight,neutralDark);
 
     // V42: Mond wirft nachts ein sanftes, kühles Licht auf Gelände und Tiefenkarte.
     // Kein künstliches Flutlicht: erst ab deutlicher Dämmerung, nachts maximal moderat.
     if(typeof moonLight!=='undefined'){
       const moonStrength=THREE.MathUtils.smoothstep(neutralDark,0.42,1.0);
-      let moonFraction=0;
-      try{
-        moonFraction=SunCalc.getMoonIllumination(now).fraction;
-      }catch(e){}
+      const moonFraction=Number.isFinite(cachedMoonFraction)
+        ? THREE.MathUtils.clamp(cachedMoonFraction,0,1)
+        : 0;
       const cloudTransmission=Math.max(.10,1-fraction*.88);
 
       moonLight.color.set(0xb8d2ff);
@@ -7960,10 +8035,17 @@ function applyNeutralDayScene(){
   if(typeof waterUniforms!=='undefined'){
     waterUniforms.sunStrength.value=0;
     waterUniforms.moonStrength.value=0;
+    waterUniforms.nightFactor.value=0;
     waterUniforms.sunScreen.value.set(-2,-2,0);
     waterUniforms.moonScreen.value.set(-2,-2,0);
   }
   if(typeof celestialDepthUniforms!=='undefined')celestialDepthUniforms.sourceStrength.value=0;
+  // Sternfeld und CPU-Wasserpunkte haben einen eigenen Astronomie-Takt.
+  // Beim Umschalten LIVE-Nacht -> NEUTRAL-Tag muessen sie trotzdem in genau
+  // diesem Klick verschwinden und nicht erst bis zum naechsten 30-s-Takt.
+  if(typeof window.__aczoHideAstronomicalStarsImmediately==='function'){
+    window.__aczoHideAstronomicalStarsImmediately();
+  }
 
   sceneNightFactor=0;
   skyMat.uniforms.topColor.value.set(0x79c7ee);
@@ -9794,6 +9876,9 @@ const starPositions=new Float32Array(starCount*3);
 const starColors=new Float32Array(starCount*3);
 const starSizes=new Float32Array(starCount);
 const starAlphas=new Float32Array(starCount);
+const starCosDec=new Float32Array(starCount);
+const starSinDec=new Float32Array(starCount);
+let starPositionRevision=0;
 
 function starColorFromBV(bv){
   if(bv<-.08) return [.68,.80,1.0];
@@ -9804,6 +9889,8 @@ function starColorFromBV(bv){
 }
 for(let i=0;i<starCount;i++){
   const s=starCatalog[i],c=starColorFromBV(s[3]);
+  starCosDec[i]=Math.cos(s[1]);
+  starSinDec[i]=Math.sin(s[1]);
   starColors.set(c,i*3);
   // FINAL V5.29: auf kleinen Mobil-Displays klar erkennbare Himmelssterne.
   // Nur die Darstellung am Himmel wird verstaerkt; die Wasserreflexionen
@@ -9811,6 +9898,11 @@ for(let i=0;i<starCount;i++){
   starSizes[i]=Math.min(12.2,4.95+(3.4-s[2])*1.47);
   starAlphas[i]=Math.min(1.0,1.01+(3.4-s[2])*.040);
 }
+// Einmal nach Helligkeit sortieren. Die frühere Zeitraffer-Routine erzeugte
+// bei jeder Sternaktualisierung 2.865 Objekte, filterte und sortierte sie neu,
+// nur um die 32 hellsten Sterne über dem Horizont zu finden.
+const starBrightnessOrder=Array.from({length:starCount},(_,i)=>i)
+  .sort((a,b)=>starCatalog[a][2]-starCatalog[b][2]);
 const starGeo=new THREE.BufferGeometry();
 starGeo.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
 starGeo.setAttribute('starColor',new THREE.BufferAttribute(starColors,3));
@@ -9891,6 +9983,9 @@ waterStarHalos.renderOrder=18;
 waterStarCores.renderOrder=19;
 scene.add(waterStarHalos,waterStarCores);
 let waterStarPhase=0;
+let waterStarProjectedRevision=-1;
+let waterStarLastProjectionAt=0;
+const waterStarLastCameraPosition=new THREE.Vector3(Infinity,Infinity,Infinity);
 
 function pointInPondWaterMask(x,y){
   return aczoPointInsideMasterPond(x,y);
@@ -9905,8 +10000,26 @@ function updateWaterStarReflectionPoints(dt){
   waterStarHalos.visible=waterStarCores.visible=active;
   if(!active){
     waterStarGeo.setDrawRange(0,0);
+    waterStarProjectedRevision=-1;
     return;
   }
+  const twinkle=.88+.12*Math.sin(waterStarPhase*2.15);
+  waterStarHaloMat.opacity=opacity*.15*twinkle;
+  waterStarCoreMat.opacity=Math.min(.44,opacity*.40*twinkle);
+
+  // Die Reflexpunkte hängen nur von Sternpositionen und Kamerastandort ab.
+  // Ihre Geometrie pro Renderbild erneut aus allen 2.865 Sternen aufzubauen,
+  // obwohl sich zwischen zwei Astronomie-Schritten nichts geändert hat, war
+  // besonders beim Übergang in die Nacht eine deutliche CPU-Spitze.
+  const projectionNow=performance.now();
+  const cameraMoved=waterStarLastCameraPosition.distanceToSquared(camera.position)>.0004;
+  const starsMoved=waterStarProjectedRevision!==starPositionRevision;
+  const timeShift=typeof anglingTimeShiftActive!=='undefined'&&!!anglingTimeShiftActive;
+  const fastMotion=typeof aczoHighMotionActive==='function'&&aczoHighMotionActive(projectionNow);
+  const projectionGap=timeShift?(ACZO_COARSE_POINTER?150:110):(fastMotion?(ACZO_COARSE_POINTER?80:48):120);
+  if((!cameraMoved&&!starsMoved)
+    ||(waterStarLastProjectionAt&&projectionNow-waterStarLastProjectionAt<projectionGap))return;
+
   let count=0;
   const waterZ=.68;
   for(let i=0;i<starCount;i++){
@@ -9932,23 +10045,37 @@ function updateWaterStarReflectionPoints(dt){
   waterStarGeo.setDrawRange(0,count);
   waterStarGeo.attributes.position.needsUpdate=true;
   waterStarGeo.attributes.color.needsUpdate=true;
-  const twinkle=.88+.12*Math.sin(waterStarPhase*2.15);
-  waterStarHaloMat.opacity=opacity*.15*twinkle;
-  waterStarCoreMat.opacity=Math.min(.44,opacity*.40*twinkle);
+  waterStarProjectedRevision=starPositionRevision;
+  waterStarLastProjectionAt=projectionNow;
+  waterStarLastCameraPosition.copy(camera.position);
 }
+
+function hideAstronomicalStarsImmediately(){
+  starMat.uniforms.opacity.value=0;
+  starField.visible=false;
+  waterStarHaloMat.opacity=0;
+  waterStarCoreMat.opacity=0;
+  waterStarHalos.visible=false;
+  waterStarCores.visible=false;
+  waterStarGeo.setDrawRange(0,0);
+  waterStarProjectedRevision=-1;
+}
+window.__aczoHideAstronomicalStarsImmediately=hideAstronomicalStarsImmediately;
 
 function updateAstronomicalStars(now,sunAltitude){
   const jd=now.getTime()/86400000+2440587.5;
   const gmst=(280.46061837+360.98564736629*(jd-2451545.0))*Math.PI/180;
   const lst=gmst+SITE_LON*Math.PI/180;
   const lat=SITE_LAT*Math.PI/180;
+  const sinLat=Math.sin(lat),cosLat=Math.cos(lat);
   const radius=Math.max(D.sceneW,D.sceneH)*2.75;
   for(let i=0;i<starCount;i++){
-    const s=starCatalog[i],h=lst-s[0],dec=s[1];
-    const cd=Math.cos(dec),sd=Math.sin(dec);
-    const east=-cd*Math.sin(h);
-    const north=sd*Math.cos(lat)-cd*Math.cos(h)*Math.sin(lat);
-    const up=sd*Math.sin(lat)+cd*Math.cos(h)*Math.cos(lat);
+    const s=starCatalog[i],h=lst-s[0];
+    const cd=starCosDec[i],sd=starSinDec[i];
+    const sh=Math.sin(h),ch=Math.cos(h);
+    const east=-cd*sh;
+    const north=sd*cosLat-cd*ch*sinLat;
+    const up=sd*sinLat+cd*ch*cosLat;
     starPositions[i*3]=east*radius;
     starPositions[i*3+1]=north*radius;
     starPositions[i*3+2]=up*radius;
@@ -9956,25 +10083,24 @@ function updateAstronomicalStars(now,sunAltitude){
   // Für die Spiegelung werden nicht pauschal die global hellsten Sterne
   // verwendet, sondern die derzeit tatsächlich über Zewens Horizont stehenden.
   // So bleiben alle 32 Reflexionsplätze nachts sinnvoll belegt.
-  const visibleReflectionStars=starCatalog.map((s,i)=>({
-    i,mag:s[2],up:starPositions[i*3+2]
-  })).filter(x=>x.up>0).sort((a,b)=>a.mag-b.mag).slice(0,32);
-  for(let k=0;k<32;k++){
-    const item=visibleReflectionStars[k];
-    if(!item){
-      waterUniforms.realStarDirs.value[k].set(0,0,-1);
-      waterUniforms.realStarBrightness.value[k]=0;
-      continue;
-    }
-    const i=item.i;
-    waterUniforms.realStarDirs.value[k].set(
+  let reflectionCount=0;
+  for(const i of starBrightnessOrder){
+    if(starPositions[i*3+2]<=0)continue;
+    waterUniforms.realStarDirs.value[reflectionCount].set(
       starPositions[i*3],starPositions[i*3+1],starPositions[i*3+2]
     ).normalize();
-    waterUniforms.realStarBrightness.value[k]=THREE.MathUtils.clamp(
+    waterUniforms.realStarBrightness.value[reflectionCount]=THREE.MathUtils.clamp(
       (4.0-starCatalog[i][2])/3.35,.46,1.55
     );
+    reflectionCount++;
+    if(reflectionCount>=32)break;
+  }
+  for(let k=reflectionCount;k<32;k++){
+      waterUniforms.realStarDirs.value[k].set(0,0,-1);
+      waterUniforms.realStarBrightness.value[k]=0;
   }
   starGeo.attributes.position.needsUpdate=true;
+  starPositionRevision++;
   const darkness=THREE.MathUtils.clamp((-sunAltitude-.055)/.13,0,1);
   const clouds=(typeof liveWeather!=='undefined'?(liveWeather.cloud||0):0)/100;
   starMat.uniforms.opacity.value=simulationEnabled ? darkness*(1-clouds*.76) : 0;
@@ -9997,9 +10123,9 @@ function fmtTime(d){
   return (!d || isNaN(d.getTime())) ? '--:--' : d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
 }
 
-function celestialVector(pos,radius){
+function celestialVector(pos,radius,out=new THREE.Vector3()){
   const ca=Math.cos(pos.altitude);
-  return new THREE.Vector3(
+  return out.set(
     -Math.sin(pos.azimuth)*ca,
     -Math.cos(pos.azimuth)*ca,
     Math.sin(pos.altitude)
@@ -10031,9 +10157,13 @@ function restoreCelestialDiscWorldPositions(){
   if(typeof moonGlow!=='undefined')moonGlow.position.copy(moonDisc.position);
 }
 
-function updateAstronomy(){
+let aczoMoonPhaseTextureKey='';
+const aczoAstronomySunVector=new THREE.Vector3();
+const aczoAstronomyMoonVector=new THREE.Vector3();
+function updateAstronomy(options={}){
   if(typeof SunCalc==='undefined') return;
 
+  const fast=!!options.fast&&!options.force;
   const now=viewerNow();
   const sunPos=SunCalc.getPosition(now,SITE_LAT,SITE_LON);
   const moonPos=SunCalc.getMoonPosition(now,SITE_LAT,SITE_LON);
@@ -10046,38 +10176,44 @@ function updateAstronomy(){
   moonLight.userData.astronomicalAltitudeRad=moonPos.altitude;
   moonLight.userData.astronomicalAzimuthRad=moonPos.azimuth;
   cachedMoonFraction=moonIll.fraction;
-  const times=SunCalc.getTimes(now,SITE_LAT,SITE_LON);
-  updateAstronomicalStars(now,sunPos.altitude);
+  // Sonne, Mond und ihre Reflexionsrichtungen laufen im Zeitraffer in jedem
+  // Renderbild. Der Sternkatalog, Auf-/Untergangszeiten und DOM-Texte brauchen
+  // dagegen nur den gedrosselten Vollschritt (etwa 8 Hz statt zuvor 30 Hz).
+  if(!fast){
+    const times=SunCalc.getTimes(now,SITE_LAT,SITE_LON);
+    updateAstronomicalStars(now,sunPos.altitude);
 
-  // Datum/Uhrzeit und astronomische Zeiten werden immer berechnet.
-  // Die Szene selbst wird nur bei aktivierter Automatik angepasst.
-  astroTime.textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})
-    +' · '+now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    // Datum/Uhrzeit und astronomische Zeiten werden immer berechnet.
+    // Die Szene selbst wird nur bei aktivierter Automatik angepasst.
+    astroTime.textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})
+      +' · '+now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
 
-  const sunrise=fmtTime(times.sunrise);
-  const sunset=fmtTime(times.sunset);
-  const moonName=phaseName(moonIll.phase);
+    const sunrise=fmtTime(times.sunrise);
+    const sunset=fmtTime(times.sunset);
+    const moonName=phaseName(moonIll.phase);
+    const moonHorizon=moonPos.altitude>0?'über Horizont':'unter Horizont';
 
-  astroSub.textContent=sunPos.altitude>0
-    ? '☀️ Auf '+sunrise+' · Unter '+sunset+' · 🌙 '+moonName
-    : '🌙 '+moonName+' · ☀️ Auf '+sunrise+' · Unter '+sunset;
+    astroSub.textContent=sunPos.altitude>0
+      ? '☀️ Auf '+sunrise+' · Unter '+sunset+' · 🌙 '+moonName+' · '+moonHorizon
+      : '🌙 '+moonName+' · '+moonHorizon+' · ☀️ Auf '+sunrise+' · Unter '+sunset;
+  }
 
   if(typeof simulationEnabled!=='undefined' && !simulationEnabled) return;
 
 
 
   const span=Math.max(D.sceneW,D.sceneH);
-  let sunVec=celestialVector(sunPos,span*2.1);
+  const sunVec=celestialVector(sunPos,span*2.1,aczoAstronomySunVector);
   // V8.57: Sonne UND Mond folgen unverändert den echten SunCalc-Koordinaten.
   // Kein künstliches Anheben des Mondes mehr, wenn er unter dem Horizont steht.
   const sunUp=sunPos.altitude>0;
   const moonUp=moonPos.altitude>0;
-  // Die reale Mondposition darf tagsüber astronomisch über dem Horizont sein,
-  // in dieser Visualisierung wird die Scheibe aber erst ab der fortgeschrittenen
-  // Dämmerung gezeigt. Damit erscheint um 14:24 garantiert kein grauer Mond
-  // neben der Sonne; nachts bleibt er selbst bei 99 % Wolken diffus sichtbar.
-  const moonDisplayAllowed=moonUp&&sunPos.altitude<=THREE.MathUtils.degToRad(-4);
-  let moonVec=celestialVector(moonPos,span*1.9);
+  // V2.3.39: Ein astronomisch über dem Horizont stehender Mond darf auch am
+  // Tag neben der Sonne sichtbar sein. Die frühere zusätzliche Sperre bis
+  // Sonnenstand -4° blendete Mond, Mondschein und beide Wasserreflexionen für
+  // viele Stunden komplett aus, obwohl seine reale Position gültig war.
+  const moonDisplayAllowed=moonUp;
+  const moonVec=celestialVector(moonPos,span*1.9,aczoAstronomyMoonVector);
 
   sun.position.copy(sunVec);
   sunDisc.position.copy(sunVec);
@@ -10100,9 +10236,10 @@ function updateAstronomy(){
   const moonDaylight=THREE.MathUtils.smoothstep(sunPos.altitude,-.08,.18);
   const moonHorizonVisibility=THREE.MathUtils.smoothstep(moonPos.altitude,0,.18);
   const moonCloudTransmission=Math.max(.13,1-.90*Math.pow(moonCloud,1.28));
+  const moonOpacityFloor=THREE.MathUtils.lerp(.18,.12,moonDaylight);
   const moonVisualOpacity=moonDisplayAllowed
     ? THREE.MathUtils.clamp(
-        Math.max(.065,moonHorizonVisibility*THREE.MathUtils.lerp(1,.46,moonDaylight)*moonCloudTransmission),
+        Math.max(moonOpacityFloor,moonHorizonVisibility*THREE.MathUtils.lerp(1,.46,moonDaylight)*moonCloudTransmission),
         0,1
       )
     : 0;
@@ -10170,8 +10307,6 @@ function updateAstronomy(){
     applyDayLightLevel(dayLevel,0x17233a);
   }
 
-  drawMoonPhase(moonIll.phase);
-
   if(typeof applyWeatherScene==='function') applyWeatherScene();
 
   // Wetter und Horizont dürfen den Mond nun realistisch abschwächen. Die
@@ -10184,8 +10319,17 @@ function updateAstronomy(){
     moonGlow.position.copy(moonDisc.position);
   }
 
-  // V44: vorhandene einfache Mondgrafik abschließend durch korrekte Phase ersetzen.
-  renderMoonPhase(viewerNow());
+  // V2.3.39: Die 256er Mondphasentextur enthält eine CPU-Pixelschleife. Eine
+  // Mondphase ändert sich innerhalb weniger Spielminuten kaum; 512 diskrete
+  // Phasen sind optisch kontinuierlich und reduzieren im 24-h-Zeitraffer rund
+  // tausend Textur-Neuberechnungen auf nur wenige tatsächliche Änderungen.
+  if(!fast){
+    const phaseTextureKey=String(Math.round(moonIll.phase*512));
+    if(phaseTextureKey!==aczoMoonPhaseTextureKey||options.force){
+      aczoMoonPhaseTextureKey=phaseTextureKey;
+      renderMoonPhase(now);
+    }
+  }
 }
 
 
@@ -12034,6 +12178,13 @@ function finishCarVisit(){
 }
 
 function carTrafficDaytimeAllowed(){
+  // NEUTRAL ist definitionsgemaess Tag. Im LIVE-/Zeitrafferbetrieb liegt die
+  // echte Sonnenhoehe bereits aus updateAstronomy vor. Zuvor riefen normaler
+  // Besuch und BMW diesen relativ teuren SunCalc-Pfad zusammen zweimal pro
+  // Renderbild auf – genau tagsueber, wenn auch die Akteure sichtbar sind.
+  if(!simulationEnabled)return true;
+  const cachedAltitude=Number(sun?.userData?.astronomicalAltitudeRad);
+  if(Number.isFinite(cachedAltitude))return cachedAltitude>-0.105;
   try{
     if(typeof SunCalc!=='undefined'){
       // Bürgerliche Dämmerung: früher Morgen bis zum Ende der Abenddämmerung.
@@ -17150,7 +17301,8 @@ aczoStructureBottomShade.position.z=.026;aczoStructureBottomShade.renderOrder=3.
 aczoStructureBottomShade.frustumCulled=false;aczoStructureBottomShade.visible=false;scene.add(aczoStructureBottomShade);
 
 function updateAczoOpticalStructureShadows(active,below,cloud,night){
-  const enabled=!!(active&&simulationEnabled&&!is2D&&waterVisible);
+  const motionReduced=!!(ACZO_COARSE_POINTER&&aczoMotionPerfActive&&!below);
+  const enabled=!!(active&&simulationEnabled&&!is2D&&waterVisible&&!motionReduced);
   aczoStructureSurfaceShade.visible=enabled;
   aczoStructureBottomShade.visible=enabled&&!!fishPondGeo.getAttribute('position')&&(below||fishPond.visible);
   aczoStructureSurfaceShadeMat.uniforms.birchDensity.value=aczoBirchOpticalDensity;
@@ -22968,7 +23120,7 @@ function updateAnglingTimeAvailability(){
 function updateAnglingTimeUi(){if(!anglingTimeHours)return;updateAnglingTimeAvailability();const h=Math.trunc(Number(anglingTimeHours.value)||0),abs=Math.abs(h),allow=anglingTimeAllowance(),forwardLeft=Math.max(0,allow-anglingTimeUsedForward),backwardLeft=Math.max(0,allow-anglingTimeUsedBackward);anglingTimeChoice.textContent=h===0?'0 Stunden':(h>0?'+':'−')+abs+' '+(abs===1?'Stunde':'Stunden');anglingTimeDuration.textContent='Dauer '+(abs*.65).toFixed(1).replace('.',',')+' Sekunden · Kosten '+abs+' EP';anglingTimeForwardLeft.textContent='Vorwärts: '+forwardLeft+' verfügbar';anglingTimeBackwardLeft.textContent='Zurück: '+backwardLeft+' verfügbar';const directionOk=h>0?forwardLeft>0:h<0?backwardLeft>0:false;anglingTimeStart.disabled=abs<1||!directionOk||anglingProgress.xp<abs||!!anglingTimeShiftActive||!!anglingTimeShiftPending;anglingTimeStart.textContent=anglingProgress.xp<abs?'Nicht genug EP':'Zeitraffer starten';}
 function openAnglingTimePanel(){if(!anglingTimeAvailableNow()||guardAnglingMenuOpen())return;closeAnglingGamePanels();updateAnglingTimeUi();markAnglingGamePanelOpen(anglingTimePanel);}
 function setSeasonTimeFromAbsoluteHours(absHours){const totalDays=365;let dayIndex=Math.floor(absHours/24),hour=absHours-dayIndex*24;while(dayIndex<0)dayIndex+=totalDays;dayIndex%=totalDays;if(hour<0){hour+=24;dayIndex=(dayIndex-1+totalDays)%totalDays;}seasonTestDay=dayIndex+1;seasonTestHour=hour;setSeasonTimeAnchor(seasonDateFromDayHour(seasonTestDay,seasonTestHour));}
-function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.65,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0,lastUiAt:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAnglingTimeUi();}
+function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeAstroAccumulator=0;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.65,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0,lastUiAt:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAstronomy({force:true});updateAnglingTimeUi();}
 function requestAnglingTimeShift(){
   const hours=Math.trunc(Number(anglingTimeHours.value)||0),cost=Math.abs(hours);
   if(!hours)return;
@@ -22983,7 +23135,37 @@ function requestAnglingTimeShift(){
   if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP.',1200);updateAnglingTimeUi();return;}
   beginAnglingTimeShift(hours);
 }
-function updateAnglingTimeShift(dt){const tr=anglingTimeShiftActive;if(!tr)return false;tr.elapsed=Math.min(tr.duration,tr.elapsed+dt);const u=tr.duration>0?tr.elapsed/tr.duration:1;setSeasonTimeFromAbsoluteHours(THREE.MathUtils.lerp(tr.start,tr.target,u));anglingTimeAstroAccumulator+=dt;if(anglingTimeAstroAccumulator>=.033||u>=1){anglingTimeAstroAccumulator=0;updateAstronomy();}const uiNow=performance.now();if(uiNow-tr.lastUiAt>=160||u>=1){tr.lastUiAt=uiNow;updateWeatherText();const now=viewerNow();anglingTimeOverlayClock.textContent=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' · '+now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}if(u>=1){const hours=tr.hours;anglingTimeShiftActive=null;anglingUi.classList.remove('time-shifting');anglingTimeOverlay.classList.remove('show');anglingTimeOverlay.setAttribute('aria-hidden','true');anglingState='ready';anglingStateTime=0;applyAnglingStraightShoreCamera(true);updateAnglingTimeUi();showAnglingToast('Zeitwechsel abgeschlossen: '+(hours>0?'+':'−')+Math.abs(hours)+' h',1200);}return true;}
+function updateAnglingTimeShift(dt){
+  const tr=anglingTimeShiftActive;if(!tr)return false;
+  // Bei einem einzelnen langen Safari-Frame wird nicht gleich ein grosser
+  // Abschnitt des Sonnen-/Mondbogens uebersprungen. Bei stabilen 60 FPS bleibt
+  // die gewohnte Dauer von 0,65 s pro Spielstunde exakt erhalten; nur unter
+  // Last verlaengert sich der Ablauf etwas, um sichtbare Zwischenbilder zu
+  // bewahren statt die Himmelskoerper scheinbar verschwinden zu lassen.
+  const celestialStep=Math.min(dt,ACZO_COARSE_POINTER?1/36:1/45);
+  tr.elapsed=Math.min(tr.duration,tr.elapsed+celestialStep);
+  const u=tr.duration>0?tr.elapsed/tr.duration:1;
+  setSeasonTimeFromAbsoluteHours(THREE.MathUtils.lerp(tr.start,tr.target,u));
+  anglingTimeAstroAccumulator+=celestialStep;
+  const fullAstronomy=anglingTimeAstroAccumulator>=.12||u>=1;
+  // Position, Horizontstatus, Licht und Wasserreflex laufen weiterhin in
+  // JEDEM dargestellten Frame; nur Sternkatalog/DOM/Mondtextur sind gedrosselt.
+  updateAstronomy({fast:!fullAstronomy,force:u>=1});
+  if(fullAstronomy)anglingTimeAstroAccumulator=0;
+  const uiNow=performance.now();
+  if(uiNow-tr.lastUiAt>=160||u>=1){
+    tr.lastUiAt=uiNow;updateWeatherText();const now=viewerNow();
+    anglingTimeOverlayClock.textContent=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' · '+now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+  }
+  if(u>=1){
+    const hours=tr.hours;anglingTimeShiftActive=null;
+    anglingUi.classList.remove('time-shifting');anglingTimeOverlay.classList.remove('show');
+    anglingTimeOverlay.setAttribute('aria-hidden','true');anglingState='ready';anglingStateTime=0;
+    applyAnglingStraightShoreCamera(true);updateAnglingTimeUi();
+    showAnglingToast('Zeitwechsel abgeschlossen: '+(hours>0?'+':'−')+Math.abs(hours)+' h',1200);
+  }
+  return true;
+}
 
 // V7.63: Während des Zeitraffers läuft nicht nur die Uhr schneller, sondern die komplette sichtbare Umwelt.
 // Der reale astronomische Sprung entspricht tausendfacher Geschwindigkeit; visuell wird bewusst auf Faktor 6
@@ -31738,10 +31920,11 @@ function updateCelestialDepthLighting(){
     &&anglingHallOfFameActive;
   const anglingUnderwater=typeof anglingCinematicView!=='undefined'
     &&anglingMode&&anglingCinematicView==='underwater';
+  const motionReduced=!!(ACZO_COARSE_POINTER&&aczoMotionPerfActive);
   const active=waterVisible&&(!is2D||allowIn2D)&&simulationEnabled
     &&(typeof diagnosticState==='undefined'||diagnosticState.depthSpots)
     &&!(typeof fishMode!=='undefined'&&fishMode)&&!anglingUnderwater
-    &&(!anglingMode||hallOfFameSurface);
+    &&(!anglingMode||hallOfFameSurface)&&!motionReduced;
   pondCelestialDepthLift.visible=active;
   moselCelestialDepthLift.visible=active&&!is2D;
   if(!active){
@@ -31845,11 +32028,16 @@ const ACZO_FAST_ANGLING_STATES=new Set([
 ]);
 function aczoHighMotionActive(now=performance.now()){
   const programmed=!!fishTransition||!!anglingCameraTransition
+    ||!!anglingTimeShiftActive||anglingState==='time-shift'
     ||['flight','return','reset-return'].includes(anglingCinematicView)
     ||['overview-flight','shore-flight','exit-flight','shore-return'].includes(anglingState);
   if(programmed)lastViewerCameraMotionAt=now;
+  // Laengere Hysterese verhindert, dass iOS zwischen zwei kurzen
+  // Fingerbewegungen wieder grosse Renderziele und volle Vegetationsdichte
+  // aufbaut, nur um sie beim naechsten Wisch sofort erneut zu verkleinern.
+  const settleDelay=ACZO_COARSE_POINTER?950:650;
   return programmed||viewerInputBusy()||(skyLookMode&&skyLookPointer!==null)
-    ||now-lastViewerCameraMotionAt<520;
+    ||now-lastViewerCameraMotionAt<settleDelay;
 }
 function aczoAnglingNeedsFullRate(){
   return !!(anglingMode&&(anglingActionHeld||anglingTimeShiftActive
@@ -31857,13 +32045,31 @@ function aczoAnglingNeedsFullRate(){
 }
 function aczoUpdateDynamicResolution(now){
   const active=aczoHighMotionActive(now);
-  if(active===aczoMotionPerfActive)return;
-  aczoMotionPerfActive=active;
-  if(typeof waterSurface!=='undefined')waterSurface.geometry=active?aczoWaterMotionGeo:waterGeo;
-  document.documentElement.classList.toggle('aczo-render-motion',active);
-  // LOD im selben Renderbild umschalten, nicht erst bis zu 180 ms spaeter.
-  aczoSurveyLastLodAt=0;aczoSurveyLastLodKey='';
-  aczoApplyRenderPixelRatio();
+  if(active){
+    aczoMotionPixelRatioRestoreAt=0;
+    if(aczoMotionPerfActive)return;
+    aczoMotionPerfActive=true;
+    if(typeof waterSurface!=='undefined')waterSurface.geometry=aczoWaterMotionGeo;
+    document.documentElement.classList.add('aczo-render-motion');
+    // LOD im selben Renderbild umschalten, nicht erst bis zu 180 ms spaeter.
+    aczoSurveyLastLodAt=0;aczoSurveyLastLodKey='';
+    aczoApplyRenderPixelRatio();
+    return;
+  }
+  if(aczoMotionPerfActive){
+    aczoMotionPerfActive=false;
+    if(typeof waterSurface!=='undefined')waterSurface.geometry=waterGeo;
+    document.documentElement.classList.remove('aczo-render-motion');
+    aczoSurveyLastLodAt=0;aczoSurveyLastLodKey='';
+    // Geometrie/Schatten zuerst bei der noch kleineren Aufloesung beruhigen.
+    // Das teure Neuanlegen des grossen Canvas-Renderziels folgt separat.
+    aczoMotionPixelRatioRestoreAt=now+(ACZO_COARSE_POINTER?320:160);
+    return;
+  }
+  if(aczoMotionPixelRatioRestoreAt&&now>=aczoMotionPixelRatioRestoreAt){
+    aczoMotionPixelRatioRestoreAt=0;
+    aczoApplyRenderPixelRatio();
+  }
 }
 
 (function loop(frameNow=performance.now()){
@@ -31994,7 +32200,7 @@ function aczoUpdateDynamicResolution(now){
    const cloudPct=(typeof liveWeather!=='undefined' ? (liveWeather.cloud||0) : 0);
    waterUniforms.cloudAmount.value=simulationEnabled
      ? Math.max(0,Math.min(1,cloudPct/100))
-     : 0.08; // künstlicher Sonnentag: nur sehr wenige harmlose Schönwetterwolken
+     : 0.0; // NEUTRAL blendet Himmelswolken aus: kein unsichtbarer 4-Sinus-Pfad pro Wasserpixel
 
    const windKmh=(typeof liveWeather!=='undefined' ? (liveWeather.windSpeed||0) : 0);
    waterUniforms.windStrength.value=Math.max(.26,Math.min(1,windKmh/20));
