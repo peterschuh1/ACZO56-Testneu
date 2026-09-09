@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.40 · Himmelslauf, Sterne und leichtere Schatten</title>
+<title>ACZO56 V2.3.41 · Stabile Uferschatten und Performance-Modus</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -2542,14 +2542,17 @@ html.aczo-render-motion .wrap *{
 .angling-main-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
 .angling-main-head-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .angling-main-close{
-  width:40px;height:40px;min-width:40px;max-width:40px;min-height:40px;max-height:40px;
-  flex:0 0 40px!important;padding:0!important;border-radius:50%;
-  border:1px solid rgba(255,255,255,.46);background:rgba(14,76,58,.96);
+  width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;
+  min-height:36px!important;max-height:36px!important;inline-size:36px;block-size:36px;
+  flex:0 0 36px!important;align-self:flex-start!important;aspect-ratio:1;padding:0!important;border-radius:50%;
+  -webkit-appearance:none;appearance:none;
+  border:1px solid rgba(218,255,236,.72);background:linear-gradient(180deg,#276f58,#174b3e);
   color:transparent;font-size:0;line-height:0;position:relative;overflow:hidden;
-  display:block;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.30)
+  display:grid;place-items:center;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 3px 10px rgba(0,0,0,.30)
 }
 .angling-main-close::before,.angling-main-close::after{
-  content:"";position:absolute;left:50%;top:50%;width:17px;height:2.6px;
+  content:"";position:absolute;left:50%;top:50%;width:14px;height:2.2px;
   border-radius:2px;background:#fff;transform-origin:center;
   box-shadow:0 1px 2px rgba(0,0,0,.28)
 }
@@ -2610,8 +2613,8 @@ html.aczo-render-motion .wrap *{
    vollständig ausgeblendet; das gut sichtbare X führt jederzeit zurück. */
 .wrap.angling-profile-menu-open > .controls{display:none!important}
 .aczo-phone-layout .angling-main-close{
-  width:38px;height:38px;min-width:38px;max-width:38px;min-height:38px;max-height:38px;
-  flex-basis:38px!important;position:sticky;top:0
+  width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;
+  min-height:36px!important;max-height:36px!important;flex-basis:36px!important;position:relative;top:auto
 }
 
 
@@ -4522,7 +4525,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.167 · V2.3.40 · HIMMELSLAUF, STERNE UND LEICHTERE SCHATTEN';
+const VIEWER_VERSION='V8.168 · V2.3.41 · STABILE UFERSCHATTEN UND PERFORMANCE-MODUS';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4674,23 +4677,31 @@ camera.up.set(0,0,1);
 // Der Viewer exportiert keine Bildschirmkopien aus dem WebGL-Canvas. Ein
 // dauerhaft konservierter Zeichenpuffer ist deshalb unnoetig und belastet
 // besonders die kachelbasierten iPhone-GPUs bei jeder Kamerabewegung.
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:false});
+const ACZO_COARSE_POINTER=!!window.matchMedia?.('(pointer:coarse)')?.matches;
+// V2.3.41 PERFORMANCE: Auf dem iPhone kostet das multisample-basierte
+// WebGL-Antialiasing in jeder transparenten Wasser-, Blatt- und Schattenlage
+// erheblich Fillrate. Die hohe physische Displaydichte glaettet Kanten bereits;
+// Desktop behaelt MSAA. Geometrie und Texturen werden nicht entfernt.
+const renderer=new THREE.WebGLRenderer({antialias:!ACZO_COARSE_POINTER,alpha:false,preserveDrawingBuffer:false});
 // V2.3.34 PERFORMANCE: Auf einer großflächigen WebGL-Landschaft ist ein
 // Pixeldichtefaktor oberhalb 1,4 optisch kaum erkennbar, vervielfacht aber die
 // Füllrate bei jedem Drehen und Zoomen. Markante 3D-Objekte bleiben geometrisch
 // unverändert; nur die interne Bildschirmauflösung wird vernünftig begrenzt.
-const ACZO_COARSE_POINTER=!!window.matchMedia?.('(pointer:coarse)')?.matches;
-const ACZO_PIXEL_RATIO_CAP=ACZO_COARSE_POINTER?1.22:1.40;
+// Auf Touch-Geraeten bleibt die Rendergroesse bewusst konstant. Das fruehere
+// Umschalten 1.05 -> .76 -> 1.05 legte in Safari bei fast jeder neuen Geste
+// den kompletten Farb-/Tiefenpuffer neu an und konnte OrbitControls fuer
+// mehrere Bilder blockieren. 0.90 ist auf Retina weiterhin sauber, spart aber
+// gegenueber 1.22 rund 46 % Pixelarbeit und vermeidet diese Resize-Haenger.
+const ACZO_PIXEL_RATIO_CAP=ACZO_COARSE_POINTER?.90:1.15;
 const ACZO_BASE_PIXEL_RATIO=Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP);
 renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
 renderer.shadowMap.enabled=true;
-// V2.3.40 PERFORMANCE: iPhone-GPUs muessen den Schattenvergleich auf sehr
-// vielen Blatt-, Land- und Wasserpixeln ausfuehren. PCF bleibt dort weich
-// genug fuer Natur- und Baumschatten, benoetigt aber weniger Samples als der
-// PCFSoft-Pfad. Desktop behaelt die bisherige weiche Qualitaet unveraendert.
-renderer.shadowMap.type=ACZO_COARSE_POINTER?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
+// V2.3.41 PERFORMANCE: Ein einheitlicher PCF-Pfad ersetzt PCFSoft. Die Kanten
+// werden etwas weniger fein, der teure Mehrfachvergleich auf grossen Land- und
+// Wasserempfaengern sinkt aber deutlich – auf iPhone ebenso wie auf Desktop.
+renderer.shadowMap.type=THREE.PCFShadowMap;
 // V2.3.33 PERFORMANCE: Die komplette 2048er-Schattenkarte wurde zuvor in
 // jedem Bild neu berechnet. Statische Gebäude/Wälder benötigen das nicht;
 // Licht-/Wetterwechsel und die kurze Torfahrt werden unten ereignisgesteuert
@@ -4711,11 +4722,12 @@ function aczoApplyRenderPixelRatio(){
   let target=ACZO_BASE_PIXEL_RATIO;
   // Die alte Grenze 1,35 konnte auf iPhones mit einer Basis von 1,22 nie
   // greifen. Unter Wasser wird die Fuellrate nun tatsaechlich reduziert.
-  if(anglingMobilePerfActive)target=Math.min(target,ACZO_COARSE_POINTER?1.00:1.18);
-  if(aczoFishPerfActive)target=Math.min(target,ACZO_COARSE_POINTER?1.00:1.18);
-  // Nur waehrend Drehen, Zoomen oder einer programmierten Kamerafahrt: weniger
-  // Pixel, gleiche Geometrie. Nach kurzer Ruhe kommt die volle Schaerfe zurueck.
-  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : 1.10);
+  if(anglingMobilePerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .82 : .98);
+  if(aczoFishPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .82 : .98);
+  // Desktop reduziert waehrend schneller Bewegung weiterhin moderat. Mobil
+  // entspricht das Bewegungslimit absichtlich der Basis: keine neue
+  // DrawingBuffer-Allokation beim Anfassen, nur billige Geometrie-/Shader-LOD.
+  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : .88);
   if(Math.abs(target-aczoAppliedPixelRatio)<.001)return;
   aczoAppliedPixelRatio=target;
   renderer.setPixelRatio(target);
@@ -6452,6 +6464,8 @@ let flagPoleFlagBackMesh=null;
 let flagPoleFlagBasePositions=null;
 let flagPoleAnimTime=0;
 let flagPoleWindAngle=0;
+let flagPoleLastDeformAt=0;
+let flagPoleDeferredDt=0;
 
 function flagPoleMapToWorld(xMeters,yMeters){
   // V8.66: Die angegebenen Mastkoordinaten stammen bereits aus demselben
@@ -6722,6 +6736,15 @@ function updateClubFlagPole(dt){
     });
   }
 
+  // Die kleine Fahne benoetigte bisher selbst bei schneller Kamerafahrt pro
+  // Bild eine CPU-Verformung plus komplette Normalenneuberechnung. 15 Hz sind
+  // in der bewegten Gesamtansicht nicht unterscheidbar; die verstrichene Zeit
+  // wird gesammelt, damit Windtempo und Endzustand korrekt bleiben.
+  flagPoleDeferredDt+=dt;
+  const deformNow=performance.now();
+  if(aczoMotionPerfActive&&flagPoleLastDeformAt&&deformNow-flagPoleLastDeformAt<66)return;
+  dt=flagPoleDeferredDt;flagPoleDeferredDt=0;flagPoleLastDeformAt=deformNow;
+
   const speed=Math.max(0,Number((typeof liveWeather!=='undefined'&&liveWeather.windSpeed)||0));
   const fromDeg=Number((typeof liveWeather!=='undefined'&&liveWeather.windDirection)||0);
   const toDeg=(fromDeg+180)%360;
@@ -6858,10 +6881,10 @@ function aczoConfigureUnderwaterShadowLight(light){
   // Natur-Schatten optisch ausreichend. Gegenüber 768 sinkt die pro Update
   // zu rasternde Fläche um 56 %, sodass Vögel häufiger und damit flüssiger
   // aktualisiert werden können, ohne die GPU dauerhaft auszulasten.
-  // V2.3.40: 384 px auf Touch-Geraeten reduziert die beim Lichtwechsel neu zu
-  // rasternde Schattenflaeche um rund 44 %. Die bewusst weichen Baumkronen
-  // kaschieren die geringere Texeldichte; Desktop bleibt bei 512 px.
-  const shadowMapSize=ACZO_COARSE_POINTER?384:512;
+  // V2.3.41: Der neue Ufer-Proxy-Pass benoetigt keine hochaufgeloesten
+  // Einzelblatt-Silhouetten mehr. 256 px mobil und 384 px am Desktop genuegen
+  // fuer die gekuerzten, weich wahrgenommenen Kronenprojektionen.
+  const shadowMapSize=ACZO_COARSE_POINTER?256:384;
   light.shadow.mapSize.set(shadowMapSize,shadowMapSize);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
@@ -6913,13 +6936,9 @@ function updateUnderwaterObstacleShadows(submerged){
     &&typeof anglingCinematicView!=='undefined'&&anglingCinematicView==='underwater';
   const surface=!!(!is2D&&!below&&!anglingUnderwater&&ground&&ground.visible);
   const active=below||surface;
-  // Die Schattenkarte selbst ist statisch, ihre vier grossflaechigen
-  // Empfaenger muessen sie aber sonst in jedem Kamerabild erneut abtasten.
-  // Auf Touch-Geraeten werden nur waehrend schneller Bewegung diese
-  // Zusatzlagen pausiert; sobald das Bild ruht, sind alle Schatten wieder da.
-  const suppressMotionShadowReceivers=!!(
-    ACZO_COARSE_POINTER&&aczoMotionPerfActive&&!below
-  );
+  // Die Schattenempfaenger bleiben jetzt auch waehrend einer Drehung sichtbar.
+  // V2.3.40 hatte sie auf Touch-Geraeten temporaer ausgeblendet; dadurch
+  // erschienen Schatten kurz und verschwanden beim ersten Fingerkontakt.
   const night=THREE.MathUtils.clamp(Number(sceneNightFactor)||0,0,1);
   // LIVE folgt Sonne/Mond und Bewoelkung. NEUTRAL ist ein fester klarer Tag,
   // wirft aber ebenfalls echte Schatten und erbt nie den letzten Nachtzustand.
@@ -6975,22 +6994,22 @@ function updateUnderwaterObstacleShadows(submerged){
     +'|'+Math.round(cloud*20)+'|a'+Math.round((Number.isFinite(sourceAltitude)?sourceAltitude:0)*90/Math.PI)
     +'|z'+Math.round((Number.isFinite(sourceAzimuth)?sourceAzimuth:0)*60/Math.PI);
   if(aczoLandShadowReceiver){
-    aczoLandShadowReceiver.visible=surface&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
+    aczoLandShadowReceiver.visible=surface&&(useSun||useMoon);
     if(typeof aczoLandShadowMat!=='undefined')aczoLandShadowMat.opacity=useMoon
       ?.20:THREE.MathUtils.lerp(.62,.20,Math.pow(cloud,.78));
   }
   if(aczoWaterStructureShadowReceiver&&aczoWaterStructureShadowMat){
-    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
+    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
     aczoWaterStructureShadowMat.opacity=useMoon
       ?.13:THREE.MathUtils.lerp(.44,.13,Math.pow(cloud,.78));
   }
   if(aczoMoselStructureShadowReceiver&&aczoMoselStructureShadowMat){
-    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
+    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
     aczoMoselStructureShadowMat.opacity=useMoon
       ?.12:THREE.MathUtils.lerp(.38,.12,Math.pow(cloud,.78));
   }
   if(typeof aczoPondStructureShadowReceiver!=='undefined'){
-    aczoPondStructureShadowReceiver.visible=!is2D&&active&&(useSun||useMoon)&&!suppressMotionShadowReceivers;
+    aczoPondStructureShadowReceiver.visible=!is2D&&active&&(useSun||useMoon);
     // Der echte Projektionsschatten bleibt unter Wasser klar erkennbar, aber
     // nicht mehr tiefschwarz durch das ganze Gewaesser hindurch.
     aczoPondStructureShadowMat.opacity=below
@@ -7216,11 +7235,23 @@ function enforceCelestialDiscVisibility(){
     return;
   }
 
-  const sunAllowed=!!sunDisc.userData.astronomicallyVisible;
+  // Direkt die aktuelle astronomische Hoehe verwenden. Damit kann kein alter
+  // Menü-, Fisch- oder Kamera-Zustand eine inzwischen aufgegangene Sonne bzw.
+  // einen aufgegangenen Mond weiter mit visible=false festhalten.
+  const sunAltitude=Number(sun.userData.astronomicalAltitudeRad);
+  const moonAltitude=Number(moonLight.userData.astronomicalAltitudeRad);
+  const sunAllowed=Number.isFinite(sunAltitude)
+    ? sunAltitude>0
+    : !!sunDisc.userData.astronomicallyVisible;
+  const moonAboveHorizon=Number.isFinite(moonAltitude)
+    ? moonAltitude>0
+    : !!moonDisc.userData.astronomicallyVisible;
+  sunDisc.userData.astronomicallyVisible=sunAllowed;
+  moonDisc.userData.astronomicallyVisible=moonAboveHorizon;
   const moonOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
     ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
     : 1;
-  const moonAllowed=!!moonDisc.userData.astronomicallyVisible&&moonOpacity>.035;
+  const moonAllowed=moonAboveHorizon&&moonOpacity>.035;
   sunDisc.visible=sunAllowed;
   moonDisc.visible=moonAllowed;
   if(moonDisc.material)moonDisc.material.opacity=moonOpacity;
@@ -7302,7 +7333,7 @@ const cloudGroup=new THREE.Group();
 // V5.49: Alle Wolkenteile verwenden dieselbe Grundgeometrie. Zuvor wurden
 // beim Start mehrere hundert identische Kugelgeometrien erzeugt; das war der
 // Hauptgrund für die spürbare Pause vor dem ersten flüssigen Kartenbild.
-const cloudPuffGeo=new THREE.SphereGeometry(1,12,8);
+const cloudPuffGeo=new THREE.SphereGeometry(1,8,5);
 // Die bisherigen transparenten DoubleSide-Kugeln zeichneten jede Wolke von
 // hinten und vorne. Bei der Draufsicht verdoppelte das die Pixelarbeit. Da die
 // Wolken unbeleuchtete Einfarb-Materialien verwenden, ist eine Vorderseite mit
@@ -8137,10 +8168,10 @@ function aczoBuildCleanWaterGeometry(step=.72){
 }
 const waterGeo=aczoBuildCleanWaterGeometry();
 // Die animierte Oberflaeche bekommt waehrend Kamera- und Zoomfahrten ein
-// temporaeres 2x2-Vertex-LOD. Die Wellenform bleibt voll erhalten, nur ihre
-// Abtastung ist in der ohnehin bewegten Ansicht grober. Nach 520 ms Stillstand
+// temporaeres 3x3-Vertex-LOD. Die Wellenform bleibt erhalten, nur ihre
+// Abtastung ist in der ohnehin bewegten Ansicht grober. Nach dem Stillstand
 // kehrt automatisch das 72-cm-Raster zurueck.
-const aczoWaterMotionGeo=aczoBuildCleanWaterGeometry(1.44);
+const aczoWaterMotionGeo=aczoBuildCleanWaterGeometry(2.16);
 // Schattenfang, optische Kronenabdunklung und direkter Himmelskoerperreflex
 // sind flache, fragmentgenau maskierte Layer. Ihr bisheriges 72-cm-Raster
 // brachte keinerlei Bildgewinn, vervierfachte aber fast den Vertexaufwand der
@@ -8174,6 +8205,7 @@ const waterUniforms={
  diagnosticLane:{value:1},
  diagnosticStars:{value:1},
  diagnosticSolarScatter:{value:1},
+ performanceMode:{value:0},
  underwaterView:{value:0},
  anglingView:{value:0},
  anglingIntroFade:{value:1},
@@ -8273,6 +8305,7 @@ const waterMat=new THREE.ShaderMaterial({
    uniform float diagnosticLane;
    uniform float diagnosticStars;
    uniform float diagnosticSolarScatter;
+   uniform float performanceMode;
    uniform float underwaterView;
    uniform float anglingView;
    uniform float anglingIntroFade;
@@ -8363,6 +8396,23 @@ const waterMat=new THREE.ShaderMaterial({
        if(pondUV.x<0.0||pondUV.x>1.0||pondUV.y<0.0||pondUV.y>1.0) discard;
        float insidePond=texture2D(pondMaskTex,pondUV).r;
        if(insidePond<.50) discard;
+     }
+
+     // V2.3.41 PERFORMANCE: Waehrend Kamera-/Zeitrafferbewegung sowie am
+     // iPhone bei Tageslicht reicht die bewegte Grundflaeche. Die separaten
+     // Sonnen-/Mond- und Wolkenreflex-Layer bleiben sichtbar; dieser uniforme
+     // Kurzpfad spart pro Wasserpixel Dutzende sin/exp/pow-Aufrufe.
+     if(performanceMode>.5){
+       float simpleWave=.5+.5*vWave;
+       vec3 simpleDay=mix(vec3(.055,.29,.47),vec3(.16,.57,.72),simpleWave*.72);
+       vec3 simpleNight=mix(vec3(.025,.095,.17),vec3(.07,.25,.38),simpleWave*.64);
+       vec3 simpleColor=mix(simpleDay,simpleNight,clamp(nightFactor,0.0,1.0));
+       float source=max(sunStrength,moonStrength);
+       vec3 sourceTint=sunStrength>=moonStrength?vec3(.32,.23,.08):vec3(.08,.16,.29);
+       simpleColor+=sourceTint*source*.18;
+       float simpleAlpha=clamp(opacity+nightFactor*.08+anglingView*.36,.40,.935);
+       gl_FragColor=vec4(simpleColor,simpleAlpha);
+       return;
      }
 
      vec3 N=normalize(vNormalW);
@@ -10191,7 +10241,10 @@ function updateAstronomy(options={}){
     const sunrise=fmtTime(times.sunrise);
     const sunset=fmtTime(times.sunset);
     const moonName=phaseName(moonIll.phase);
-    const moonHorizon=moonPos.altitude>0?'über Horizont':'unter Horizont';
+    const moonAltitudeDeg=moonPos.altitude*180/Math.PI;
+    const moonHorizon=moonPos.altitude>0
+      ? Math.round(moonAltitudeDeg)+'° über Horizont'
+      : Math.round(Math.abs(moonAltitudeDeg))+'° unter Horizont · nicht sichtbar';
 
     astroSub.textContent=sunPos.altitude>0
       ? '☀️ Auf '+sunrise+' · Unter '+sunset+' · 🌙 '+moonName+' · '+moonHorizon
@@ -17301,10 +17354,13 @@ aczoStructureBottomShade.position.z=.026;aczoStructureBottomShade.renderOrder=3.
 aczoStructureBottomShade.frustumCulled=false;aczoStructureBottomShade.visible=false;scene.add(aczoStructureBottomShade);
 
 function updateAczoOpticalStructureShadows(active,below,cloud,night){
-  const motionReduced=!!(ACZO_COARSE_POINTER&&aczoMotionPerfActive&&!below);
-  const enabled=!!(active&&simulationEnabled&&!is2D&&waterVisible&&!motionReduced);
-  aczoStructureSurfaceShade.visible=enabled;
-  aczoStructureBottomShade.visible=enabled&&!!fishPondGeo.getAttribute('position')&&(below||fishPond.visible);
+  // V2.3.41: Oberhalb des Wassers liefert bereits die echte Schattenkarte den
+  // sichtbaren Uferwurf. Die zusaetzliche vollflaechige Kronenmaske war ein
+  // redundanter Transparenzpass und verursachte beim Bewegungs-LOD sichtbares
+  // Ein-/Ausblenden. Nur unter Wasser bleibt die dezente Tiefenabschattung.
+  const enabled=!!(active&&simulationEnabled&&!is2D&&waterVisible&&below);
+  aczoStructureSurfaceShade.visible=false;
+  aczoStructureBottomShade.visible=enabled&&!!fishPondGeo.getAttribute('position');
   aczoStructureSurfaceShadeMat.uniforms.birchDensity.value=aczoBirchOpticalDensity;
   aczoStructureBottomShadeMat.uniforms.birchDensity.value=aczoBirchOpticalDensity;
   if(!enabled)return;
@@ -17377,15 +17433,19 @@ scene.add(aczoSurveyedNatureGroup);
 if(aczoOuterForestGroup.parent)aczoOuterForestGroup.parent.remove(aczoOuterForestGroup);
 aczoOuterForestGroup.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});
 
-const aczoSurveyWoodMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true,emissive:0x2b2117,emissiveIntensity:.10});
-const aczoSurveyDarkWoodMat=new THREE.MeshStandardMaterial({color:0x30251e,roughness:1,metalness:0});
-const aczoSurveyBirchMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,metalness:0,vertexColors:true,emissive:0xf0f0e9,emissiveIntensity:.44});
-const aczoSurveyBirchMarkMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,vertexColors:true});
-const aczoSurveyLeafMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveySprayMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveyNeedleMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x183c24,emissiveIntensity:.11});
-const aczoSurveyReedMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x78bd49,emissiveIntensity:.46});
-const aczoSurveyReedHeadMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true});
+// V2.3.41 PERFORMANCE: Der grosse Wald ist matt und benoetigt keine
+// metallisch/physikalische Standard-Schattierung. Lambert behaelt Licht,
+// Jahreszeiten, Vertexfarben und die sichtbare Tiefe, ist bei hunderttausenden
+// Blatt-/Astfragmenten aber wesentlich billiger als MeshStandardMaterial.
+const aczoSurveyWoodMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,emissive:0x2b2117,emissiveIntensity:.10});
+const aczoSurveyDarkWoodMat=new THREE.MeshLambertMaterial({color:0x30251e});
+const aczoSurveyBirchMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,emissive:0xf0f0e9,emissiveIntensity:.44});
+const aczoSurveyBirchMarkMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
+const aczoSurveyLeafMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true});
+const aczoSurveySprayMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true});
+const aczoSurveyNeedleMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true,emissive:0x183c24,emissiveIntensity:.11});
+const aczoSurveyReedMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true,emissive:0x78bd49,emissiveIntensity:.46});
+const aczoSurveyReedHeadMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
 const aczoSurveyBranchGeo=new THREE.CylinderGeometry(1,1,1,8,1,false);
 const aczoSurveyUp=new THREE.Vector3(0,1,0);
 const aczoSurveySeasonMeshes=[];
@@ -17420,6 +17480,30 @@ function aczoSurveyPushSegment(target,a,b,r,color){if(a.distanceToSquared(b)>.00
 const aczoSurveyWoodSegments=[],aczoSurveyBirchSegments=[],aczoSurveyBirchMarks=[],aczoSurveyConiferSegments=[];
 const aczoSurveyLeafItems=[],aczoSurveySprayItems=[],aczoSurveyNeedleItems=[];
 const aczoSurveyReedSegments=[],aczoSurveyReedHeads=[],aczoSurveyReedBladeItems=[];
+// V2.3.41 PERFORMANCE: Die detailreichen Wald-Batches bleiben voll sichtbar,
+// gelangen aber nicht mehr komplett in die Schattenkarte. Nur Baeume in den
+// ersten Reihen am Weiher oder an der Mosel erhalten spaeter sehr einfache,
+// unsichtbare Schatten-Proxys.
+const aczoForestShadowProxySpecs=[];
+let aczoForestDeciduousShadowCrownMesh=null;
+function aczoDistanceToClosedShoreline(x,y,points){
+  let best=Infinity;
+  for(let i=0;i<points.length;i++){
+    const a=points[i],b=points[(i+1)%points.length];
+    const ax=Array.isArray(a)?a[0]:a.x,ay=Array.isArray(a)?a[1]:a.y;
+    const bx=Array.isArray(b)?b[0]:b.x,by=Array.isArray(b)?b[1]:b.y;
+    const dx=bx-ax,dy=by-ay,den=dx*dx+dy*dy;
+    const t=den>1e-9?THREE.MathUtils.clamp(((x-ax)*dx+(y-ay)*dy)/den,0,1):0;
+    best=Math.min(best,Math.hypot(x-(ax+dx*t),y-(ay+dy*t)));
+  }
+  return best;
+}
+function aczoForestTreeNeedsShadow(x,y){
+  const pondDistance=aczoNearestMasterBoundaryPoint(x,y)?.distance??Infinity;
+  const moselDistance=aczoDistanceToClosedShoreline(x,y,moselWorldPolygon);
+  // Bei einem 5-m-Pflanzraster umfasst 11 m ungefaehr die ersten zwei Reihen.
+  return pondDistance<=11||moselDistance<=11;
+}
 function aczoSurveyShadeColor(base,rnd,spread=.08){const c=new THREE.Color(base);c.offsetHSL((rnd()-.5)*spread*.18,(rnd()-.5)*spread*.25,(rnd()-.5)*spread);return c.getHex();}
 
 function aczoSurveyTreeSpec(object,index,filler=false){
@@ -17440,6 +17524,13 @@ function aczoSurveyTreeSpec(object,index,filler=false){
 
 function aczoSurveyBuildDeciduous(tree){
   const rnd=aczoSurveyRandom(tree.seed),birch=tree.type==='birch',baseZ=ACZO_SATELLITE_GROUND_Z;
+  if(aczoForestTreeNeedsShadow(tree.x,tree.y)){
+    aczoForestShadowProxySpecs.push({
+      kind:'deciduous',x:tree.x,y:tree.y,height:tree.height,
+      crownRadius:tree.crownRadius,crownDepth:tree.crownDepth,
+      trunkRadius:tree.trunkRadius
+    });
+  }
   const straight=rnd()<.38;
   const bend=(straight?.08+rnd()*.16:.34+rnd()*.80),bendAngle=rnd()*Math.PI*2;
   const sideWobble=(rnd()-.5)*(straight?.12:.38);
@@ -17517,6 +17608,12 @@ function aczoSurveyBuildConifer(object,index,forestMix=false){
   const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+5500)),baseZ=ACZO_SATELLITE_GROUND_Z;
   // Die vier Labor-Tannen bleiben sehr grosse Landmarken; Waldmischung bleibt niedriger.
   const height=forestMix?(13.5+rnd()*6.5):(23.0+rnd()*6.0+(index%4===1?2.2:0)),radius=height*(.145+rnd()*.038),bend=.12+rnd()*(forestMix?.62:.42),angle=rnd()*Math.PI*2;
+  if(aczoForestTreeNeedsShadow(object.x,object.y)){
+    aczoForestShadowProxySpecs.push({
+      kind:'conifer',x:object.x,y:object.y,height,crownRadius:radius,
+      crownDepth:radius,trunkRadius:.30+height*.0055
+    });
+  }
   const trunk=[];for(let i=0;i<7;i++){const u=i/6;trunk.push(new THREE.Vector3(object.x+Math.cos(angle)*bend*u*u,object.y+Math.sin(angle)*bend*u*u,baseZ+height*.98*u));}
   for(let i=0;i<6;i++)aczoSurveyPushSegment(aczoSurveyConiferSegments,trunk[i],trunk[i+1],(.30+height*.0055)*Math.pow(1-i/6,.72));
   const levels=forestMix?14:20;for(let level=0;level<levels;level++){
@@ -17581,8 +17678,8 @@ function aczoSurveyBuildFoliageBatches(items,geometry,name,cast=false,receive=fa
   for(const [key,batch] of batches){
     const first=batch[0],dayColor=new THREE.Color(first.species.summer);
     dayColor.offsetHSL(first.hueShift||0,first.satShift||0,first.lightShift||0);
-    const material=new THREE.MeshStandardMaterial({
-      color:dayColor,roughness:.91,metalness:0,side:THREE.DoubleSide,
+    const material=new THREE.MeshLambertMaterial({
+      color:dayColor,side:THREE.DoubleSide,
       emissive:dayColor,emissiveIntensity:.075
     });
     material.userData.aczoDayColor=dayColor.clone();
@@ -17629,17 +17726,74 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
   for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys)&&areaFillerCount<areaCap;y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs)&&areaFillerCount<areaCap;x+=step){const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;if(aczoSurveyManualTreePoints.some(p=>Math.hypot(px-p[0],py-p[1])<3.6))continue;const fillerIndex=aczoSurveyFillerCount;if((fillerIndex+ai*7)%36===11)aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);else aczoSurveyBuildDeciduous(aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true));aczoSurveyFillerCount++;areaFillerCount++;}}
 }
 
+function aczoBuildForestShoreShadowProxies(){
+  const proxyMat=new THREE.MeshBasicMaterial({color:0x000000,colorWrite:false,depthWrite:false});
+  proxyMat.name='NUR_SCHATTENPASS_KEINE_SICHTBARE_GEOMETRIE';
+  const dummy=new THREE.Object3D();
+  const addBatch=(specs,geometry,name,place)=>{
+    if(!specs.length)return null;
+    const mesh=new THREE.InstancedMesh(geometry,proxyMat,specs.length);
+    specs.forEach((spec,i)=>{
+      dummy.position.set(0,0,0);dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);
+      place(dummy,spec,i);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
+    mesh.layers.set(1);mesh.castShadow=true;mesh.receiveShadow=false;
+    mesh.userData.aczoNoShadow=false;mesh.userData.aczoNoReceiveShadow=true;
+    mesh.userData.maxCount=specs.length;mesh.frustumCulled=false;
+    aczoSurveyedNatureGroup.add(mesh);return mesh;
+  };
+  const deciduous=aczoForestShadowProxySpecs.filter(s=>s.kind==='deciduous');
+  const conifers=aczoForestShadowProxySpecs.filter(s=>s.kind==='conifer');
+  addBatch(
+    aczoForestShadowProxySpecs,
+    new THREE.CylinderGeometry(1,1,1,5,1,false),
+    'UFERKORRIDOR_SCHATTENPROXY_STAEMME',
+    (d,s)=>{
+      const h=s.kind==='conifer'?s.height*.72:s.height*.62;
+      d.position.set(s.x,s.y,ACZO_SATELLITE_GROUND_Z+h*.5);
+      d.rotation.x=Math.PI*.5;d.scale.set(s.trunkRadius,h,s.trunkRadius);
+    }
+  );
+  aczoForestDeciduousShadowCrownMesh=addBatch(
+    deciduous,
+    new THREE.SphereGeometry(1,7,4),
+    'UFERKORRIDOR_SCHATTENPROXY_LAUBKRONEN',
+    (d,s,i)=>{
+      d.position.set(s.x,s.y,ACZO_SATELLITE_GROUND_Z+s.height*.77);
+      d.rotation.z=(i*.754877666)%Math.PI;
+      d.scale.set(s.crownRadius,s.crownDepth,s.height*.205);
+    }
+  );
+  addBatch(
+    conifers,
+    new THREE.ConeGeometry(1,1,7,1,false),
+    'UFERKORRIDOR_SCHATTENPROXY_NADELKRONEN',
+    (d,s)=>{
+      const h=s.height*.80;
+      d.position.set(s.x,s.y,ACZO_SATELLITE_GROUND_Z+s.height*.53);
+      d.rotation.x=Math.PI*.5;d.scale.set(s.crownRadius,h,s.crownRadius);
+    }
+  );
+  // Die Hauptkamera zeichnet nur Layer 0. Die Schattenkamera bekommt Layer 1
+  // zusaetzlich und sieht daher ausschliesslich beim seltenen Shadow-Pass die
+  // billigen Ufer-Proxys.
+  aczoStructureShadowLight.shadow.camera.layers.enable(1);
+  aczoSurveyedNatureGroup.userData.shadowProxyTreeCount=aczoForestShadowProxySpecs.length;
+}
+aczoBuildForestShoreShadowProxies();
+
 aczoSurveyShuffle(aczoSurveyLeafItems,19561201);aczoSurveyShuffle(aczoSurveySprayItems,19561202);
-aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE');
-aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME',true,false);
-aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER',true,false);
-aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE');
-aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EINZELHALME',true);
-aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',true);
+aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE',false,true);
+aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME',false,false);
+aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER',false,false);
+aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE',false,true);
+aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EINZELHALME',false,true);
+aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',false,true);
 aczoSurveyBuildFoliageBatches(aczoSurveyLeafItems,realBirchLeafGeometry,'NATURWALD_EINZELBLAETTER',false,false,true);
-aczoSurveyBuildFoliageBatches(aczoSurveySprayItems,realBirchSprayGeometry,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',true,false,false);
-aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,true,false);
-aczoSurveyBuildColored(aczoSurveyReedBladeItems,realBirchLeafGeometry,aczoSurveyReedMat,'UFER_SCHILF_SCHMALE_BLAETTER',false,true);
+aczoSurveyBuildFoliageBatches(aczoSurveySprayItems,realBirchSprayGeometry,'NATURWALD_FEINE_BLATTFAECHER',false,false,false);
+aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,false,false);
+aczoSurveyBuildColored(aczoSurveyReedBladeItems,realBirchLeafGeometry,aczoSurveyReedMat,'UFER_SCHILF_SCHMALE_BLAETTER',false,false);
 
 function aczoSurveyBuildStump(object,index){
   const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+15000)),g=new THREE.Group(),h=.36+rnd()*.66,r=.19+rnd()*.17;
@@ -17858,6 +18012,11 @@ let aczoSurveySeasonKey='',aczoSurveyLightKey='';const aczoSurveyColor=new THREE
 function updateAczoSurveyedNatureSeason(day){
   const d=THREE.MathUtils.clamp(Number(day)||1,1,366);let phase='summer',progress=0,density=1;
   if(d<66||d>=338){phase='winter';density=.035;}else if(d<145){phase='spring';progress=THREE.MathUtils.smoothstep(d,66,132);density=THREE.MathUtils.smoothstep(d,66,126);}else if(d>=258){phase='autumn';progress=THREE.MathUtils.smoothstep(d,258,326);density=1-THREE.MathUtils.smoothstep(d,295,338);}
+  if(aczoForestDeciduousShadowCrownMesh){
+    const max=aczoForestDeciduousShadowCrownMesh.userData.maxCount||0;
+    aczoForestDeciduousShadowCrownMesh.count=Math.max(0,Math.round(max*density));
+    aczoForestDeciduousShadowCrownMesh.visible=!is2D&&aczoForestDeciduousShadowCrownMesh.count>0;
+  }
   // Ein Nacht-/Jahreszeitenwechsel aktualisiert nur die begrenzte Art-/Ton-
   // Palette – nicht mehr jede einzelne Blattinstanz. Dadurch reagiert jede
   // Pflanze wie die alten Weiden auf Licht, ohne Zeitraffer auszubremsen.
@@ -17901,11 +18060,11 @@ function updateAczoSurveyForestLod(){
   // erzeugt weder kahle Ecken noch Farbverschiebungen.
   const moving=typeof aczoHighMotionActive==='function'&&aczoHighMotionActive(now);
   const phone=document.documentElement.classList.contains('aczo-phone-layout');
-  const finePenalty=moving?(phone ? .22 : .30):1;
-  const sprayPenalty=moving?(phone ? .64 : .76):1;
+  const finePenalty=moving?(phone ? .06 : .16):1;
+  const sprayPenalty=moving?(phone ? .30 : .50):1;
   const factor=THREE.MathUtils.lerp(1,.34,far)*finePenalty;
   const sprayFactor=THREE.MathUtils.lerp(1,.64,far)*sprayPenalty;
-  const realFineFactor=THREE.MathUtils.lerp(1,.38,far)*(moving?(phone ? .24 : .34):1);
+  const realFineFactor=THREE.MathUtils.lerp(1,.38,far)*(moving?(phone ? .08 : .18):1);
   const realSprayFactor=THREE.MathUtils.lerp(1,.72,far)*sprayPenalty;
   const key=Math.round(factor*40)+'|'+Math.round(sprayFactor*30)
     +'|'+Math.round(realFineFactor*30)+'|'+Math.round(realSprayFactor*30)+'|'+(is2D?'2':'3');
@@ -32089,7 +32248,12 @@ function aczoUpdateDynamicResolution(now){
    ||(Number(window.__aczoFlyingBirdCount)||0)>0
    ||rainSystem.visible||seasonSnowPoints.visible||seasonLeafPoints.visible
  );
- const aczoTargetFps=aczoFullRate?60:(aczoAmbientRate?30:(aczoMainMenuOpen?15:24));
+ // In Ruhe muss ein iPhone nicht 24-mal pro Sekunde den kompletten Tageswald
+ // zeichnen. Kamerafahrt, Gesten und Zeitraffer bleiben bei voller Browserrate;
+ // nur ruhiges Wasser/Wolken und Nebenbewegung werden sparsamer getaktet.
+ const aczoTargetFps=aczoFullRate?60
+   :(aczoAmbientRate?(ACZO_COARSE_POINTER?24:30)
+     :(aczoMainMenuOpen?15:(ACZO_COARSE_POINTER?18:24)));
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap-.5)return;
  // Den idealen Zeitraster-Rest mitnehmen: Auf 90-Hz-Panels entsteht so kein
@@ -32164,6 +32328,11 @@ function aczoUpdateDynamicResolution(now){
   updateAnglingMode(dt);
   updateAnglingClockDisplay();
  if(waterVisible){
+   // Hohe Bewegung nutzt auf allen Geraeten den billigen Wasserpfad. Auf
+   // iPhones bleibt er zusaetzlich am hellen Tag aktiv, weil dort Schatten,
+   // transparente Baumkronen und Wasser sonst gleichzeitig die Tile-GPU fuellen.
+   waterUniforms.performanceMode.value=(aczoMotionPerfActive
+     ||(ACZO_COARSE_POINTER&&sceneNightFactor<.48))?1:0;
    // Flache Uferperspektive benötigt etwas klarer wahrnehmbare Bewegung.
    // Außerhalb des Angelmodus bleibt das bisherige Tempo exakt .48.
    waterUniforms.time.value += visualDt*(.48+waterUniforms.anglingView.value*.34);
