@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.41 · Stabile Uferschatten und Performance-Modus</title>
+<title>ACZO56 V2.3.42 · Scharfe stabile Tiefenlinien</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4525,7 +4525,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.168 · V2.3.41 · STABILE UFERSCHATTEN UND PERFORMANCE-MODUS';
+const VIEWER_VERSION='V8.169 · V2.3.42 · SCHARFE STABILE TIEFENLINIEN';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4690,9 +4690,10 @@ const renderer=new THREE.WebGLRenderer({antialias:!ACZO_COARSE_POINTER,alpha:fal
 // Auf Touch-Geraeten bleibt die Rendergroesse bewusst konstant. Das fruehere
 // Umschalten 1.05 -> .76 -> 1.05 legte in Safari bei fast jeder neuen Geste
 // den kompletten Farb-/Tiefenpuffer neu an und konnte OrbitControls fuer
-// mehrere Bilder blockieren. 0.90 ist auf Retina weiterhin sauber, spart aber
-// gegenueber 1.22 rund 46 % Pixelarbeit und vermeidet diese Resize-Haenger.
-const ACZO_PIXEL_RATIO_CAP=ACZO_COARSE_POINTER?.90:1.15;
+// mehrere Bilder blockieren. Die feste Renderdichte wird nun wieder sichtbar
+// angehoben; Wald-, Wasser- und Schatten-LOD tragen die Mehrlast, ohne dass
+// Safari beim Beginn/Ende jeder Geste neue Renderpuffer anlegen muss.
+const ACZO_PIXEL_RATIO_CAP=ACZO_COARSE_POINTER?1.08:1.25;
 const ACZO_BASE_PIXEL_RATIO=Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP);
 renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
@@ -4722,12 +4723,12 @@ function aczoApplyRenderPixelRatio(){
   let target=ACZO_BASE_PIXEL_RATIO;
   // Die alte Grenze 1,35 konnte auf iPhones mit einer Basis von 1,22 nie
   // greifen. Unter Wasser wird die Fuellrate nun tatsaechlich reduziert.
-  if(anglingMobilePerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .82 : .98);
-  if(aczoFishPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .82 : .98);
+  if(anglingMobilePerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : 1.02);
+  if(aczoFishPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : 1.02);
   // Desktop reduziert waehrend schneller Bewegung weiterhin moderat. Mobil
   // entspricht das Bewegungslimit absichtlich der Basis: keine neue
   // DrawingBuffer-Allokation beim Anfassen, nur billige Geometrie-/Shader-LOD.
-  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? .90 : .88);
+  if(aczoMotionPerfActive)target=Math.min(target,ACZO_COARSE_POINTER ? 1.08 : .96);
   if(Math.abs(target-aczoAppliedPixelRatio)<.001)return;
   aczoAppliedPixelRatio=target;
   renderer.setPixelRatio(target);
@@ -5842,8 +5843,11 @@ function aczoAddContourLine(points,level,opacity=1,color=0x17242b){
   // kippte der Streifen dadurch buckelig und wirkte gelb/orange viel zu fett.
   const levelNum=Number(level)||0;
   const depthWeight=THREE.MathUtils.smoothstep(levelNum,.42,1.22);
-  const width=THREE.MathUtils.lerp(.036,.066,depthWeight);
-  const contourZ=-levelNum*exaggeration+THREE.MathUtils.lerp(.082,.135,depthWeight);
+  // V2.3.42: Das bisher teils unter einem physischen Pixel liegende Band
+  // flimmerte trotz korrekter Geometrie beim Drehen. Eine moderate Mindest-
+  // breite und mehr Tiefenabstand stabilisieren es ohne eine zweite Linie.
+  const width=THREE.MathUtils.lerp(.054,.090,depthWeight);
+  const contourZ=-levelNum*exaggeration+THREE.MathUtils.lerp(.125,.185,depthWeight);
   const pos=new Float32Array(points.length*2*3);
   const idx=[];
   for(let i=0;i<points.length;i++){
@@ -5863,7 +5867,7 @@ function aczoAddContourLine(points,level,opacity=1,color=0x17242b){
   const m=new THREE.MeshBasicMaterial({
     color,transparent:true,opacity,side:THREE.DoubleSide,
     depthTest:true,depthWrite:false,toneMapped:false,
-    polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6
+    polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8
   });
   const line=new THREE.Mesh(g,m);
   line.renderOrder=4.08;
