@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.31 · Detailwald, Birkenrinde, Grundschilf und panorama-freier Test</title>
+<title>ACZO56 V2.3.34 · Naturfarben, flüssige Übergänge, Hütte und Wildschweine</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -2531,6 +2531,13 @@ html,body{
   color:#f4fff8;box-shadow:0 18px 55px rgba(0,0,0,.52);padding:15px
 }
 .angling-main-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.angling-main-head-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.angling-main-close{
+  width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.42);
+  background:rgba(14,76,58,.96);color:#fff;font-size:22px;font-weight:900;line-height:1;
+  display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.30)
+}
+.angling-main-close:hover,.angling-main-close:focus-visible{background:#21825e;outline:2px solid rgba(255,240,150,.92);outline-offset:2px}
 .angling-main-head small{display:block;font-size:8px;font-weight:1000;letter-spacing:.12em;color:#91cfb6}
 .angling-main-head strong{display:block;font-size:20px;line-height:1.05;margin-top:2px}
 .angling-main-head p{margin:5px 0 0;font-size:10px;line-height:1.4;color:#d5eee4}
@@ -2579,6 +2586,12 @@ html,body{
   .angling-main-head strong{font-size:17px}
   .angling-main-actions{grid-template-columns:1fr 1fr}
 }
+
+/* V2.3.33: Auch vor der ersten Profilerstellung gehört das Menü optisch zum
+   Angelspiel. Die Karten-Werkzeugleiste wird deshalb hinter dem Dialog
+   vollständig ausgeblendet; das gut sichtbare X führt jederzeit zurück. */
+.wrap.angling-profile-menu-open > .controls{display:none!important}
+.aczo-phone-layout .angling-main-close{width:38px;height:38px;font-size:21px;position:sticky;top:0}
 
 
 /* V7.73 Navigation audit fixes */
@@ -4012,7 +4025,10 @@ html,body{
              <strong>🎣 Hauptmenü</strong>
              <p id="anglingMainSubtitle">Spiel starten, Fortschritt verwalten und Einstellungen öffnen.</p>
            </div>
-           <div id="anglingMainEpBadge" class="angling-ep-badge"><small>EP</small><strong>0</strong></div>
+           <div class="angling-main-head-actions">
+             <div id="anglingMainEpBadge" class="angling-ep-badge"><small>EP</small><strong>0</strong></div>
+             <button id="anglingMainCloseBtn" class="angling-main-close" type="button" aria-label="Angelmenü schließen und zur Karte zurückkehren" title="Zurück zur Karte">×</button>
+           </div>
          </div>
 
          <div class="angling-main-grid">
@@ -4485,7 +4501,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.158 · V2.3.31 · DETAILWALD, BIRKENRINDE, GRUNDSCHILF, OHNE PANORAMA';
+const VIEWER_VERSION='V8.161 · V2.3.34 · NATURFARBEN, FLÜSSIGE ÜBERGÄNGE, HÜTTE UND WILDSCHWEINE';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4638,12 +4654,22 @@ camera.up.set(0,0,1);
 // dauerhaft konservierter Zeichenpuffer ist deshalb unnoetig und belastet
 // besonders die kachelbasierten iPhone-GPUs bei jeder Kamerabewegung.
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:false});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+// V2.3.34 PERFORMANCE: Auf einer großflächigen WebGL-Landschaft ist ein
+// Pixeldichtefaktor oberhalb 1,4 optisch kaum erkennbar, vervielfacht aber die
+// Füllrate bei jedem Drehen und Zoomen. Markante 3D-Objekte bleiben geometrisch
+// unverändert; nur die interne Bildschirmauflösung wird vernünftig begrenzt.
+const ACZO_PIXEL_RATIO_CAP=window.matchMedia?.('(pointer:coarse)')?.matches?1.22:1.40;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP));
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.shadowMap.autoUpdate=true;
+// V2.3.33 PERFORMANCE: Die komplette 2048er-Schattenkarte wurde zuvor in
+// jedem Bild neu berechnet. Statische Gebäude/Wälder benötigen das nicht;
+// bewegte Personen, Fahrzeuge, Fahnen und der Sonnenlauf werden unten gezielt
+// mit einer begrenzten Frequenz aktualisiert.
+renderer.shadowMap.autoUpdate=false;
+renderer.shadowMap.needsUpdate=true;
 
 // V6.31 SYSTEM-AUDIT: Auf Smartphones ist die Kunstkoeder-Unterwasseransicht
 // der teuerste Modus (Unterwasserwelt + viele Fische + zweites Live-Uferbild).
@@ -4661,7 +4687,7 @@ function setAnglingMobilePerformance(active){
     anglingMobilePerfActive=true;
     if(typeof scheduleViewerResize==='function')scheduleViewerResize();
   }else if(!active&&anglingMobilePerfActive){
-    renderer.setPixelRatio(anglingMobileSavedPixelRatio||Math.min(window.devicePixelRatio||1,2));
+    renderer.setPixelRatio(anglingMobileSavedPixelRatio||Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP));
     anglingMobilePerfActive=false;anglingMobileSavedPixelRatio=null;
     if(typeof scheduleViewerResize==='function')scheduleViewerResize();
   }
@@ -5851,9 +5877,12 @@ function updateContourNightContrast(nightFactor){
   updateContourDistanceLod();
 }
 
+let aczoContourLodKey='';
 function updateContourDistanceLod(){
   const span=Math.max(D.pondW,D.pondH);
   const dist=Math.max(.001,camera.position.distanceTo(controls.target));
+  const key=Math.round(dist)+'|'+Math.round(contourVisibilityFade*50)+'|'+(contoursEnabled?'1':'0');
+  if(key===aczoContourLodKey)return;aczoContourLodKey=key;
   const far=THREE.MathUtils.clamp((dist-span*.88)/(span*1.45),0,1);
   // Linien bleiben auch aus schraeger Perspektive lesbar. Nur auf sehr grosse
   // Entfernung wird die Deckung leicht reduziert.
@@ -5905,9 +5934,12 @@ function aczoBuildShoreSealGeometry(){
   const perimeter=Math.max(1,aczoPolylineLength2D(base,true));
   const cols=Math.max(900,Math.min(1800,Math.round(perimeter/.14)));
   const ring=aczoResampleLoop2D(base,cols,true);
-  const offsets=[0,.16,.36,.62,.90];
+  // V2.3.34: Der Dichtsaum schließt nur noch den technisch nötigen Spalt.
+  // Die frühere Breite bis 90 cm war aus der Vogelperspektive als heller,
+  // künstlicher Balken vor der eigentlichen Uferkante sichtbar.
+  const offsets=[0,.035,.075,.13,.20];
   const rows=offsets.length;
-  const pos=[],uv=[],idx=[];
+  const pos=[],uv=[],shoreBlend=[],idx=[];
   const bands=Array.from({length:rows},()=>new Array(cols));
   for(let i=0;i<cols;i++){
     const cur=ring[i];
@@ -5936,6 +5968,7 @@ function aczoBuildShoreSealGeometry(){
       const z=r===0?ACZO_SHORE_SURFACE_Z+.002:-Math.max(.01,p.d)*exaggeration+.026;
       pos.push(p.x,p.y,z);
       uv.push((p.x-F.minX)/dx,(p.y-F.minY)/dy);
+      shoreBlend.push([0,.50,.78,.94,1][r]);
     }
   }
   for(let r=0;r<rows-1;r++){
@@ -5948,13 +5981,35 @@ function aczoBuildShoreSealGeometry(){
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setAttribute('shoreBlend',new THREE.Float32BufferAttribute(shoreBlend,1));
   g.setIndex(idx);g.computeVertexNormals();
   return g;
 }
-const aczoShoreSealMat=new THREE.MeshBasicMaterial({
-  map:ACZO_DISPLAY_TEX,side:THREE.DoubleSide,toneMapped:false,
-  transparent:false,depthWrite:true,depthTest:true,
-  polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2
+const aczoShoreSealMat=new THREE.ShaderMaterial({
+  uniforms:{mapTex:{value:ACZO_DISPLAY_TEX},nightFactor:{value:0}},
+  side:THREE.DoubleSide,transparent:false,depthWrite:true,depthTest:true,
+  polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
+  vertexShader:`
+    attribute float shoreBlend;varying vec2 vUv;varying float vShoreBlend;
+    void main(){vUv=uv;vShoreBlend=shoreBlend;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}
+  `,
+  fragmentShader:`
+    uniform sampler2D mapTex;uniform float nightFactor;varying vec2 vUv;varying float vShoreBlend;
+    void main(){
+      vec3 depthColor=texture2D(mapTex,vUv).rgb;
+      // Der null Meter breite Orange-/Rosasaum der Tiefenpalette wird am
+      // unmittelbaren Ufer durch eine natürliche, matte Schlamm-/Wasserfarbe
+      // ersetzt. Erst weiter innen geht der Anschluss weich in die Tiefenkarte.
+      vec3 edgeDay=vec3(.25,.32,.28);
+      // Nur die äußersten Zentimeter neutralisieren die rote Nullmeterfarbe;
+      // ab der zweiten Ringreihe übernimmt bereits fast vollständig die echte
+      // Tiefenfarbe. So bleibt keine zweite, breite Uferstufe zurück.
+      vec3 col=mix(edgeDay,depthColor,smoothstep(.00,.58,vShoreBlend));
+      float light=mix(1.0,.19,clamp(nightFactor,0.0,1.0));
+      col*=mix(vec3(.58,.68,.80),vec3(1.0),light)*light;
+      gl_FragColor=vec4(col,1.0);
+    }
+  `
 });
 const aczoShoreSeal=new THREE.Mesh(aczoBuildShoreSealGeometry(),aczoShoreSealMat);
 aczoShoreSeal.renderOrder=1.96;
@@ -6714,7 +6769,7 @@ const sunDisc=new THREE.Sprite(
    })(),
    transparent:true,
    depthWrite:false,
-   depthTest:false,
+   depthTest:true,
    blending:THREE.AdditiveBlending
  })
 );
@@ -6734,7 +6789,11 @@ let aczoWaterStructureShadowMat=null;
 let aczoShadowCasterRefreshAt=0;
 function aczoConfigureUnderwaterShadowLight(light){
   light.castShadow=false;
-  const mobileShadowMap=((window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)||window.innerWidth<=700)?2048:4096;
+  // Eine 4096er Karte über 250+ Meter kostete bei jeder Bewegung viel GPU-
+  // Bandbreite. 2048 Desktop / 1024 Mobil liefert mit PCFSoftShadowMap weiter
+  // natürliche Objektkanten, reduziert aber Speicher- und Aktualisierungslast
+  // auf ein Viertel bzw. ein Sechzehntel.
+  const mobileShadowMap=((window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)||window.innerWidth<=700)?1024:2048;
   light.shadow.mapSize.set(mobileShadowMap,mobileShadowMap);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
@@ -6767,7 +6826,7 @@ aczoStructureShadowLight.target.position.set(0,0,-2);
 scene.add(aczoStructureShadowLight.target);
 scene.add(aczoStructureShadowLight);
 aczoConfigureUnderwaterShadowLight(aczoStructureShadowLight);
-let aczoUnderwaterShadowKey='';
+let aczoUnderwaterShadowKey='',aczoLastShadowRefreshAt=0;
 function updateUnderwaterObstacleShadows(submerged){
   const below=!!submerged;
   const anglingUnderwater=typeof anglingMode!=='undefined'&&anglingMode
@@ -6817,8 +6876,11 @@ function updateUnderwaterObstacleShadows(submerged){
   // eigenen Schattenkarten bleiben aus. So gibt es nur einen konsistenten
   // Schatten pro Baum/Steg und keine alten Doppelprojektionen.
   sun.castShadow=false;moonLight.castShadow=false;
+  const sourceAltitude=useMoon?moonAltitude:sunAltitude;
+  const sourceAzimuth=useMoon?Number(moonLight.userData.astronomicalAzimuthRad):Number(sun.userData.astronomicalAzimuthRad);
   const key=(surface?'l':below?'u':'-')+(useSun?'s':'-')+(useMoon?'m':'-')
-    +'|'+Math.round(cloud*20)+'|'+Math.round((Number.isFinite(sunAltitude)?sunAltitude:0)*180/Math.PI);
+    +'|'+Math.round(cloud*20)+'|a'+Math.round((Number.isFinite(sourceAltitude)?sourceAltitude:0)*90/Math.PI)
+    +'|z'+Math.round((Number.isFinite(sourceAzimuth)?sourceAzimuth:0)*60/Math.PI);
   if(aczoLandShadowReceiver){
     aczoLandShadowReceiver.visible=surface&&(useSun||useMoon);
     if(typeof aczoLandShadowMat!=='undefined')aczoLandShadowMat.opacity=useMoon
@@ -6840,12 +6902,21 @@ function updateUnderwaterObstacleShadows(submerged){
   if(typeof updateAczoOpticalStructureShadows==='function'){
     updateAczoOpticalStructureShadows(structureActive,below,cloud,night);
   }
-  if(key===aczoUnderwaterShadowKey)return;
-  aczoUnderwaterShadowKey=key;
+  const shadowNow=performance.now();
+  // In Echtzeit wandert die Lichtquelle zwischen zwei Frames nur um Bruchteile
+  // eines Pixels. Eine neue 2048er-Schattenkarte viermal pro Sekunde reicht
+  // deshalb aus; nur der sichtbare Zeitraffer erhält eine schnellere Kadenz.
+  const shifting=!!document.querySelector('.angling-ui.time-shifting');
+  const phone=document.documentElement.classList.contains('aczo-phone-layout');
+  const refreshGap=shifting?(phone?140:100):(phone?340:250);
+  const lightChanged=key!==aczoUnderwaterShadowKey;
+  if(!lightChanged&&(!structureActive||shadowNow-aczoLastShadowRefreshAt<refreshGap))return;
+  if(lightChanged)aczoUnderwaterShadowKey=key;
+  aczoLastShadowRefreshAt=shadowNow;
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
   // Totholz und alle modellierten Hindernisse bleiben dagegen Schattenwerfer.
-  if(typeof cleanOverhangGroup!=='undefined')cleanOverhangGroup.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-  if(typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
+  if(lightChanged&&typeof cleanOverhangGroup!=='undefined')cleanOverhangGroup.traverse(o=>{if(o.isMesh)o.castShadow=false;});
+  if(lightChanged&&typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
   renderer.shadowMap.needsUpdate=true;
 }
 
@@ -6872,7 +6943,9 @@ function aczoRefreshAboveWaterShadowCasters(){
   if(typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=!is2D;
   const now=performance.now();
   if(now<aczoShadowCasterRefreshAt)return;
-  aczoShadowCasterRefreshAt=now+1000;
+  // Alle statischen Gruppen behalten ihre Shadow-Flags. Ein Kontrolllauf alle
+  // 2,5 s reicht für neu aktivierte Fahrzeuge/Figuren vollkommen aus.
+  aczoShadowCasterRefreshAt=now+2500;
   aczoEnableShadowTree(flagPoleGroup);
   aczoEnableShadowTree(trafficGroup);
   aczoEnableShadowTree(carTestGroup);
@@ -6987,7 +7060,7 @@ const moonDisc=new THREE.Sprite(new THREE.SpriteMaterial({
   map:moonTex,
   transparent:true,
   depthWrite:false,
-  depthTest:false
+  depthTest:true
 }));
 moonDisc.renderOrder=CELESTIAL_DISC_RENDER_ORDER;
 moonDisc.scale.set(25,25,1);
@@ -7053,7 +7126,7 @@ const moonGlow=new THREE.Sprite(new THREE.SpriteMaterial({
   map:moonGlowTex,
   transparent:true,
   depthWrite:false,
-  depthTest:false,
+  depthTest:true,
   blending:THREE.AdditiveBlending
 }));
 moonGlow.renderOrder=CELESTIAL_GLOW_RENDER_ORDER;
@@ -7786,7 +7859,7 @@ function applyNeutralDayScene(){
   sunDisc.scale.set(48,48,1);
   if(sunDisc.material){
     sunDisc.material.opacity=1.0;
-    sunDisc.material.depthTest=false;
+    sunDisc.material.depthTest=true;
   }
 
   moonDisc.userData.astronomicallyVisible=false;
@@ -7813,6 +7886,12 @@ function applyNeutralDayScene(){
   hemi.intensity=.88;
   applyDayLightLevel(1.0,0xffffff);
   applyWeatherScene();
+  // Ein Spielstart kann zuvor reale Nachtwerte gesetzt haben. Die Vegetation
+  // wird hier im selben Aufruf auf den festen NEUTRAL-Tag synchronisiert und
+  // nicht erst irgendwann im nächsten Animationsbild.
+  if(typeof updateAczoSurveyedNatureSeason==='function'){
+    aczoSurveyLightKey='';updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
+  }
   updateSimulationButton();
   updateWeatherText();
 }
@@ -8597,9 +8676,9 @@ function updateOneDirectCelestialReflection(source,astronomicallyVisible,materia
   }
   directCelestialReflectionTowardViewer.normalize();
 
-  const cloud=THREE.MathUtils.clamp((liveWeather.cloud||0)/100,0,1);
-  const clearSky=1-cloud*.88;
-  const night=THREE.MathUtils.clamp(sceneNightFactor,0,1);
+  const cloud=simulationEnabled?THREE.MathUtils.clamp((liveWeather.cloud||0)/100,0,1):.08;
+  const clearSky=isMoon?Math.max(.24,1-cloud*.76):(1-cloud*.88);
+  const night=simulationEnabled?THREE.MathUtils.clamp(sceneNightFactor,0,1):0;
   let strength;
   if(isMoon){
     const phase=THREE.MathUtils.clamp(cachedMoonFraction||0,0,1);
@@ -8608,10 +8687,10 @@ function updateOneDirectCelestialReflection(source,astronomicallyVisible,materia
       : 1;
     // V8.81: Mondreflex klarer und groesser, damit er im ruhigen Spiegelwasser
     // auf Weiher und Mosel wirklich lesbar bleibt.
-    strength=(.42+.90*phase)*THREE.MathUtils.lerp(.20,1.0,night)*clearSky*visualOpacity;
-    material.uniforms.coreRadius.value=THREE.MathUtils.lerp(2.55,1.62,altNorm);
-    material.uniforms.trailLength.value=THREE.MathUtils.lerp(20.5,8.2,altNorm);
-    material.uniforms.trailWidth.value=THREE.MathUtils.lerp(2.65,1.28,altNorm);
+    strength=(.58+1.00*phase)*THREE.MathUtils.lerp(.22,1.0,night)*clearSky*visualOpacity;
+    material.uniforms.coreRadius.value=THREE.MathUtils.lerp(2.85,1.82,altNorm);
+    material.uniforms.trailLength.value=THREE.MathUtils.lerp(27.0,10.5,altNorm);
+    material.uniforms.trailWidth.value=THREE.MathUtils.lerp(3.00,1.46,altNorm);
   }else{
     // Sonne bleibt dominant und bekommt ebenfalls eine klarere Spiegelbahn.
     strength=THREE.MathUtils.lerp(1.00,.74,altNorm)*clearSky*(1-night*.92);
@@ -8629,7 +8708,10 @@ function updateDirectCelestialWaterReflections(){
   const underwater=(typeof fishMode!=='undefined'&&fishMode)
     ||(typeof anglingMode!=='undefined'&&anglingMode&&anglingCinematicView==='underwater')
     ||camera.position.z<=.115;
-  const active=!!(waterVisible&&waterSurface.visible&&!is2D&&simulationEnabled&&!underwater);
+  // Der feste NEUTRAL-Tag besitzt ebenfalls eine sichtbare Sonne. Deshalb
+  // bleibt der gemeinsame Reflex-Layer bei jedem Oberflaechenmodus aktiv und
+  // wird nicht mehr allein durch den Wetter-Schalter abgeschaltet.
+  const active=!!(waterVisible&&waterSurface.visible&&!is2D&&!underwater);
   directCelestialReflectionGroup.visible=active;
   if(!active){
     directSunReflectionMat.uniforms.strength.value=0;
@@ -9076,7 +9158,7 @@ function set3D(){
     sunDisc.position.copy(sun.position);
     if(sunDisc.material){
       sunDisc.material.opacity=1.0;
-      sunDisc.material.depthTest=false;
+      sunDisc.material.depthTest=true;
     }
     moonDisc.visible=false;
     if(typeof moonGlow!=='undefined') moonGlow.visible=false;
@@ -9844,15 +9926,16 @@ function updateAstronomy(){
 
   const twilight=sunPos.altitude>-0.12;
 
-  // V8.113: Der Mond bleibt astronomisch korrekt, wird optisch aber wie am
+  // V8.160: Der Mond bleibt astronomisch korrekt, wird optisch aber wie am
   // echten Himmel behandelt. Tagsüber ist er kleiner und blasser, in den
   // letzten Grad über dem Horizont blendet er weich aus und geschlossene
-  // Bewölkung kann Scheibe und Schein vollständig verdecken. Diese Werte
-  // gelten gemeinsam für Desktop und die responsive Mobilansicht.
+  // Bewölkung dämpft Scheibe und Schein stark, löscht sie aber selbst bei
+  // 99–100 % nicht vollständig. So bleibt der Mond als diffuse Quelle lesbar.
+  // Diese Werte gelten gemeinsam für Desktop und die responsive Mobilansicht.
   const moonCloud=THREE.MathUtils.clamp((liveWeather?.cloud||0)/100,0,1);
   const moonDaylight=THREE.MathUtils.smoothstep(sunPos.altitude,-.08,.18);
   const moonHorizonVisibility=THREE.MathUtils.smoothstep(moonPos.altitude,0,.18);
-  const moonCloudTransmission=THREE.MathUtils.clamp(1-.97*Math.pow(moonCloud,1.35),0,1);
+  const moonCloudTransmission=Math.max(.13,1-.90*Math.pow(moonCloud,1.28));
   const moonVisualOpacity=moonUp
     ? THREE.MathUtils.clamp(
         moonHorizonVisibility*THREE.MathUtils.lerp(1,.46,moonDaylight)*moonCloudTransmission,
@@ -12426,7 +12509,13 @@ function depositPersonalZander(){
 }
 
 function updatePersonalCampScene(dt){
-  if(!personalCampReady||!personalScene||!personalCamper||!personalAngler)return;
+  // Predatorpit darf gerade nachts nicht ausbleiben, nur weil der Rechner
+  // wegen Vegetation/Schatten keinen langen Leerlauf fuer den Spaetaufbau fand.
+  // Bei einsetzender Dunkelheit wird der weiterhin gestufte Aufbau priorisiert.
+  if(!personalCampReady||!personalScene||!personalCamper||!personalAngler){
+    if(simulationEnabled&&sceneNightFactor>.34&&!personalCampBuilding){personalCampForceBuild=true;initPersonalCampScene();}
+    return;
+  }
   const underwater=(typeof fishMode!=='undefined'&&fishMode);
   const anglingBlocked=anglingPhotoWallsActive();
   personalSceneGroup.visible=!underwater && !anglingBlocked;
@@ -16815,7 +16904,10 @@ updateRealBirchSeason(seasonDayOfDate(viewerNow()));
 
 
 // =========================================================
-// V8.158 / V2.3.31 – Detailwald aus den vermessenen Laborpunkten.
+// V8.161 / V2.3.34 – artenreiche Naturfarben, echte Nachtabdunklung und
+// leistungsoptimierte Kronen. Detail bleibt an den sichtbaren Randbäumen,
+// während Innenwald über größere Blattfächer statt hunderttausender Kleinteile
+// geschlossen wird.
 // Alle sichtbaren Randbaeume folgen den gesetzten Punkten. Die Kronen bestehen
 // wie bei den beiden Weiden aus echten Asthierarchien, Einzelblaettern und
 // kleinen Blattfaechern – ohne Kugeln, Kegel oder Icosaeder-Laubkronen.
@@ -16832,13 +16924,13 @@ scene.add(aczoSurveyedNatureGroup);
 if(aczoOuterForestGroup.parent)aczoOuterForestGroup.parent.remove(aczoOuterForestGroup);
 aczoOuterForestGroup.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});
 
-const aczoSurveyWoodMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true});
+const aczoSurveyWoodMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true,emissive:0x1b1510,emissiveIntensity:.055});
 const aczoSurveyDarkWoodMat=new THREE.MeshStandardMaterial({color:0x30251e,roughness:1,metalness:0});
-const aczoSurveyBirchMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,metalness:0,vertexColors:true});
+const aczoSurveyBirchMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,metalness:0,vertexColors:true,emissive:0x4a4942,emissiveIntensity:.075});
 const aczoSurveyBirchMarkMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,vertexColors:true});
-const aczoSurveyLeafMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveySprayMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveyNeedleMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97,metalness:0,side:THREE.DoubleSide,vertexColors:true});
+const aczoSurveyLeafMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x173a14,emissiveIntensity:.085});
+const aczoSurveySprayMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x153612,emissiveIntensity:.075});
+const aczoSurveyNeedleMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x0b2817,emissiveIntensity:.055});
 const aczoSurveyReedMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.96,metalness:0,side:THREE.DoubleSide,vertexColors:true});
 const aczoSurveyReedHeadMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true});
 const aczoSurveyBranchGeo=new THREE.CylinderGeometry(1,1,1,8,1,false);
@@ -16846,15 +16938,18 @@ const aczoSurveyUp=new THREE.Vector3(0,1,0);
 const aczoSurveySeasonMeshes=[];
 const aczoSurveyEvergreenMeshes=[];
 
+// Aus Luftbild und Uferfotos abgeleitete Palette: kein einheitliches dunkles
+// Grün, sondern olivgrüne Erle, warmere Buche, hellerer Ahorn/Linde und eine
+// bewusst dunklere Eiche. Die Unterschiede bleiben auch von oben erkennbar.
 const aczoSurveySpecies=[
-  {name:'ERLE',summer:0x39733c,spring:0x72aa51,autumn:0x9b7a39,winter:0x554b3c,form:.91,bark:0x4a4237,barkAlt:0x665847,barkMark:0x302f2a},
-  {name:'BUCHE',summer:0x2f6938,spring:0x79ad50,autumn:0xae6a31,winter:0x57483c,form:1.03,bark:0x6d6a61,barkAlt:0x817a6c,barkMark:0x4b4a45},
-  {name:'AHORN',summer:0x467f3c,spring:0x88b95a,autumn:0xc38a2f,winter:0x5c5141,form:1.08,bark:0x5a5040,barkAlt:0x756550,barkMark:0x37342d},
-  {name:'EICHE',summer:0x326b32,spring:0x71a34a,autumn:0x8d6035,winter:0x51483b,form:1.14,bark:0x493d31,barkAlt:0x66513b,barkMark:0x29251f},
-  {name:'LINDE',summer:0x508b43,spring:0x93c568,autumn:0xc09a42,winter:0x5c5040,form:.99,bark:0x59564c,barkAlt:0x747064,barkMark:0x393832},
-  {name:'WILDKIRSCHE',summer:0x437b3e,spring:0xd9ddc5,autumn:0xad5230,winter:0x57483d,form:.94,blossom:true,bark:0x67443b,barkAlt:0x83594c,barkMark:0x3b2925}
+  {name:'ERLE',summer:0x6e9d4a,spring:0xa0cb70,autumn:0xa9873f,winter:0x554b3c,form:.91,bark:0x574b3d,barkAlt:0x79664f,barkMark:0x302f2a},
+  {name:'BUCHE',summer:0x5f9147,spring:0xa5cf72,autumn:0xb87534,winter:0x57483c,form:1.03,bark:0x7f796e,barkAlt:0x999181,barkMark:0x4b4a45},
+  {name:'AHORN',summer:0x83ac55,spring:0xb4d986,autumn:0xc99536,winter:0x5c5141,form:1.08,bark:0x6b5d49,barkAlt:0x8b775c,barkMark:0x37342d},
+  {name:'EICHE',summer:0x46763e,spring:0x8ebb63,autumn:0x96683b,winter:0x51483b,form:1.14,bark:0x594938,barkAlt:0x7b6146,barkMark:0x29251f},
+  {name:'LINDE',summer:0x96b766,spring:0xbddd8d,autumn:0xc5a34a,winter:0x5c5040,form:.99,bark:0x6d685e,barkAlt:0x8a8476,barkMark:0x393832},
+  {name:'WILDKIRSCHE',summer:0x688e4d,spring:0xe2e5d4,autumn:0xb45d35,winter:0x57483d,form:.94,blossom:true,bark:0x7d5548,barkAlt:0x9b6c5d,barkMark:0x3b2925}
 ];
-const aczoSurveyBirchSpecies={name:'BIRKE',summer:0x66a94f,spring:0x9bca70,autumn:0xc7a044,winter:0x625b49,form:.82,bark:0xd7d8cf,barkAlt:0xf0eee1,barkMark:0x343530};
+const aczoSurveyBirchSpecies={name:'BIRKE',summer:0x86ad68,spring:0xb9dc91,autumn:0xc9a448,winter:0x625b49,form:.82,bark:0xf1f0e9,barkAlt:0xfffef8,barkMark:0x30312e};
 
 function aczoSurveyRandom(seed){let value=seed>>>0;return()=>{value=(value+0x6D2B79F5)>>>0;let t=value;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
 function aczoSurveySeed(x,y,salt=0){let n=Math.imul(Math.round((x+140)*1000),73856093)^Math.imul(Math.round((y+140)*1000),19349663)^Math.imul(salt+1,83492791);n=(n^(n>>>13))*1274126177;return Math.abs((n^(n>>>16))|0);}
@@ -16897,12 +16992,18 @@ function aczoSurveyBuildDeciduous(tree){
     const trunkColor=aczoSurveyShadeColor(i%3===1?tree.species.barkAlt:tree.species.bark,rnd,birch?.055:.13);
     aczoSurveyPushSegment(birch?aczoSurveyBirchSegments:aczoSurveyWoodSegments,trunk[i],trunk[i+1],Math.max(.035,r),trunkColor);
     // Viele kurze, unregelmaessige Borkenfelder brechen die glatte Zylinderoptik.
-    const markCount=birch?(i<5?8:4):(i<4?4:2);
+    const markCount=birch?(i<5?13:7):(i<4?4:2);
     for(let m=0;m<markCount;m++){
       const t=.07+rnd()*.86,mid=trunk[i].clone().lerp(trunk[i+1],t),axis=trunk[i+1].clone().sub(trunk[i]).normalize();
-      const radial=new THREE.Vector3(Math.cos(rnd()*Math.PI*2),Math.sin(rnd()*Math.PI*2),0).multiplyScalar(r*1.015);mid.add(radial);
-      const markColor=aczoSurveyShadeColor(rnd()<.28?tree.species.barkAlt:tree.species.barkMark,rnd,birch?.12:.17);
-      aczoSurveyBirchMarks.push({a:mid.clone().addScaledVector(axis,-.018-rnd()*.055),b:mid.clone().addScaledVector(axis,.018+rnd()*.055),r:.006+rnd()*(birch?.010:.008),color:markColor});
+      const radial=new THREE.Vector3(Math.cos(rnd()*Math.PI*2),Math.sin(rnd()*Math.PI*2),0).multiplyScalar(r*1.018);mid.add(radial);
+      const tangent=new THREE.Vector3(-radial.y,radial.x,0).normalize();
+      const markColor=aczoSurveyShadeColor(
+        birch?(rnd()<.16?0x77766e:(rnd()<.22?tree.species.barkAlt:tree.species.barkMark)):(rnd()<.28?tree.species.barkAlt:tree.species.barkMark),
+        rnd,birch?.10:.17
+      );
+      const markAxis=birch&&rnd()<.78?tangent:axis;
+      const half=birch?(.025+rnd()*.095):(.018+rnd()*.055);
+      aczoSurveyBirchMarks.push({a:mid.clone().addScaledVector(markAxis,-half),b:mid.clone().addScaledVector(markAxis,half),r:.006+rnd()*(birch?.013:.008),color:markColor});
     }
   }
   const anchors=[],branchCount=tree.filler?12+Math.floor(rnd()*5):(birch?19:22)+Math.floor(rnd()*6);
@@ -16928,17 +17029,17 @@ function aczoSurveyBuildDeciduous(tree){
       }
     }
   }
-  const leafCount=tree.filler?430+Math.floor(rnd()*250):(birch?1800:1950)+Math.floor(rnd()*(birch?620:760));
+  const leafCount=tree.filler?120+Math.floor(rnd()*70):(birch?1450:780)+Math.floor(rnd()*(birch?460:320));
   for(let i=0;i<leafCount;i++){
     const anchor=anchors[Math.floor(rnd()*anchors.length)]||trunk[6],spread=.035+rnd()*(tree.filler?.28:.42),phi=rnd()*Math.PI*2,cz=rnd()*2-1,sr=Math.sqrt(Math.max(0,1-cz*cz));
     const p=anchor.clone().add(new THREE.Vector3(Math.cos(phi)*sr*spread,Math.sin(phi)*sr*spread,cz*spread*.82));
     aczoSurveyLeafItems.push({p,scale:new THREE.Vector3(.018+rnd()*.021,.030+rnd()*.032,1),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,variation:(rnd()-.5)*.42});
   }
-  const sprayCount=tree.filler?62+Math.floor(rnd()*48):(birch?190:230)+Math.floor(rnd()*(birch?90:125));
+  const sprayCount=tree.filler?46+Math.floor(rnd()*28):(birch?220:205)+Math.floor(rnd()*(birch?95:95));
   for(let i=0;i<sprayCount;i++){
     let p;if(rnd()<.78&&anchors.length)p=anchors[Math.floor(rnd()*anchors.length)].clone().add(new THREE.Vector3((rnd()-.5)*.68,(rnd()-.5)*.68,(rnd()-.5)*.58));
     else{const a=rnd()*Math.PI*2,rad=Math.sqrt(rnd()),z=(rnd()*2-1);p=new THREE.Vector3(tree.x+Math.cos(a)*tree.crownRadius*rad,tree.y+Math.sin(a)*tree.crownDepth*rad,baseZ+tree.height*(birch?.79:.75)+z*tree.height*(birch?.115:.16));}
-    const size=(birch?.10:.115)+rnd()*(birch?.14:.19);aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.78+rnd()*.34),size*(.84+rnd()*.38),size*(.70+rnd()*.34)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,variation:(rnd()-.5)*.40});
+    const size=tree.filler?(.27+rnd()*.30):((birch?.17:.20)+rnd()*(birch?.23:.28));aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.78+rnd()*.34),size*(.84+rnd()*.38),size*(.70+rnd()*.34)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,variation:(rnd()-.5)*.56});
   }
 }
 
@@ -16953,10 +17054,10 @@ function aczoSurveyBuildConifer(object,index,forestMix=false){
     for(let b=0;b<branches;b++){
       const a=b*Math.PI*2/branches+level*.37+index*.73+(rnd()-.5)*.20,tip=center.clone().add(new THREE.Vector3(Math.cos(a)*reach,Math.sin(a)*reach,-(.24+.55*(1-u))+rnd()*.16));
       aczoSurveyPushSegment(aczoSurveyConiferSegments,center,tip,.022+(1-u)*.035);
-      for(const t of [.26,.46,.65,.82,1]){const p=center.clone().lerp(tip,t),size=(.23+(1-u)*.42)*(1.08-t*.22);aczoSurveyNeedleItems.push({p,rot:new THREE.Euler((rnd()-.5)*.25,(rnd()-.5)*.25,a),scale:new THREE.Vector3(size*(.88+rnd()*.22),size*(.42+rnd()*.18),size*(.30+rnd()*.16)),color:[0x123b25,0x1b512e,0x2b6739,0x17442b,0x387044][(b+level+index)%5]});}
+      for(const t of [.26,.46,.65,.82,1]){const p=center.clone().lerp(tip,t),size=(.23+(1-u)*.42)*(1.08-t*.22);aczoSurveyNeedleItems.push({p,rot:new THREE.Euler((rnd()-.5)*.25,(rnd()-.5)*.25,a),scale:new THREE.Vector3(size*(.88+rnd()*.22),size*(.42+rnd()*.18),size*(.30+rnd()*.16)),color:[0x3f744a,0x4d8554,0x5e925e,0x477d50,0x699b68][(b+level+index)%5]});}
     }
   }
-  for(let i=0;i<9;i++){const size=.55-i*.045;aczoSurveyNeedleItems.push({p:new THREE.Vector3(trunk[6].x+(rnd()-.5)*.24,trunk[6].y+(rnd()-.5)*.24,baseZ+height*(.83+i*.018)),rot:new THREE.Euler(rnd()*.16,rnd()*.16,rnd()*Math.PI),scale:new THREE.Vector3(size,size*.72,size*1.35),color:[0x143d2a,0x1d4b32,0x28583a][i%3]});}
+  for(let i=0;i<9;i++){const size=.55-i*.045;aczoSurveyNeedleItems.push({p:new THREE.Vector3(trunk[6].x+(rnd()-.5)*.24,trunk[6].y+(rnd()-.5)*.24,baseZ+height*(.83+i*.018)),rot:new THREE.Euler(rnd()*.16,rnd()*.16,rnd()*Math.PI),scale:new THREE.Vector3(size,size*.72,size*1.35),color:[0x457c50,0x54895a,0x669663][i%3]});}
 }
 
 function aczoSurveyBuildBush(object,index){
@@ -16979,15 +17080,18 @@ function aczoSurveyBuildReeds(object,index){
     const floorZ=inWater?-depth*exaggeration+.025:ACZO_SATELLITE_GROUND_Z,topBase=inWater?WATER_OVERLAY_Z:ACZO_SATELLITE_GROUND_Z,aboveH=groupHeight*(.72+rnd()*.34),topZ=topBase+aboveH;
     const leanX=(rnd()-.5)*.15,leanY=(rnd()-.5)*.15,p0=new THREE.Vector3(x,y,floorZ),p1=new THREE.Vector3(x+leanX,y+leanY,topZ),fullH=topZ-floorZ,stemColor=green[(i+index)%green.length];
     aczoSurveyPushSegment(aczoSurveyReedSegments,p0,p1,.009+rnd()*.009,stemColor);
-    const headBase=p1.clone().add(new THREE.Vector3(0,0,-aboveH*(.10+rnd()*.05)));aczoSurveyPushSegment(aczoSurveyReedHeads,headBase,p1,.024+rnd()*.018,[0x705633,0x80613b,0x5f482d][(i+index)%3]);
+    // Das reale Uferbild zeigt vor allem grasartiges Schilf. Nur wenige
+    // Einzelhalme tragen einen dunklen Samenstand; es ist kein Rohrkolbenfeld.
+    if((i+index*3)%11===0){const headBase=p1.clone().add(new THREE.Vector3(0,0,-aboveH*(.075+rnd()*.04)));aczoSurveyPushSegment(aczoSurveyReedHeads,headBase,p1,.015+rnd()*.010,[0x715b39,0x816b42,0x625034][(i+index)%3]);}
     const waterU=inWater?THREE.MathUtils.clamp((WATER_OVERLAY_Z-floorZ)/Math.max(.01,fullH)+.035,.08,.76):.24;
     for(const offset of [.06,.19,.33,.47]){const u=THREE.MathUtils.clamp(waterU+offset*(1-waterU),.12,.78),p=p0.clone().lerp(p1,u),side=(i%2?1:-1),length=.22+rnd()*.31;aczoSurveyReedBladeItems.push({p,rot:new THREE.Euler(rnd()*.18,rnd()*.18,Math.atan2(leanY,leanX)+side*(.8+rnd()*.65)),scale:new THREE.Vector3(.021+rnd()*.020,length,1),color:green[(i+index+Math.round(offset*10))%green.length]});}
   }
 }
 
-function aczoSurveyBuildSegments(items,material,name,cast=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(aczoSurveyBranchGeo,material,items.length),dummy=new THREE.Object3D();items.forEach((s,i)=>{const delta=s.b.clone().sub(s.a),length=delta.length();dummy.position.copy(s.a).add(s.b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(aczoSurveyUp,delta.normalize());dummy.scale.set(s.r,length,s.r);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);if(material.vertexColors)mesh.setColorAt(i,new THREE.Color(s.color??material.color??0xffffff));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=true;mesh.frustumCulled=false;aczoSurveyedNatureGroup.add(mesh);return mesh;}
+function aczoSurveyBuildSegments(items,material,name,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(aczoSurveyBranchGeo,material,items.length),dummy=new THREE.Object3D();items.forEach((s,i)=>{const delta=s.b.clone().sub(s.a),length=delta.length();dummy.position.copy(s.a).add(s.b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(aczoSurveyUp,delta.normalize());dummy.scale.set(s.r,length,s.r);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);if(material.vertexColors)mesh.setColorAt(i,new THREE.Color(s.color??material.color??0xffffff));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.frustumCulled=false;aczoSurveyedNatureGroup.add(mesh);return mesh;}
 function aczoSurveyShuffle(items,seed){const rnd=aczoSurveyRandom(seed);for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}}
-function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x557b45));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);return mesh;}
+const aczoSurveyFineLodMeshes=[];
+function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
 
 const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='deciduous'||o.type==='birch');
 const aczoSurveyManualTreePoints=aczoSurveyManualTreeObjects.map(o=>[o.x,o.y]);
@@ -17005,19 +17109,19 @@ let aczoSurveyFillerCount=0;
 for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
   const poly=aczoSurveyForestAreas[ai].points,xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),rnd=aczoSurveyRandom(23091+ai*817);
   const step=5.0,areaCap=ai===0?410:90;let areaFillerCount=0;
-  for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys)&&areaFillerCount<areaCap;y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs)&&areaFillerCount<areaCap;x+=step){const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;if(aczoSurveyManualTreePoints.some(p=>Math.hypot(px-p[0],py-p[1])<3.6))continue;const fillerIndex=aczoSurveyFillerCount;if((fillerIndex+ai*3)%9===4)aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);else aczoSurveyBuildDeciduous(aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true));aczoSurveyFillerCount++;areaFillerCount++;}}
+  for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys)&&areaFillerCount<areaCap;y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs)&&areaFillerCount<areaCap;x+=step){const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;if(aczoSurveyManualTreePoints.some(p=>Math.hypot(px-p[0],py-p[1])<3.6))continue;const fillerIndex=aczoSurveyFillerCount;if((fillerIndex+ai*7)%36===11)aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);else aczoSurveyBuildDeciduous(aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true));aczoSurveyFillerCount++;areaFillerCount++;}}
 }
 
 aczoSurveyShuffle(aczoSurveyLeafItems,19561201);aczoSurveyShuffle(aczoSurveySprayItems,19561202);
 aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE');
-aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_WEISSE_STAEMME');
-aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER');
+aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME',true,false);
+aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER',true,false);
 aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE');
 aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EINZELHALME',true);
 aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',true);
-aczoSurveyBuildColored(aczoSurveyLeafItems,realBirchLeafGeometry,aczoSurveyLeafMat,'NATURWALD_EINZELBLAETTER',true,false);
-aczoSurveyBuildColored(aczoSurveySprayItems,realBirchSprayGeometry,aczoSurveySprayMat,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',true,true);
-aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,true);
+aczoSurveyBuildColored(aczoSurveyLeafItems,realBirchLeafGeometry,aczoSurveyLeafMat,'NATURWALD_EINZELBLAETTER',true,false,false);
+aczoSurveyBuildColored(aczoSurveySprayItems,realBirchSprayGeometry,aczoSurveySprayMat,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',true,true,false);
+aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,true,false);
 aczoSurveyBuildColored(aczoSurveyReedBladeItems,realBirchLeafGeometry,aczoSurveyReedMat,'UFER_SCHILF_SCHMALE_BLAETTER',false,true);
 
 function aczoSurveyBuildStump(object,index){
@@ -17031,13 +17135,30 @@ function aczoSurveyBuildStump(object,index){
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='stump').forEach(aczoSurveyBuildStump);
 
 function aczoSurveyBuildLifebuoy(object){
-  const g=new THREE.Group();g.name='RETTUNGSRING_EXAKTE_LABORPOSITION';g.position.set(object.x,object.y,ACZO_SATELLITE_GROUND_Z+1.32);g.rotation.set(Math.PI*.5,0,THREE.MathUtils.degToRad(object.rotationDeg||0));
+  // Der Laborpunkt bestimmt das Zaunfeld; die sichtbare Geometrie wird exakt
+  // auf dessen Achse projiziert. Dadurch schwebt der Ring nicht vor/hinter dem
+  // Gitter und bleibt auch an schrägen Zaunabschnitten parallel.
+  let best=null;
+  for(const segment of ACZO_CONSTRUCTION_SEGMENTS.filter(s=>s.type==='fence')){
+    const dx=segment.b[0]-segment.a[0],dy=segment.b[1]-segment.a[1],len2=dx*dx+dy*dy||1;
+    const t=THREE.MathUtils.clamp(((object.x-segment.a[0])*dx+(object.y-segment.a[1])*dy)/len2,0,1);
+    const x=segment.a[0]+dx*t,y=segment.a[1]+dy*t,d2=(x-object.x)**2+(y-object.y)**2;
+    if(!best||d2<best.d2)best={segment,x,y,dx,dy,d2};
+  }
+  const length=Math.hypot(best.dx,best.dy)||1,ux=best.dx/length,uy=best.dy/length;
+  let ix=-uy,iy=ux;if(best.x*ix+best.y*iy>0){ix=-ix;iy=-iy;}
+  const g=new THREE.Group();g.name='RETTUNGSRING_BUENDIG_AM_VERMESSENEN_ZAUN';
+  g.position.set(best.x+ix*.055,best.y+iy*.055,ACZO_CONSTRUCTION_FENCE_BASE_Z+1.30);
+  g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(ux,uy,0),new THREE.Vector3(0,0,1),new THREE.Vector3(ix,iy,0)));
   const orange=new THREE.MeshStandardMaterial({color:0xe94e2e,roughness:.62,metalness:.04}),white=new THREE.MeshStandardMaterial({color:0xf2efe3,roughness:.74});const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.078,10,30),orange);ring.castShadow=true;ring.receiveShadow=true;g.add(ring);for(const a of [0,Math.PI*.5,Math.PI,Math.PI*1.5]){const band=new THREE.Mesh(new THREE.BoxGeometry(.16,.19,.052),white);band.position.set(Math.cos(a)*.31,Math.sin(a)*.31,.045);band.rotation.z=a;band.castShadow=true;g.add(band);}aczoSurveyedNatureGroup.add(g);
+  const bracket=new THREE.Mesh(new THREE.BoxGeometry(.18,.52,.075),aczoFenceDarkSteelMat);bracket.position.z=-.075;bracket.castShadow=true;g.add(bracket);
 }
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='lifebuoy').forEach(aczoSurveyBuildLifebuoy);
 
 function aczoSurveyBuildOldHut(object){
-  const g=new THREE.Group();g.name='ALTE_MORSCHE_HUETTE_NACH_REFERENZFOTOS';g.position.set(object.x,object.y,ACZO_SATELLITE_GROUND_Z+.03);g.rotation.z=THREE.MathUtils.degToRad((object.headingDeg||0)+90);aczoSurveyedNatureGroup.add(g);
+  // Weitere 180° gegenüber V2.3.32; +X ist Osten im gemeinsamen Labor-
+  // Koordinatensystem. Die 1,5 m schaffen den gewünschten Weiherdurchgang.
+  const g=new THREE.Group();g.name='ALTE_MORSCHE_HUETTE_NACH_REFERENZFOTOS';g.position.set(object.x+1.5,object.y,ACZO_SATELLITE_GROUND_Z+.03);g.rotation.z=THREE.MathUtils.degToRad((object.headingDeg||0)+360);aczoSurveyedNatureGroup.add(g);
   const w=5.55,d=3.85,wallH=2.34,ridgeH=3.22;
   const greenMats=[0x405d55,0x4a675e,0x526e64,0x385149].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:1,metalness:0}));
   const dark=new THREE.MeshStandardMaterial({color:0x171a17,roughness:1}),roof=new THREE.MeshStandardMaterial({color:0x302d27,roughness:.99}),roofDark=new THREE.MeshStandardMaterial({color:0x221f1b,roughness:1}),moss=new THREE.MeshStandardMaterial({color:0x526532,roughness:1,polygonOffset:true,polygonOffsetFactor:-2}),rust=new THREE.MeshStandardMaterial({color:0x7a4127,roughness:1});
@@ -17050,36 +17171,66 @@ function aczoSurveyBuildOldHut(object){
   for(const side of [-1,1])for(let row=0;row<14;row++){const board=new THREE.Mesh(new THREE.BoxGeometry(.045,d,.125),greenMats[(row+2)%greenMats.length]);board.position.set(side*w*.506,0,.12+row*.16);board.castShadow=true;g.add(board);}
   const gableGeo=new THREE.BufferGeometry();gableGeo.setAttribute('position',new THREE.Float32BufferAttribute([-w*.5,0,0,w*.5,0,0,0,0,ridgeH-wallH],3));gableGeo.computeVertexNormals();
   for(const side of [-1,1]){const face=new THREE.Mesh(gableGeo,greenMats[2]);face.position.set(0,side*d*.508,wallH);if(side>0)face.rotation.x=Math.PI;face.castShadow=true;g.add(face);}
-  // Offene dunkle Tuer, verbogene Tuerhaelfte und kleines schwarzes Fenster.
-  const doorVoid=new THREE.Mesh(new THREE.PlaneGeometry(1.05,1.88),dark);doorVoid.position.set(.48,-d*.532,.94);doorVoid.rotation.x=Math.PI*.5;g.add(doorVoid);
-  const brokenDoor=new THREE.Mesh(new THREE.BoxGeometry(.53,.055,1.44),greenMats[1]);brokenDoor.position.set(.10,-d*.565,.72);brokenDoor.rotation.z=-.035;brokenDoor.castShadow=true;g.add(brokenDoor);
-  const windowVoid=new THREE.Mesh(new THREE.PlaneGeometry(.66,.73),dark);windowVoid.position.set(1.72,-d*.535,1.24);windowVoid.rotation.x=Math.PI*.5;g.add(windowVoid);
+  // V2.3.34 REFERENZFOTO: Die Tür sitzt mittig in der zum Weiher gerichteten
+  // Giebel-Stirnseite (+Y), nicht in der bisherigen Seitenansicht. Das kleine
+  // Fenster liegt auf der unmittelbar angrenzenden langen Wand (-X).
+  const doorVoid=new THREE.Mesh(new THREE.PlaneGeometry(1.08,1.90),dark);doorVoid.position.set(0,d*.532,.95);doorVoid.rotation.x=-Math.PI*.5;g.add(doorVoid);
+  const brokenDoor=new THREE.Mesh(new THREE.BoxGeometry(.54,.055,1.46),greenMats[1]);brokenDoor.position.set(-.37,d*.565,.73);brokenDoor.rotation.z=.045;brokenDoor.castShadow=true;g.add(brokenDoor);
+  const windowVoid=new THREE.Mesh(new THREE.PlaneGeometry(.68,.72),dark);windowVoid.position.set(-w*.535,.54,1.22);windowVoid.rotation.y=-Math.PI*.5;g.add(windowVoid);
   // Zweite, dunkle Seitenkammer wie auf dem Foto rechts.
   const annexW=2.05,annexD=3.15,annexH=2.05,annex=new THREE.Mesh(new THREE.BoxGeometry(annexW,annexD,annexH),greenMats[3]);annex.position.set(w*.5+annexW*.42,.28,annexH*.5);annex.castShadow=true;annex.receiveShadow=true;g.add(annex);
   const annexVoid=new THREE.Mesh(new THREE.PlaneGeometry(.86,1.70),dark);annexVoid.position.set(w*.5+annexW*.42,-annexD*.5+.25,.85);annexVoid.rotation.x=Math.PI*.5;g.add(annexVoid);
-  const annexRoof=new THREE.Mesh(new THREE.BoxGeometry(annexW*1.18,annexD*1.10,.16),roofDark);annexRoof.position.set(w*.5+annexW*.42,.31,annexH+.22);annexRoof.rotation.y=-.09;annexRoof.castShadow=true;g.add(annexRoof);
-  const slope=Math.atan2(ridgeH-wallH,d*.5),roofDepth=Math.sqrt((d*.57)**2+(ridgeH-wallH)**2);
+  const annexRoof=new THREE.Mesh(new THREE.BoxGeometry(annexW*1.18,annexD*1.10,.16),roofDark);annexRoof.position.set(w*.5+annexW*.42,.31,annexH+.22);annexRoof.rotation.y=.10;annexRoof.castShadow=true;g.add(annexRoof);
+  // Das Frontfoto zeigt einen Giebel: Der First laeuft von der Front zur
+  // Rueckseite. Zuvor verlief er quer und die beiden Flaechen wirkten wie
+  // aufgesetzte Platten. Nun fallen sie korrekt nach links und rechts ab.
+  const slope=Math.atan2(ridgeH-wallH,w*.5),roofRun=Math.sqrt((w*.56)**2+(ridgeH-wallH)**2);
   for(const side of [-1,1]){
-    const panel=new THREE.Mesh(new THREE.BoxGeometry(w*1.12,roofDepth,.17),roof);panel.position.set(0,side*d*.275,wallH+(ridgeH-wallH)*.52);panel.rotation.x=side*slope;panel.castShadow=true;panel.receiveShadow=true;g.add(panel);
-    for(let row=0;row<9;row++){const batten=new THREE.Mesh(new THREE.BoxGeometry(w*1.09,.028,.026),roofDark);batten.position.set(0,side*(.12+row*roofDepth/10),wallH+(ridgeH-wallH)*(.88-row/16));batten.rotation.x=side*slope;batten.castShadow=true;g.add(batten);}
-    for(let p=0;p<13;p++){const patch=new THREE.Mesh(new THREE.CircleGeometry(.18+((p*7)%5)*.05,10),moss);patch.position.set(-w*.45+(p%7)*w*.15,side*(.32+(p%4)*.31),wallH+(ridgeH-wallH)*(.82-(p%4)*.10)+.025);patch.rotation.x=side*slope;patch.scale.set(1.4,.62,1);g.add(patch);}
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(roofRun,d*1.12,.17),roof);panel.position.set(side*w*.275,0,wallH+(ridgeH-wallH)*.52);panel.rotation.y=side*slope;panel.castShadow=true;panel.receiveShadow=true;g.add(panel);
+    for(let row=0;row<10;row++){const u=.08+row*.095,batten=new THREE.Mesh(new THREE.BoxGeometry(.035,d*1.09,.028),roofDark);batten.position.set(side*w*.50*u,0,ridgeH-(ridgeH-wallH)*u+.025);batten.rotation.y=side*slope;batten.castShadow=true;g.add(batten);}
+    for(let p=0;p<15;p++){const u=.12+(p%5)*.18,patch=new THREE.Mesh(new THREE.CircleGeometry(.16+((p*7)%5)*.05,10),moss);patch.position.set(side*w*.50*u,-d*.43+Math.floor(p/5)*d*.39+(p%2)*.11,ridgeH-(ridgeH-wallH)*u+.105);patch.rotation.y=side*slope;patch.rotation.z=(p%4)*.31;patch.scale.set(1.45,.62,1);g.add(patch);}
   }
-  const ridge=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,w*1.08,8),roofDark);ridge.rotation.z=Math.PI*.5;ridge.position.z=ridgeH+.02;ridge.castShadow=true;g.add(ridge);
-  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.105,.115,.82,10),dark);pipe.rotation.x=Math.PI*.5;pipe.position.set(1.25,.18,ridgeH+.34);pipe.castShadow=true;g.add(pipe);const cap=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.055,10),rust);cap.rotation.x=Math.PI*.5;cap.position.set(1.25,.18,ridgeH+.77);cap.castShadow=true;g.add(cap);
+  const ridge=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,d*1.10,8),roofDark);ridge.position.z=ridgeH+.02;ridge.castShadow=true;g.add(ridge);
+  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.105,.115,.82,10),dark);pipe.rotation.x=Math.PI*.5;pipe.position.set(.66,.42,ridgeH+.34);pipe.castShadow=true;g.add(pipe);const cap=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.055,10),rust);cap.rotation.x=Math.PI*.5;cap.position.set(.66,.42,ridgeH+.77);cap.castShadow=true;g.add(cap);
   // Verwittertes Schild ohne erfundenen Schriftzug und lose Bretter.
-  const sign=new THREE.Mesh(new THREE.BoxGeometry(1.08,.055,.22),new THREE.MeshStandardMaterial({color:0x857f68,roughness:1}));sign.position.set(.48,-d*.568,2.10);sign.rotation.z=.018;sign.castShadow=true;g.add(sign);
-  for(let i=0;i<9;i++){const rot=(i*2.31)%6.2,r=.8+(i%4)*.32,spot=new THREE.Mesh(new THREE.CircleGeometry(.025+(i%3)*.012,8),rust);spot.position.set(Math.cos(rot)*r,-d*.571,.55+(i%5)*.34);spot.rotation.x=Math.PI*.5;g.add(spot);}
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(1.08,.055,.22),new THREE.MeshStandardMaterial({color:0x857f68,roughness:1}));sign.position.set(0,d*.568,2.10);sign.rotation.z=-.018;sign.castShadow=true;g.add(sign);
+  for(let i=0;i<9;i++){const rot=(i*2.31)%6.2,r=.8+(i%4)*.32,spot=new THREE.Mesh(new THREE.CircleGeometry(.025+(i%3)*.012,8),rust);spot.position.set(Math.cos(rot)*r,d*.571,.55+(i%5)*.34);spot.rotation.x=-Math.PI*.5;g.add(spot);}
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 }
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='hut').forEach(aczoSurveyBuildOldHut);
 
-let aczoSurveySeasonKey='';const aczoSurveyColor=new THREE.Color();
+const aczoSurveyLitMaterials=[aczoSurveyWoodMat,aczoSurveyDarkWoodMat,aczoSurveyBirchMat,aczoSurveyBirchMarkMat,aczoSurveyLeafMat,aczoSurveySprayMat,aczoSurveyNeedleMat,aczoSurveyReedMat,aczoSurveyReedHeadMat];
+aczoSurveyLitMaterials.forEach(m=>{m.userData.aczoDayColor=m.color.clone();m.userData.aczoDayEmissiveIntensity=Number(m.emissiveIntensity)||0;m.userData.aczoDayGain=(m===aczoSurveyLeafMat||m===aczoSurveySprayMat)?1.42:(m===aczoSurveyNeedleMat?1.20:(m===aczoSurveyReedMat?1.16:1.04));});
+let aczoSurveySeasonKey='',aczoSurveyLightKey='';const aczoSurveyColor=new THREE.Color();
 function updateAczoSurveyedNatureSeason(day){
   const d=THREE.MathUtils.clamp(Number(day)||1,1,366);let phase='summer',progress=0,density=1;
   if(d<66||d>=338){phase='winter';density=.035;}else if(d<145){phase='spring';progress=THREE.MathUtils.smoothstep(d,66,132);density=THREE.MathUtils.smoothstep(d,66,126);}else if(d>=258){phase='autumn';progress=THREE.MathUtils.smoothstep(d,258,326);density=1-THREE.MathUtils.smoothstep(d,295,338);}
-  const key=phase+'|'+Math.round(progress*20)+'|'+Math.round(density*40)+'|'+(is2D?'2':'3');if(key===aczoSurveySeasonKey)return;aczoSurveySeasonKey=key;
-  for(const mesh of aczoSurveySeasonMeshes){const items=mesh.userData.items;mesh.count=Math.max(0,Math.round(mesh.userData.maxCount*density));items.forEach((item,i)=>{const s=item.species;if(phase==='winter')aczoSurveyColor.set(s.winter);else if(phase==='spring'){aczoSurveyColor.set(s.spring).lerp(new THREE.Color(s.summer),progress*.74);if(s.blossom&&d>=82&&d<=126)aczoSurveyColor.set(0xe0e2cf).lerp(new THREE.Color(0xb5c595),Math.abs(d-104)/22);}else if(phase==='autumn')aczoSurveyColor.set(s.summer).lerp(new THREE.Color(s.autumn),progress);else aczoSurveyColor.set(s.summer);aczoSurveyColor.offsetHSL(item.variation*.22,item.variation*.18,item.variation*.48);mesh.setColorAt(i,aczoSurveyColor);});if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=!is2D&&mesh.count>0;}
+  // Nachtwechsel kostet nur neun uniforme Materialwerte – nicht mehr eine
+  // Neufärbung aller Blattinstanzen. Dadurch reagiert jede neue Pflanze wie
+  // die alten Weiden auf Licht, ohne Zoom und Zeitraffer auszubremsen.
+  const night=simulationEnabled?THREE.MathUtils.clamp(Number(sceneNightFactor)||0,0,1):0;
+  const lightKey=Math.round(night*32)+'|'+(simulationEnabled?'l':'n');
+  if(lightKey!==aczoSurveyLightKey){
+    aczoSurveyLightKey=lightKey;
+    const brightness=THREE.MathUtils.lerp(1,.18,night);
+    aczoSurveyLitMaterials.forEach(m=>{
+      m.color.copy(m.userData.aczoDayColor).multiplyScalar(brightness*m.userData.aczoDayGain);
+      if('emissiveIntensity' in m)m.emissiveIntensity=m.userData.aczoDayEmissiveIntensity*(1-night);
+    });
+  }
+  const key=phase+'|'+Math.round(progress*20)+'|'+Math.round(density*40)+'|'+(is2D?'2':'3');if(key===aczoSurveySeasonKey){aczoSurveyedNatureGroup.visible=!is2D;return;}aczoSurveySeasonKey=key;
+  for(const mesh of aczoSurveySeasonMeshes){const items=mesh.userData.items;mesh.userData.seasonCount=Math.max(0,Math.round(mesh.userData.maxCount*density));mesh.count=mesh.userData.seasonCount;items.forEach((item,i)=>{const s=item.species;if(phase==='winter')aczoSurveyColor.set(s.winter);else if(phase==='spring'){aczoSurveyColor.set(s.spring).lerp(new THREE.Color(s.summer),progress*.74);if(s.blossom&&d>=82&&d<=126)aczoSurveyColor.set(0xe0e2cf).lerp(new THREE.Color(0xb5c595),Math.abs(d-104)/22);}else if(phase==='autumn')aczoSurveyColor.set(s.summer).lerp(new THREE.Color(s.autumn),progress);else aczoSurveyColor.set(s.summer);aczoSurveyColor.offsetHSL(item.variation*.42,item.variation*.30,item.variation*.78);mesh.setColorAt(i,aczoSurveyColor);});if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=!is2D&&mesh.count>0;}
   aczoSurveyedNatureGroup.visible=!is2D;renderer.shadowMap.needsUpdate=true;
+}
+let aczoSurveyLastLodAt=0,aczoSurveyLastLodKey='';
+function updateAczoSurveyForestLod(){
+  const now=performance.now();if(now<aczoSurveyLastLodAt)return;aczoSurveyLastLodAt=now+180;
+  const dist=Math.max(0,camera.position.distanceTo(controls.target));
+  const far=THREE.MathUtils.clamp((dist-52)/138,0,1);
+  const inputPenalty=(typeof viewerInputBusy==='function'&&viewerInputBusy()) ? .82 : 1;
+  const factor=THREE.MathUtils.lerp(1,.34,far)*inputPenalty;
+  const key=Math.round(factor*20)+'|'+(is2D?'2':'3');if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
+  for(const mesh of aczoSurveyFineLodMeshes){mesh.count=is2D?0:Math.max(0,Math.round((mesh.userData.seasonCount||mesh.userData.maxCount)*factor));mesh.visible=!is2D&&mesh.count>0;}
 }
 updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
 aczoEnableShadowTree(aczoSurveyedNatureGroup);
@@ -17089,6 +17240,82 @@ aczoSurveyedNatureGroup.userData.coniferCount=ACZO_SURVEY_DATA.objects.filter(o=
 aczoSurveyedNatureGroup.userData.bushCount=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush').length;
 aczoSurveyedNatureGroup.userData.reedGroupCount=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').length;
 aczoSurveyedNatureGroup.userData.fillerTreeCount=aczoSurveyFillerCount;
+
+// =========================================================
+// V2.3.34 – Wildschweinrotte ausschließlich im äußeren Laubwald.
+// Fünf unterschiedlich große Tiere, lange Ruhephasen und eine vollständig
+// außerhalb des Weihergrundstücks verlaufende Waldroute.
+// =========================================================
+function aczoMakeBoarFurTexture(){
+  const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');
+  const grad=x.createLinearGradient(0,0,0,128);grad.addColorStop(0,'#4b4035');grad.addColorStop(.48,'#342d27');grad.addColorStop(1,'#211e1b');x.fillStyle=grad;x.fillRect(0,0,256,128);
+  const rnd=aczoSurveyRandom(195656);for(let i=0;i<720;i++){
+    const px=rnd()*256,py=rnd()*128,len=2+rnd()*10,light=rnd()<.22;
+    x.strokeStyle=light?'rgba(169,143,109,'+(.10+rnd()*.20)+')':'rgba(12,10,9,'+(.10+rnd()*.24)+')';
+    x.lineWidth=.35+rnd()*1.15;x.beginPath();x.moveTo(px,py);x.lineTo(px+len,py+(rnd()-.5)*2.4);x.stroke();
+  }
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2.2,1.25);t.encoding=THREE.sRGBEncoding;t.anisotropy=2;t.needsUpdate=true;return t;
+}
+const aczoBoarFurTexture=aczoMakeBoarFurTexture();
+const aczoWildBoarGroup=new THREE.Group();aczoWildBoarGroup.name='WILDSCHWEINROTTE_NUR_IM_AUSSENWALD';aczoWildBoarGroup.userData.alwaysVisible=true;scene.add(aczoWildBoarGroup);
+const aczoBoarDarkMat=new THREE.MeshStandardMaterial({color:0x171513,roughness:.98});
+const aczoBoarNoseMat=new THREE.MeshStandardMaterial({color:0x28221f,roughness:.88});
+const aczoBoarEyeMat=new THREE.MeshStandardMaterial({color:0x090806,roughness:.42});
+const aczoBoarTuskMat=new THREE.MeshStandardMaterial({color:0xd8d0b5,roughness:.72});
+const aczoBoarBristleMat=new THREE.LineBasicMaterial({color:0x211c18,transparent:true,opacity:.82});
+function aczoBuildWildBoar(seed,scale=1,piglet=false){
+  const rnd=aczoSurveyRandom(seed),g=new THREE.Group();g.userData.phase=rnd()*Math.PI*2;
+  const coat=new THREE.MeshStandardMaterial({color:piglet?0x735943:[0x55483a,0x4b4035,0x615041,0x443a32][seed%4],map:aczoBoarFurTexture,roughness:.96,metalness:0});
+  const addMesh=(geo,mat,pos,scl,rot)=>{const m=new THREE.Mesh(geo,mat);m.position.set(...pos);m.scale.set(...scl);if(rot)m.rotation.set(...rot);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;};
+  addMesh(new THREE.SphereGeometry(.62,18,12),coat,[0,0,.79],[1.48,.66,.72]);
+  // Hohe Schulter, abfallender Rücken und keilförmiger Kopf sind die typische
+  // Wildschwein-Silhouette – keine rechteckigen Tierbausteine.
+  addMesh(new THREE.SphereGeometry(.48,16,11),coat,[.48,0,.91],[.78,.72,.94]);
+  addMesh(new THREE.SphereGeometry(.44,16,11),coat,[.97,0,.75],[.82,.68,.70],[0,.16,0]);
+  addMesh(new THREE.CylinderGeometry(.17,.25,.48,12,2),coat,[1.37,0,.64],[1,.92,1],[0,0,-Math.PI*.5]);
+  addMesh(new THREE.CylinderGeometry(.18,.18,.055,14),aczoBoarNoseMat,[1.615,0,.62],[1,.92,1],[0,0,-Math.PI*.5]);
+  // Bewegliche dreieckige Ohren, kleine Augen und gekrümmte helle Hauer.
+  const leftEar=addMesh(new THREE.ConeGeometry(.13,.31,8),coat,[.91,.27,1.11],[1,.72,1],[.18,0,-.18]);
+  const rightEar=leftEar.clone();rightEar.position.y=-.27;rightEar.rotation.x=-.18;g.add(rightEar);
+  for(const side of [-1,1]){
+    addMesh(new THREE.SphereGeometry(.030,10,7),aczoBoarEyeMat,[1.19,side*.285,.81],[1,1,1]);
+    if(!piglet)addMesh(new THREE.ConeGeometry(.035,.20,9),aczoBoarTuskMat,[1.48,side*.20,.51],[1,1,1],[side*.24,0,-Math.PI*.56]);
+  }
+  const legGeo=new THREE.CylinderGeometry(.075,.105,.54,9,2),hoofGeo=new THREE.CylinderGeometry(.082,.075,.18,8,1);
+  for(const x of [-.46,.48])for(const y of [-.31,.31]){
+    const leg=addMesh(legGeo,coat,[x,y,.35],[1,1,1],[Math.PI*.5,0,(rnd()-.5)*.05]);leg.userData.legPhase=(x+y>0?0:Math.PI);
+    addMesh(hoofGeo,aczoBoarDarkMat,[x+.035,y,.08],[1,1,1],[Math.PI*.5,0,.18]);
+  }
+  // Feine Rückenborsten als ein einziger leichter Linienzug.
+  const br=[];for(let i=0;i<26;i++){const u=i/25,px=-.76+u*1.48,pz=1.19+.10*Math.sin(u*Math.PI);br.push(px,(rnd()-.5)*.08,pz,px-.025,(rnd()-.5)*.09,pz+.12+rnd()*.09);}const brGeo=new THREE.BufferGeometry();brGeo.setAttribute('position',new THREE.Float32BufferAttribute(br,3));g.add(new THREE.LineSegments(brGeo,aczoBoarBristleMat));
+  // Kurzer gebogener Schwanz mit dunklem Quast.
+  const tailA=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.34,7),coat);tailA.rotation.set(Math.PI*.5,0,.55);tailA.position.set(-.98,0,.86);tailA.castShadow=true;g.add(tailA);
+  addMesh(new THREE.SphereGeometry(.07,9,7),aczoBoarDarkMat,[-1.12,0,1.00],[1.25,.82,1.12]);
+  if(piglet){for(const y of [-.39,-.22,0,.22,.39]){const stripe=new THREE.Mesh(new THREE.TorusGeometry(.52,.018,5,22,Math.PI*.92),new THREE.MeshStandardMaterial({color:0xc8a66e,roughness:1}));stripe.rotation.set(Math.PI*.5,0,Math.PI*.5);stripe.position.set(-.05,y,.83);stripe.scale.set(1.55,1,.82);g.add(stripe);}}
+  g.scale.setScalar(scale);return g;
+}
+const aczoWildBoarActors=[];
+[
+  {seed:4101,scale:1.12,offset:[0,0],piglet:false},
+  {seed:4102,scale:.94,offset:[-1.65,1.05],piglet:false},
+  {seed:4103,scale:.88,offset:[-1.85,-1.08],piglet:false},
+  {seed:4104,scale:.57,offset:[-2.85,.46],piglet:true},
+  {seed:4105,scale:.53,offset:[-2.72,-.50],piglet:true}
+].forEach(cfg=>{const actor=aczoBuildWildBoar(cfg.seed,cfg.scale,cfg.piglet);actor.position.set(cfg.offset[0],cfg.offset[1],ACZO_SATELLITE_GROUND_Z);actor.userData.baseOffset=new THREE.Vector2(cfg.offset[0],cfg.offset[1]);aczoWildBoarGroup.add(actor);aczoWildBoarActors.push(actor);});
+const aczoWildBoarRoute=[new THREE.Vector2(-84,79),new THREE.Vector2(-70,88),new THREE.Vector2(-53,92),new THREE.Vector2(-37,86),new THREE.Vector2(-45,76),new THREE.Vector2(-63,75),new THREE.Vector2(-79,72)];
+const aczoWildBoarRouteLengths=[];let aczoWildBoarRouteTotal=0;for(let i=0;i<aczoWildBoarRoute.length;i++){const a=aczoWildBoarRoute[i],b=aczoWildBoarRoute[(i+1)%aczoWildBoarRoute.length],l=a.distanceTo(b);aczoWildBoarRouteLengths.push(l);aczoWildBoarRouteTotal+=l;}
+let aczoWildBoarDistance=7.5,aczoWildBoarClock=0,aczoWildBoarLastUpdate=0;
+function aczoWildBoarRoutePose(distance,out){let d=((distance%aczoWildBoarRouteTotal)+aczoWildBoarRouteTotal)%aczoWildBoarRouteTotal;for(let i=0;i<aczoWildBoarRoute.length;i++){const len=aczoWildBoarRouteLengths[i];if(d<=len){const a=aczoWildBoarRoute[i],b=aczoWildBoarRoute[(i+1)%aczoWildBoarRoute.length],u=d/len;out.x=THREE.MathUtils.lerp(a.x,b.x,u);out.y=THREE.MathUtils.lerp(a.y,b.y,u);out.heading=Math.atan2(b.y-a.y,b.x-a.x);return out;}d-=len;}return out;}
+const aczoWildBoarPose={x:0,y:0,heading:0};
+function updateAczoWildBoars(dt){
+  const underwater=(typeof fishMode!=='undefined'&&fishMode)||(typeof anglingMode!=='undefined'&&anglingMode&&anglingCinematicView==='underwater');
+  aczoWildBoarGroup.visible=!is2D&&!underwater;if(!aczoWildBoarGroup.visible)return;
+  aczoWildBoarClock+=dt;const now=performance.now();if(now<aczoWildBoarLastUpdate)return;aczoWildBoarLastUpdate=now+66;
+  const cycle=aczoWildBoarClock%52,moving=cycle<14||(cycle>35&&cycle<45),step=moving?dt*.60:0;aczoWildBoarDistance+=step;
+  aczoWildBoarRoutePose(aczoWildBoarDistance,aczoWildBoarPose);aczoWildBoarGroup.position.set(aczoWildBoarPose.x,aczoWildBoarPose.y,0);aczoWildBoarGroup.rotation.z=aczoWildBoarPose.heading;
+  aczoWildBoarActors.forEach((actor,i)=>{const phase=actor.userData.phase+aczoWildBoarClock*5.1+i*.7;actor.position.z=ACZO_SATELLITE_GROUND_Z+(moving?Math.abs(Math.sin(phase))*.022:0);actor.rotation.y=moving?Math.sin(phase)*.018:0;actor.rotation.z=(moving?Math.sin(phase*.5)*.012:Math.sin(aczoWildBoarClock*.28+i)*.006);});
+}
+aczoEnableShadowTree(aczoWildBoarGroup);
 
 
 
@@ -18907,9 +19134,10 @@ function updateFishActors(dt){
     // Außerhalb Fischsicht/Kunstköder-Unterwasserkamera wird die Population nur
     // simuliert. Die Modelle selbst bleiben im normalen Angelbild unsichtbar.
     f.obj.visible=fishVisualActive&&nearEnough;
-    // Unsichtbare Fische bewegen sich weiter, aber nur in jedem achten Bild.
-    if(!nearEnough&&(fishActorFrame+f.index)%8!==0) continue;
-    const step=nearEnough?dt:dt*8;
+    // Unsichtbare Fernfische werden zeitversetzt statt in jedem Bild simuliert.
+    // Ihre zurückgelegte Strecke bleibt identisch, die CPU-Arbeit sinkt jedoch.
+    if(!nearEnough&&(fishActorFrame+f.index)%12!==0) continue;
+    const step=nearEnough?dt:dt*12;
     let activity=1;
     if(species==='zander') activity=THREE.MathUtils.lerp(.035,1,aczoLowLight);
     if(species==='eel') activity=THREE.MathUtils.lerp(.025,1,simulationEnabled?sceneNightFactor:0);
@@ -19069,6 +19297,9 @@ const fishShadowDummy=new THREE.Object3D();
 const fishShadowCandidates=[];
 function updateFishShadows(){
   if(!fishMode){fishShadows.count=0;return;}
+  // Weiche Bodenschatten benötigen keine 60 vollständigen Sortierungen pro
+  // Sekunde. 30 Hz wirkt bei den langsamen Fischen unverändert flüssig.
+  if((fishActorFrame&1)!==0)return;
   fishShadowCandidates.length=0;
   for(const f of fishActors){
     if(!f.obj.visible||f.obj.userData.hiddenByHunt) continue;
@@ -19778,7 +20009,7 @@ function buildAnglingFixedPhotoWalls(){
 }
 
 function setAnglingPhotoHorizonForSelection(){
-  // V2.3.31 Test: Die vier alten Foto-Panoramen werden weder geladen noch
+  // V2.3.32 Test: Die vier alten Foto-Panoramen werden weder geladen noch
   // aufgebaut. Ihre Hilfsschatten werden ebenfalls vollstaendig entfernt.
   ++anglingPhotoHorizonLoadToken;
   anglingPhotoHorizonLoaded=false;
@@ -20674,7 +20905,7 @@ function drawAnglingDeeperSonar(){
 }
 function updateAnglingDeeperPins(){for(const p of anglingDeeperPinEntries){if(p?.group)p.group.position.z=anglingSurfaceZ(p.x,p.y);}}
 function updateAnglingDeeperReadyPose(){
- const ready=anglingMode&&anglingSelection&&anglingState==='ready'&&!anglingUi.classList.contains('line-active');
+ const ready=anglingMode&&anglingSelection&&(anglingState==='ready'||anglingState==='time-shift')&&!anglingUi.classList.contains('line-active');
  const usesDeeper=anglingUsesDeeper();
  const usesLure=anglingUsesArtificialLure();
  const lureProfile=anglingActiveLure();
@@ -20909,10 +21140,13 @@ anglingReelMiniCamera.position.set(1.28,-1.48,-.18);anglingReelMiniCamera.lookAt
 const anglingFloatBufferSize=new THREE.Vector2();
 // V5.79: Das Kunstköderfenster rendert nicht mehr eine künstliche Nahszene,
 // sondern exakt dieselbe Unterwasserwelt wie die freie Fischsicht.
-let anglingLureUnderwaterWorldReady=false;
+let anglingLureUnderwaterWorldReady=false,aczoUnderwaterShadersReady=false;
 function ensureAnglingLureUnderwaterWorld(){
   if(anglingLureUnderwaterWorldReady){
-    rebuildFishBankWall();
+    // V2.3.34 PERFORMANCE: Dieser Aufruf liegt auch im normalen
+    // Unterwasser-Frame. Die bereits fertige Uferwand darf hier keinesfalls
+    // erneut verworfen und aufgebaut werden – das erzeugte vorher fortlaufend
+    // Geometrie/GC-Last und genau am Auftreffen des Kunstköders eine Pause.
     return;
   }
   ensureUnderwaterStaticAssets();
@@ -20925,6 +21159,33 @@ function ensureAnglingLureUnderwaterWorld(){
   rebuildUnderwaterObjects();
   anglingLureUnderwaterWorldReady=true;
 }
+function aczoCompileUnderwaterShaders(){
+  if(aczoUnderwaterShadersReady||!anglingLureUnderwaterWorldReady)return;
+  // Unsichtbare Objekte überspringt WebGLRenderer.compile(). Deshalb werden
+  // ausschließlich die Unterwasser-Layer für die Dauer des Compile-Passes
+  // sichtbar gesetzt und danach exakt wiederhergestellt. Kein Bild wird dabei
+  // ausgegeben; der Auftreff-Frame muss später keine Shader mehr übersetzen.
+  const objects=[fishPond,fishBottomDetails,fishBankWall,fishBankStones,fishShoreTalus,fishPlantMesh,fishCaustics,fishLightGlow,fishShadows,suspendedWater,bubblePool.points,sedimentPool.points,underwaterStones,northWood,deadwoodContactShadow,fishGroup].filter(Boolean);
+  const visibility=objects.map(o=>o.visible),oldFog=scene.fog;
+  try{
+    objects.forEach(o=>o.visible=true);scene.fog=fishUnderwaterFog;
+    renderer.compile(scene,camera);aczoUnderwaterShadersReady=true;
+  }finally{
+    objects.forEach((o,i)=>o.visible=visibility[i]);scene.fog=oldFog;
+  }
+}
+// V2.3.34: Die bisher beim ersten Kunstköder-Abtauchen gebündelte Erzeugung
+// von Bodentextur, Fischen, Uferwand und Unterwasserobjekten wird in eine echte
+// Leerlaufphase vorgezogen und einschließlich Shadern vorgewärmt.
+function aczoPrewarmUnderwaterWorld(){
+  if(aczoUnderwaterShadersReady||document.hidden)return;
+  if(typeof viewerInputBusy==='function'&&viewerInputBusy()){
+    window.setTimeout(aczoPrewarmUnderwaterWorld,650);return;
+  }
+  try{ensureAnglingLureUnderwaterWorld();aczoCompileUnderwaterShaders();}catch(err){console.warn('Unterwasser-Vorbereitung wird beim ersten Einstieg nachgeholt:',err);}
+}
+if('requestIdleCallback' in window)window.requestIdleCallback(aczoPrewarmUnderwaterWorld,{timeout:9000});
+else window.setTimeout(aczoPrewarmUnderwaterWorld,6500);
 // V5.77: Kunstköder sind eigenständige kleine 3D-Modelle. Der Blinker ist
 // eine gewölbte Metall-Löffelform mit Ösen und Drilling, der Gummifisch ein
 // schlanker Beutefisch mit Jigkopf, Auge und Paddelschwanz. Beide sind bewusst
@@ -22081,10 +22342,10 @@ function updateAnglingTimeAvailability(){
   updateAnglingJumpQuickAvailability();
   return available;
 }
-function updateAnglingTimeUi(){if(!anglingTimeHours)return;updateAnglingTimeAvailability();const h=Math.trunc(Number(anglingTimeHours.value)||0),abs=Math.abs(h),allow=anglingTimeAllowance(),forwardLeft=Math.max(0,allow-anglingTimeUsedForward),backwardLeft=Math.max(0,allow-anglingTimeUsedBackward);anglingTimeChoice.textContent=h===0?'0 Stunden':(h>0?'+':'−')+abs+' '+(abs===1?'Stunde':'Stunden');anglingTimeDuration.textContent='Dauer '+(abs*.5).toFixed(1).replace('.',',')+' Sekunden · Kosten '+abs+' EP';anglingTimeForwardLeft.textContent='Vorwärts: '+forwardLeft+' verfügbar';anglingTimeBackwardLeft.textContent='Zurück: '+backwardLeft+' verfügbar';const directionOk=h>0?forwardLeft>0:h<0?backwardLeft>0:false;anglingTimeStart.disabled=abs<1||!directionOk||anglingProgress.xp<abs||!!anglingTimeShiftActive||!!anglingTimeShiftPending;anglingTimeStart.textContent=anglingProgress.xp<abs?'Nicht genug EP':'Zeitraffer starten';}
+function updateAnglingTimeUi(){if(!anglingTimeHours)return;updateAnglingTimeAvailability();const h=Math.trunc(Number(anglingTimeHours.value)||0),abs=Math.abs(h),allow=anglingTimeAllowance(),forwardLeft=Math.max(0,allow-anglingTimeUsedForward),backwardLeft=Math.max(0,allow-anglingTimeUsedBackward);anglingTimeChoice.textContent=h===0?'0 Stunden':(h>0?'+':'−')+abs+' '+(abs===1?'Stunde':'Stunden');anglingTimeDuration.textContent='Dauer '+(abs*.65).toFixed(1).replace('.',',')+' Sekunden · Kosten '+abs+' EP';anglingTimeForwardLeft.textContent='Vorwärts: '+forwardLeft+' verfügbar';anglingTimeBackwardLeft.textContent='Zurück: '+backwardLeft+' verfügbar';const directionOk=h>0?forwardLeft>0:h<0?backwardLeft>0:false;anglingTimeStart.disabled=abs<1||!directionOk||anglingProgress.xp<abs||!!anglingTimeShiftActive||!!anglingTimeShiftPending;anglingTimeStart.textContent=anglingProgress.xp<abs?'Nicht genug EP':'Zeitraffer starten';}
 function openAnglingTimePanel(){if(!anglingTimeAvailableNow()||guardAnglingMenuOpen())return;closeAnglingGamePanels();updateAnglingTimeUi();markAnglingGamePanelOpen(anglingTimePanel);}
 function setSeasonTimeFromAbsoluteHours(absHours){const totalDays=365;let dayIndex=Math.floor(absHours/24),hour=absHours-dayIndex*24;while(dayIndex<0)dayIndex+=totalDays;dayIndex%=totalDays;if(hour<0){hour+=24;dayIndex=(dayIndex-1+totalDays)%totalDays;}seasonTestDay=dayIndex+1;seasonTestHour=hour;setSeasonTimeAnchor(seasonDateFromDayHour(seasonTestDay,seasonTestHour));}
-function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.5,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAnglingTimeUi();}
+function beginAnglingTimeShift(hours){hours=Math.trunc(Number(hours)||0);if(!hours)return;const cost=Math.abs(hours),allow=anglingTimeAllowance();if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP für diesen Zeitwechsel.',1400);return;}if(hours>0&&anglingTimeUsedForward>=allow){showAnglingToast('Vorwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}if(hours<0&&anglingTimeUsedBackward>=allow){showAnglingToast('Rückwärtswechsel für diese Sitzung aufgebraucht.',1600);return;}seasonTestMode=true;simulationEnabled=true;updateSimulationButton();const currentGameTime=viewerNow();seasonTestDay=seasonDayOfDate(currentGameTime);seasonTestHour=seasonHourOfDate(currentGameTime);const start=(seasonTestDay-1)*24+seasonTestHour;anglingTimeShiftActive={hours,cost,start,target:start+hours,duration:cost*.65,elapsed:0,jumpSchedule:makeAnglingTimeShiftJumpSchedule(cost),jumpIndex:0,lastUiAt:0};if(hours>0)anglingTimeUsedForward++;else anglingTimeUsedBackward++;anglingProgress.xp-=cost;saveAnglingProgress();updateAnglingSetupUi();closeAnglingGamePanels();anglingUi.classList.add('time-shifting');anglingTimeOverlay.classList.add('show');anglingTimeOverlay.setAttribute('aria-hidden','false');anglingTimeOverlayTitle.textContent=(hours>0?'⏩ +':'⏪ −')+cost+' '+(cost===1?'Stunde':'Stunden');anglingState='time-shift';anglingStateTime=0;anglingCinematicView='shore';anglingCinematicBlend=0;waterUniforms.underwaterView.value=0;scene.fog=null;setFishSubmergedLayers(false);fishGroup.visible=false;camera.position.copy(anglingShoreCameraPos);controls.target.copy(anglingShoreCameraTarget);camera.up.set(0,0,1);camera.fov=anglingShoreFieldOfView();camera.updateProjectionMatrix();camera.lookAt(controls.target);anglingRodGroup.visible=true;anglingBobber.visible=false;anglingDeeper.visible=false;anglingDeeperReadyLine.visible=false;anglingReadyLineGroup.visible=false;anglingLure.visible=false;anglingLine.visible=false;anglingDrillLineGroup.visible=false;updateAnglingTimeUi();}
 function requestAnglingTimeShift(){
   const hours=Math.trunc(Number(anglingTimeHours.value)||0),cost=Math.abs(hours);
   if(!hours)return;
@@ -22099,7 +22360,7 @@ function requestAnglingTimeShift(){
   if(anglingProgress.xp<cost){showAnglingToast('Nicht genug EP.',1200);updateAnglingTimeUi();return;}
   beginAnglingTimeShift(hours);
 }
-function updateAnglingTimeShift(dt){const tr=anglingTimeShiftActive;if(!tr)return false;tr.elapsed=Math.min(tr.duration,tr.elapsed+dt);const u=tr.duration>0?tr.elapsed/tr.duration:1;setSeasonTimeFromAbsoluteHours(THREE.MathUtils.lerp(tr.start,tr.target,u));anglingTimeAstroAccumulator+=dt;if(anglingTimeAstroAccumulator>=.045||u>=1){anglingTimeAstroAccumulator=0;updateAstronomy();updateWeatherText();}const now=viewerNow();anglingTimeOverlayClock.textContent=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' · '+now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});if(u>=1){const hours=tr.hours;anglingTimeShiftActive=null;anglingUi.classList.remove('time-shifting');anglingTimeOverlay.classList.remove('show');anglingTimeOverlay.setAttribute('aria-hidden','true');anglingState='ready';anglingStateTime=0;applyAnglingStraightShoreCamera(true);updateAnglingTimeUi();showAnglingToast('Zeitwechsel abgeschlossen: '+(hours>0?'+':'−')+Math.abs(hours)+' h',1200);}return true;}
+function updateAnglingTimeShift(dt){const tr=anglingTimeShiftActive;if(!tr)return false;tr.elapsed=Math.min(tr.duration,tr.elapsed+dt);const u=tr.duration>0?tr.elapsed/tr.duration:1;setSeasonTimeFromAbsoluteHours(THREE.MathUtils.lerp(tr.start,tr.target,u));anglingTimeAstroAccumulator+=dt;if(anglingTimeAstroAccumulator>=.033||u>=1){anglingTimeAstroAccumulator=0;updateAstronomy();}const uiNow=performance.now();if(uiNow-tr.lastUiAt>=160||u>=1){tr.lastUiAt=uiNow;updateWeatherText();const now=viewerNow();anglingTimeOverlayClock.textContent=now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' · '+now.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}if(u>=1){const hours=tr.hours;anglingTimeShiftActive=null;anglingUi.classList.remove('time-shifting');anglingTimeOverlay.classList.remove('show');anglingTimeOverlay.setAttribute('aria-hidden','true');anglingState='ready';anglingStateTime=0;applyAnglingStraightShoreCamera(true);updateAnglingTimeUi();showAnglingToast('Zeitwechsel abgeschlossen: '+(hours>0?'+':'−')+Math.abs(hours)+' h',1200);}return true;}
 
 // V7.63: Während des Zeitraffers läuft nicht nur die Uhr schneller, sondern die komplette sichtbare Umwelt.
 // Der reale astronomische Sprung entspricht tausendfacher Geschwindigkeit; visuell wird bewusst auf Faktor 6
@@ -22978,7 +23239,7 @@ function equipAnglingLure(id){
    return;
  }
  if(anglingLureStock(id)<1){showAnglingToast(anglingEmptyBaitMessage(ANGLING_LURE_CATALOG[id]?.type||id),2200);openAnglingShop();return;}
- anglingProgress.selectedEquipment='';anglingSelectedLureId=id;anglingSelectedBait=ANGLING_LURE_CATALOG[id].type;anglingProgress.selectedLureId=id;anglingProgress.selectedBait=anglingSelectedBait;saveAnglingProgress();applyAnglingLureStyle();ensureAnglingLureUnderwaterWorld();closeAnglingGamePanels();updateAnglingSetupUi();
+ anglingProgress.selectedEquipment='';anglingSelectedLureId=id;anglingSelectedBait=ANGLING_LURE_CATALOG[id].type;anglingProgress.selectedLureId=id;anglingProgress.selectedBait=anglingSelectedBait;saveAnglingProgress();applyAnglingLureStyle();ensureAnglingLureUnderwaterWorld();if(!aczoUnderwaterShadersReady){if('requestIdleCallback' in window)window.requestIdleCallback(aczoCompileUnderwaterShaders,{timeout:1800});else window.setTimeout(aczoCompileUnderwaterShaders,120);}closeAnglingGamePanels();updateAnglingSetupUi();
  if(anglingSelection&&anglingState==='ready'){
    updateAnglingDeeperReadyPose();
  }
@@ -23901,6 +24162,7 @@ function openAnglingMainMenu(){
   closeAnglingLog();
   updateAnglingMainMenuUi();
   anglingUi.classList.add('menu-shell','main-menu-open','game-panel-open');
+  document.querySelector('.wrap')?.classList.add('angling-profile-menu-open');
   anglingMainMenu.setAttribute('aria-hidden','false');
   anglingMainSettings.style.display='none';
   stopAnglingActionHold?.();
@@ -23909,6 +24171,7 @@ function openAnglingMainMenu(){
 
 function closeAnglingMainMenu(){
   anglingUi.classList.remove('main-menu-open','game-panel-open');
+  document.querySelector('.wrap')?.classList.remove('angling-profile-menu-open');
   anglingMainMenu.setAttribute('aria-hidden','true');
   if(!anglingMode)anglingUi.classList.remove('menu-shell');
 }
@@ -29923,7 +30186,14 @@ function updateAnglingMode(dt){
   }else if(anglingSelection&&anglingState!=='selecting'&&anglingState!=='overview-flight'&&anglingState!=='shore-flight'&&anglingState!=='exit-flight'){
     anglingBankGroup.visible=true;
   }
-  if(anglingTimeShiftActive){updateAnglingTimeShift(dt);updateAnglingSurfaceActivity(dt,true);updateAnglingSurfaceEffects(dt);updateAnglingEnvironment();enforceAnglingSurfaceOnly();updateDeadwoodVisibilityForCurrentView();updateAnglingRodAnchor();return;}
+  if(anglingTimeShiftActive){
+    // V2.3.34: Die Bereitschaftsmontage wird auch im Zeitraffer aus der
+    // aktuellen Rutenmatrix neu aufgebaut. Dadurch bleibt die Schnur unter
+    // Rolle, Ringen und Spitze befestigt, statt zu verschwinden oder seitlich
+    // mit einer veralteten Weltmatrix zu verspringen.
+    anglingLine.visible=false;anglingMainLineGroup.visible=false;anglingAim3DGroup.visible=false;
+    updateAnglingTimeShift(dt);updateAnglingSurfaceActivity(dt,true);updateAnglingSurfaceEffects(dt);updateAnglingEnvironment();enforceAnglingSurfaceOnly();updateDeadwoodVisibilityForCurrentView();updateAnglingRodAnchor();updateAnglingDeeperReadyPose();updateAnglingRodThreadLine3D(true);return;
+  }
   updateAnglingEnvironment();
   enforceAnglingSurfaceOnly();
   updateDeadwoodVisibilityForCurrentView();
@@ -29978,7 +30248,7 @@ function updateAnglingMode(dt){
   }
   updateAnglingRodAnchor();updateAnglingDeeperReadyPose();updateAnglingDeeperPins();
   updateAnglingRodThreadLine3D(
-    !!(anglingMode&&anglingRodGroup.visible&&(anglingCinematicView==='shore'||anglingCinematicView==='reset-return')&&(
+    !!(!anglingTimeShiftActive&&anglingMode&&anglingRodGroup.visible&&(anglingCinematicView==='shore'||anglingCinematicView==='reset-return')&&(
       (anglingState==='ready'&&!anglingUi.classList.contains('line-active'))||anglingLine.visible
     ))
   );
@@ -30408,6 +30678,7 @@ function updateAnglingMode(dt){
 
 anglingStartBtn.addEventListener('click',startAnglingFromMainButton);
 anglingFixedMenuBtn.addEventListener('click',openAnglingMainMenu);
+document.getElementById('anglingMainCloseBtn')?.addEventListener('click',closeAnglingMainMenu);
 anglingMainPlayBtn.addEventListener('click',()=>{closeAnglingMainMenu();startAnglingMode();});
 anglingMainContinueBtn.addEventListener('click',closeAnglingMainMenu);
 anglingMainChangeSpotBtn.addEventListener('click',()=>{closeAnglingMainMenu();changeAnglingSpot();});
@@ -30903,8 +31174,13 @@ const clock=new THREE.Clock();
   updatePersonalCampScene(visualDt);
   updateSeasonTestVisuals(visualDt);
   updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
+  updateAczoSurveyForestLod();
+  updateAczoWildBoars(visualDt);
   updateRealBirchSeason(seasonDayOfDate(viewerNow()));
   updateClubFlagPole(visualDt);
+  if(typeof aczoShoreSealMat!=='undefined'&&aczoShoreSealMat.uniforms?.nightFactor){
+    aczoShoreSealMat.uniforms.nightFactor.value=simulationEnabled?sceneNightFactor:0;
+  }
 
   // FINAL V5.15: Sonnen-/Mondstrahl aktualisiert das ansonsten unbeleuchtete
   // Satellitenbild unabhängig davon, ob die Wasseroberfläche eingeschaltet ist.
@@ -30962,7 +31238,7 @@ const clock=new THREE.Clock();
    if(typeof moonLight!=='undefined'){
      waterUniforms.moonDir.value.copy(moonLight.position).sub(moonLight.target.position).normalize();
      const moonFraction=cachedMoonFraction;
-     const moonCloud=1-Math.max(0,Math.min(1,(liveWeather.cloud||0)/100))*.68;
+     const moonCloud=Math.max(.28,1-Math.max(0,Math.min(1,(liveWeather.cloud||0)/100))*.72);
      const moonVisualOpacity=Number.isFinite(moonDisc.userData.visualOpacity)
        ? THREE.MathUtils.clamp(moonDisc.userData.visualOpacity,0,1)
        : 1;
