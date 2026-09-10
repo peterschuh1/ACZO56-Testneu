@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P38 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P39 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P38';
+const VIEWER_VERSION='ACZO56 · P39';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -7036,6 +7036,14 @@ function updateUnderwaterObstacleShadows(submerged){
   // Tiere und Verkehr besitzen leichte optische Kontaktschatten.
   const lightChanged=key!==aczoUnderwaterShadowKey;
   if(!lightChanged)return;
+  // P39 PERFORMANCE: Waehrend einer aktiven 3D-Kartengeste bleibt die zuletzt
+  // gueltige Shadowmap stehen. Sonne/Wetter duerfen sich intern weiterbewegen,
+  // aber die teure Schattenkarte wird erst nach Loslassen des Fingers/Maus-
+  // zeigers aktualisiert. Unterwasser- und Angelansicht sind davon ausgenommen.
+  const aczoPlainShadowGesture=(typeof viewerInputBusy==='function'&&viewerInputBusy())
+    &&!(typeof fishMode!=='undefined'&&fishMode)
+    &&!(typeof anglingMode!=='undefined'&&anglingMode);
+  if(aczoPlainShadowGesture)return;
   aczoUnderwaterShadowKey=key;
   aczoLastShadowRefreshAt=performance.now();
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
@@ -16646,7 +16654,7 @@ function aczoBuildTreeShadowProxies(){
   aczoBuildTreeShadowProxyMesh(aczoSeasonalTreeShadowProxyItems,new THREE.IcosahedronGeometry(1,0),'NATURWALD_STABILE_KRONENSCHATTEN_PROXIES',true);
   // P21: ConeGeometry liegt lokal entlang Y, die Welt benutzt aber Z als Hoehe.
   // Deshalb werden auch die Schatten-Proxies exakt um X=90 Grad aufgerichtet.
-  aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,8,3,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
+  aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,6,1,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
 }
 function aczoBirchWorldPoint(frame,local){
   return new THREE.Vector3(
@@ -30784,6 +30792,13 @@ function renderAnglingTargetAssistCamera(){
   if(!selecting&&!aiming){
     anglingTargetAssistGroup.visible=false;
     anglingFloatZoom.classList.remove('target-assist');
+    // P39: Kein verwaister Rahmen waehrend Spielstart, shore-flight oder
+    // sonstigen Kamerafluegen. Ein Livefenster wird nur von seinem wirklich
+    // aktiven Renderpfad wieder eingeblendet.
+    if(anglingState!=='casting'){
+      anglingFloatZoom.style.setProperty('display','none','important');
+      anglingFloatZoom.setAttribute('aria-hidden','true');
+    }
     return false;
   }
 
@@ -30863,7 +30878,11 @@ function renderAnglingFloatCamera(){
   }
   const floatActive=!anglingUsesDeeper()&&!anglingUsesArtificialLure()&&anglingBobber.visible&&
     ['casting','waiting','approach','bite','bite-focus','strike','retrieving'].includes(anglingState);
-  if(!anglingMode||!floatActive||!anglingUi.classList.contains('line-active'))return;
+  if(!anglingMode||!floatActive||!anglingUi.classList.contains('line-active')){
+    anglingFloatZoom.style.setProperty('display','none','important');
+    anglingFloatZoom.setAttribute('aria-hidden','true');
+    return;
+  }
   // Eventuell vom Kunstkoederwurf gesetztes inline-!important sicher loesen.
   anglingFloatZoom.style.removeProperty('display');
   anglingFloatZoom.setAttribute('aria-hidden','false');
@@ -30943,9 +30962,17 @@ function renderAnglingReelCamera(){
     anglingReelZoom.setAttribute('aria-hidden','true');
     return;
   }
-  if(!anglingUsesArtificialLure())return;
+  if(!anglingUsesArtificialLure()){
+    anglingReelZoom.style.setProperty('display','none','important');
+    anglingReelZoom.setAttribute('aria-hidden','true');
+    return;
+  }
   const reelStates=['casting','lure-waiting','lure-retrieving','lure-attack','lure-missed','strike'];
-  if(!anglingMode||!reelStates.includes(anglingState)||!anglingUi.classList.contains('line-active'))return;
+  if(!anglingMode||!reelStates.includes(anglingState)||!anglingUi.classList.contains('line-active')){
+    anglingReelZoom.style.setProperty('display','none','important');
+    anglingReelZoom.setAttribute('aria-hidden','true');
+    return;
+  }
   // Nach dem Eintauchen den nur fuer die Flugphase gesetzten Inline-Wert loesen.
   anglingReelZoom.style.removeProperty('display');
   anglingReelZoom.setAttribute('aria-hidden','false');
