@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P34 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P35 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P34';
+const VIEWER_VERSION='ACZO56 · P35';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4682,7 +4682,13 @@ camera.up.set(0,0,1);
 // Der Viewer exportiert keine Bildschirmkopien aus dem WebGL-Canvas. Ein
 // dauerhaft konservierter Zeichenpuffer ist deshalb unnoetig und belastet
 // besonders die kachelbasierten iPhone-GPUs bei jeder Kamerabewegung.
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:false});
+const renderer=new THREE.WebGLRenderer({
+  antialias:true,alpha:false,preserveDrawingBuffer:false,
+  // P35: Reiner Browser-Hinweis ohne Qualitaetsaenderung. Auf Systemen mit
+  // mehreren GPU-Pfaden soll WebGL nach Moeglichkeit den leistungsfaehigen
+  // Renderpfad verwenden; iOS darf den Hinweis wie ueblich selbst bewerten.
+  powerPreference:'high-performance'
+});
 // V2.3.34 PERFORMANCE: Auf einer großflächigen WebGL-Landschaft ist ein
 // Pixeldichtefaktor oberhalb 1,4 optisch kaum erkennbar, vervielfacht aber die
 // Füllrate bei jedem Drehen und Zoomen. Markante 3D-Objekte bleiben geometrisch
@@ -5839,7 +5845,10 @@ function aczoAddContourLine(points,level,opacity=1,color=0x17242b){
   // kippte der Streifen dadurch buckelig und wirkte gelb/orange viel zu fett.
   const levelNum=Number(level)||0;
   const depthWeight=THREE.MathUtils.smoothstep(levelNum,.42,1.22);
-  const width=THREE.MathUtils.lerp(.036,.066,depthWeight);
+  // P35: Tiefe Konturen minimal breiter. Die flachen Uferlinien bleiben
+  // praktisch unveraendert, waehrend Linien im dunklen Tiefenwasser mehr
+  // Bildschirmflaeche bekommen und bei Tageslicht nicht mehr verschwinden.
+  const width=THREE.MathUtils.lerp(.036,.078,depthWeight);
   const contourZ=-levelNum*exaggeration+THREE.MathUtils.lerp(.082,.135,depthWeight);
   const pos=new Float32Array(points.length*2*3);
   const idx=[];
@@ -5864,7 +5873,10 @@ function aczoAddContourLine(points,level,opacity=1,color=0x17242b){
   });
   const line=new THREE.Mesh(g,m);
   line.renderOrder=4.08;
-  line.frustumCulled=false;
+  // P35: Statische Kontursegmente ausserhalb des Kamerabildes muessen nicht
+  // gezeichnet werden. Three.js kann sie ueber ihre Geometriegrenzen sicher
+  // aus dem Renderpass nehmen; sichtbare Linien bleiben unveraendert.
+  line.frustumCulled=true;
   line.userData={level,major:false,baseOpacity:opacity,aczoContourFlank:false,aczoContourRole:'core'};
   contourGroup.add(line);
 }
@@ -5911,15 +5923,23 @@ function setContourVisibilityFade(v){contourVisibilityFade=Math.max(0,Math.min(1
 // Konturen ändern. Keine zweite Geometrie, kein Overlay und kein Höhenversatz.
 function updateContourNightContrast(nightFactor){
   const nf=THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(Number(nightFactor)||0,0,1),.18,.92);
-  const dayColor=new THREE.Color(0x17242b);
+  const dayShallowColor=new THREE.Color(0x17242b);
+  const dayDeepColor=new THREE.Color(0xb6cbd2);
   const nightColor=new THREE.Color(0xe7eef1);
+  const contourDayColor=new THREE.Color();
   contourGroup.children.forEach(line=>{
     const level=Number(line.userData.level)||0;
+    // P35: Im tiefblauen Tageswasser braucht eine dunkle Kontur einen
+    // Gegenkontrast. Bis etwa 1,2 m bleibt die bewaehrte dunkle Linie erhalten;
+    // danach wird sie mit zunehmender Tiefe dezent hellgrau-blau. Nachts
+    // uebernimmt weiterhin exakt die vorhandene Nachtlogik.
+    const deepDayWeight=THREE.MathUtils.smoothstep(level,1.20,3.20);
+    contourDayColor.copy(dayShallowColor).lerp(dayDeepColor,deepDayWeight);
     // Am steilen Ufer liegen viele 20-cm-Linien auf engem Raum. Wenn nachts
     // alle gleich weiss werden, entsteht der bisherige leuchtende Rand. Ab
     // etwa 1 m Tiefe bekommen die Linien dagegen die volle Nachtlesbarkeit.
     const depthWeight=THREE.MathUtils.smoothstep(level,.35,1.10);
-    line.material.color.copy(dayColor).lerp(nightColor,nf);
+    line.material.color.copy(contourDayColor).lerp(nightColor,nf);
     const dayOpacity=1.00;
     const nightOpacity=THREE.MathUtils.lerp(.82,1.00,depthWeight);
     line.userData.baseOpacity=THREE.MathUtils.lerp(dayOpacity,nightOpacity,nf);
@@ -6709,6 +6729,8 @@ function createClubFlagPole(){
   scene.add(group);
 }
 
+let aczoFlagGeometryNextUpdateAt=0;
+let aczoFlagGeometryAccumDt=0;
 function updateClubFlagPole(dt){
   if(!flagPoleFlagMesh||!flagPoleFlagRoot||!flagPoleFlagBasePositions)return;
 
@@ -6725,6 +6747,17 @@ function updateClubFlagPole(dt){
     });
   }
 
+  // P35 PERFORMANCE: Die Fahne ist Nebendekoration. Auf Mobilgeraeten reichen
+  // 24 Geometrieupdates/s, auf Desktop 30/s. Der Haupt-Renderloop und alle
+  // Kamerabewegungen bleiben davon voellig unangetastet.
+  aczoFlagGeometryAccumDt+=Math.max(0,Number(dt)||0);
+  const flagNow=performance.now();
+  const flagGap=1000/(ACZO_MOBILE_PERF?24:30);
+  if(flagNow<aczoFlagGeometryNextUpdateAt)return;
+  const flagDt=Math.min(.10,Math.max(.001,aczoFlagGeometryAccumDt));
+  aczoFlagGeometryAccumDt=0;
+  aczoFlagGeometryNextUpdateAt=flagNow+flagGap;
+
   const speed=Math.max(0,Number((typeof liveWeather!=='undefined'&&liveWeather.windSpeed)||0));
   const fromDeg=Number((typeof liveWeather!=='undefined'&&liveWeather.windDirection)||0);
   const toDeg=(fromDeg+180)%360;
@@ -6735,13 +6768,13 @@ function updateClubFlagPole(dt){
   const wy=Math.cos(toRad);
   const targetAngle=Math.atan2(wy,wx);
   const angleDelta=Math.atan2(Math.sin(targetAngle-flagPoleWindAngle),Math.cos(targetAngle-flagPoleWindAngle));
-  flagPoleWindAngle+=angleDelta*Math.min(1,dt*2.3);
+  flagPoleWindAngle+=angleDelta*Math.min(1,flagDt*2.3);
   flagPoleFlagRoot.rotation.z=flagPoleWindAngle;
 
   const wind01=THREE.MathUtils.clamp(speed/24,0,1);
   const extension=THREE.MathUtils.lerp(.28,1.0,Math.sqrt(wind01));
   const droop=THREE.MathUtils.lerp(.34,.035,wind01);
-  flagPoleAnimTime+=dt*(2.0+speed*.19);
+  flagPoleAnimTime+=flagDt*(2.0+speed*.19);
 
   const attr=flagPoleFlagMesh.geometry.attributes.position;
   const arr=attr.array;
@@ -18273,8 +18306,14 @@ function updateAczoSurveyForestLod(){
 // P7: Die 28.300 schattenfreien Einzelblaetter der zwei grossen Weiden sind
 // in der Gesamtansicht kaum als Einzelobjekte lesbar. Die Kronen-Sprays bleiben
 // voll bestehen und tragen Silhouette/Schatten; Nahsicht bleibt 100 Prozent.
-let aczoRealBirchLodKey='';
+let aczoRealBirchLodKey='',aczoRealBirchNextLodAt=0;
 function updateAczoRealBirchFineLod(){
+  // P35 PERFORMANCE: Diese Distanzpruefung veraendert nur die Zahl feinster
+  // Einzelblaetter. 6 Hz reagieren beim Zoomen mehr als schnell genug und
+  // sparen die Berechnung in fast jedem normalen Renderframe.
+  const now=performance.now();
+  if(now<aczoRealBirchNextLodAt)return;
+  aczoRealBirchNextLodAt=now+165;
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
   const farFactor=ACZO_MOBILE_PERF?.06:.14;
   const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,32,62));
