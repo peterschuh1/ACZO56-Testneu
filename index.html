@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P75 BAUM GPU TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P76 BAUM GPU TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4610,7 +4610,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P75 BAUM GPU TEST';
+const VIEWER_VERSION='ACZO56 · P76 BAUM GPU TEST';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33615,63 +33615,92 @@ setTimeout(aczoP74Install,700);
  setTimeout(install,900);
 })();
 
-// P75 BAUM/GPU A-B-TEST -------------------------------------------------
+// P76 BAUM/GPU A-B-TEST -------------------------------------------------
+// Fix: genau EIN Eingabe-Event pro Tipp. P75 hatte pointerup+click parallel,
+// wodurch ein Tipp zweimal umschalten konnte und direkt wieder im Ausgangszustand landete.
 (()=>{
- function initP75TreeTest(){
+ let started=false;
+
+ function initP76TreeTest(){
+   if(started)return true;
    const leavesBtn=document.getElementById('aczoP75LeavesBtn');
    const shadowBtn=document.getElementById('aczoP75TreeShadowBtn');
-   if(!leavesBtn||!shadowBtn||typeof scene==='undefined')return;
+   if(!leavesBtn||!shadowBtn||typeof scene==='undefined'||!scene)return false;
 
    const state={leavesOff:false,treeShadowsOff:false};
    const leafRe=/LEAF|LEAVES|BLATT|FOLIAGE|SPRAY|NEEDLE|NADEL|TWIG|ZWEIG|CROWN|KRONE/i;
    const treeRe=/TREE|BAUM|BIRCH|BIRKE|WILLOW|WEIDE|FOREST|WALD|CONIFER|FICHTE|TANNE|PINE|DECID|VEGET/i;
    const trunkRe=/TRUNK|STAMM/i;
 
-   function candidates(){
-     const arr=[];
-     scene.traverse(o=>{
-       if(!o?.isMesh)return;
-       const n=o.name||'';
-       const isLeaf=leafRe.test(n) || (treeRe.test(n)&&!trunkRe.test(n)&&o.material?.transparent===true);
-       const isTree=treeRe.test(n)||isLeaf;
-       if(isLeaf||isTree)arr.push({o,isLeaf,isTree});
-     });
-     return arr;
-   }
-
-   // Snapshot original states once, so NORMAL restores exactly what P74/P69 had.
-   const items=candidates();
-   items.forEach(x=>{
-     x.origVisible=x.o.visible;
-     x.origCast=x.o.castShadow;
+   const items=[];
+   scene.traverse(o=>{
+     if(!o?.isMesh)return;
+     const n=o.name||'';
+     const matTransparent=Array.isArray(o.material)
+       ? o.material.some(m=>m?.transparent===true || (typeof m?.alphaTest==='number'&&m.alphaTest>0))
+       : (o.material?.transparent===true || (typeof o.material?.alphaTest==='number'&&o.material.alphaTest>0));
+     const isLeaf=leafRe.test(n) || (treeRe.test(n)&&!trunkRe.test(n)&&matTransparent);
+     const isTree=treeRe.test(n)||isLeaf;
+     if(isLeaf||isTree){
+       items.push({
+         o,isLeaf,isTree,
+         origVisible:o.visible,
+         origCast:o.castShadow
+       });
+     }
    });
 
    function apply(){
-     items.forEach(x=>{
-       x.o.visible = state.leavesOff&&x.isLeaf ? false : x.origVisible;
-       x.o.castShadow = state.treeShadowsOff&&x.isTree ? false : x.origCast;
-     });
-     leavesBtn.textContent=state.leavesOff?'BLÄTTER: AUS':'BLÄTTER: NORMAL';
-     shadowBtn.textContent=state.treeShadowsOff?'BAUMSCHATTEN: AUS':'BAUMSCHATTEN: NORMAL';
+     for(const x of items){
+       x.o.visible = (state.leavesOff&&x.isLeaf) ? false : x.origVisible;
+       x.o.castShadow = (state.treeShadowsOff&&x.isTree) ? false : x.origCast;
+     }
+     leavesBtn.textContent=state.leavesOff
+       ? `BLÄTTER: AUS (${items.filter(x=>x.isLeaf).length})`
+       : `BLÄTTER: NORMAL (${items.filter(x=>x.isLeaf).length})`;
+     shadowBtn.textContent=state.treeShadowsOff
+       ? `BAUMSCHATTEN: AUS (${items.filter(x=>x.isTree&&x.origCast).length})`
+       : `BAUMSCHATTEN: NORMAL (${items.filter(x=>x.isTree&&x.origCast).length})`;
      leavesBtn.classList.toggle('off',state.leavesOff);
      shadowBtn.classList.toggle('off',state.treeShadowsOff);
-     try{renderer.shadowMap.needsUpdate=true;}catch(e){}
+     try{
+       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
+         renderer.shadowMap.needsUpdate=true;
+       }
+     }catch(e){}
    }
 
-   function bind(btn,key){
-     const h=e=>{
-       e.preventDefault();e.stopPropagation();
-       if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-       state[key]=!state[key];apply();
-     };
-     btn.addEventListener('click',h,{passive:false});
-     btn.addEventListener('pointerup',h,{passive:false});
-   }
-   bind(leavesBtn,'leavesOff');
-   bind(shadowBtn,'treeShadowsOff');
+   const evt = ('PointerEvent' in window) ? 'pointerup' : 'click';
+
+   leavesBtn.addEventListener(evt,e=>{
+     e.preventDefault();e.stopPropagation();
+     state.leavesOff=!state.leavesOff;
+     apply();
+   },{passive:false});
+
+   shadowBtn.addEventListener(evt,e=>{
+     e.preventDefault();e.stopPropagation();
+     state.treeShadowsOff=!state.treeShadowsOff;
+     apply();
+   },{passive:false});
+
+   apply();
+   started=true;
+   return true;
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(initP75TreeTest,900),{once:true});
- else setTimeout(initP75TreeTest,900);
+
+ function boot(){
+   if(initP76TreeTest())return;
+   let tries=0;
+   const id=setInterval(()=>{
+     tries++;
+     if(initP76TreeTest()||tries>30)clearInterval(id);
+   },250);
+ }
+
+ if(document.readyState==='loading'){
+   document.addEventListener('DOMContentLoaded',boot,{once:true});
+ }else boot();
 })();
 </script>
 
