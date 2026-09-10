@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P16 · Performance- und Flackerfix</title>
+<title>ACZO56 V2.3.37-P17 · Livefenster-Flickerfix</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -30540,14 +30540,16 @@ function projectAnglingQte(){
   anglingQte.style.top='50%';
 }
 
-// P8: Die kleinen Livefenster rendern teilweise die komplette 3D-Szene ein
-// zweites Mal. Auf Mobilgeräten reicht für diese Vorschau 10 Hz, am Desktop
-// 15 Hz. Das Hauptbild und die Spielsimulation behalten ihr eigenes Framebudget.
+// P17: Pose- und Kunstkoeder-Livefenster liegen per Scissor direkt im selben
+// WebGL-Framebuffer wie das Hauptbild. Seit preserveDrawingBuffer=false aktiv ist,
+// duerfen diese Fenster nicht mehr auf 10/15 Hz gedrosselt werden: Jeder normale
+// Hauptrender ueberschreibt ihren Bildbereich. Deshalb werden die Livekameras bei
+// jedem tatsaechlich gerenderten Hauptframe unmittelbar danach neu gezeichnet.
+// Das globale P16-Framebudget bleibt unveraendert (Mobil max. 30, Desktop max. 40 FPS).
 let aczoLastAnglingFloatRenderAt=0;
 let aczoLastAnglingReelRenderAt=0;
 function aczoSecondaryCameraDue(lastAt,now){
-  const hz=ACZO_MOBILE_PERF?10:15;
-  return !lastAt||now-lastAt>=1000/hz;
+  return true;
 }
 
 function renderAnglingFloatCamera(){
