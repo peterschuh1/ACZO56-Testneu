@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P17 · Livefenster-Flickerfix</title>
+<title>ACZO56 V2.3.37-P17 · iPhone-, Schatten- und Performancefix</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -44,6 +44,21 @@ button{
 button.on{background:#176d3d;color:white;border-color:#176d3d}
 #viewer{position:relative;width:100%;height:720px;max-height:78vh;min-height:440px;border-radius:16px;overflow:hidden;background:#eef7fb;touch-action:none}
 #viewer canvas{display:block;width:100%;height:100%}
+
+/* P17 iOS: Die komplette interaktive Kartenoberfläche ist ein Bedienelement,
+   kein auswählbarer Text-/Bildbereich. Eingabefelder bleiben weiter nutzbar. */
+#viewer,#viewer *,canvas,img,.controls,.controls *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+  -webkit-user-drag:none!important;
+  -webkit-tap-highlight-color:transparent;
+}
+input,textarea,[contenteditable="true"]{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  -webkit-touch-callout:default!important;
+}
 
 .legend{
   position:absolute;
@@ -4741,7 +4756,8 @@ const ACZO_PIXEL_RATIO_CAP=window.matchMedia?.('(pointer:coarse)')?.matches?1.22
 // und Kartenbeschriftung nicht wieder unscharf werden.
 const ACZO_MOBILE_PERF=!!((window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)
   ||((Number(navigator.maxTouchPoints)||0)>0&&Math.min(window.innerWidth||9999,window.innerHeight||9999)<=1024));
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP));
+const ACZO_BASE_PIXEL_RATIO=Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP);
+renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
 renderer.shadowMap.enabled=true;
@@ -4779,7 +4795,18 @@ host.prepend(renderer.domElement);
 // iOS/Safari: Browser-Gesten auf dem Canvas verhindern, damit OrbitControls
 // zuverlässig drehen und zoomen kann.
 renderer.domElement.style.touchAction='none';
-renderer.domElement.addEventListener('touchstart',()=>{}, {passive:false});
+// preventDefault ohne stopPropagation: OrbitControls erhält die Ereignisse,
+// Safari darf daraus aber weder Seitengeste, Textlupe noch Auswahl erzeugen.
+renderer.domElement.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+renderer.domElement.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+const aczoViewerEditableTarget=target=>target instanceof Element
+  &&!!target.closest('input,textarea,[contenteditable="true"]');
+['contextmenu','selectstart','dragstart','gesturestart'].forEach(type=>{
+  host.addEventListener(type,e=>{
+    if(aczoViewerEditableTarget(e.target))return;
+    e.preventDefault();
+  },{capture:true,passive:false});
+});
 
 // Leichte, rein interne Eingabeueberwachung. Aufwendige, spaet geladene
 // Szenenteile werden damit nie mitten in einer Fingerbewegung aufgebaut.
@@ -4792,6 +4819,17 @@ function releaseViewerPointer(e){
 }
 function viewerInputBusy(){
   return activeViewerPointers.size>0 || performance.now()-lastViewerInputAt<450;
+}
+// P17 PERFORMANCE: Während eines Fingerzugs und der kurzen Auslaufbewegung
+// wird die interne Kartenauflösung leicht abgesenkt. Danach ist die volle P16-
+// Schärfe wieder da. Angel- und Unterwassermodi verwalten ihre Auflösung selbst.
+let aczoMapGestureResolutionReduced=false;
+function updateAczoMapGestureResolution(){
+  const reduce=viewerInputBusy()&&!fishMode&&!anglingMode&&!skyLookMode;
+  if(reduce===aczoMapGestureResolutionReduced)return;
+  aczoMapGestureResolutionReduced=reduce;
+  const factor=reduce?(ACZO_MOBILE_PERF?.82:.88):1;
+  renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO*factor);
 }
 renderer.domElement.addEventListener('pointerdown',e=>{
   activeViewerPointers.add(e.pointerId);
@@ -10892,19 +10930,19 @@ const aczoContactShadowBaseTexture=(()=>{
   const c=document.createElement('canvas');c.width=c.height=96;
   const x=c.getContext('2d');
   const g=x.createRadialGradient(48,48,3,48,48,46);
-  g.addColorStop(0,'rgba(8,14,10,.72)');
-  g.addColorStop(.42,'rgba(8,14,10,.34)');
-  g.addColorStop(.76,'rgba(8,14,10,.10)');
+  g.addColorStop(0,'rgba(8,14,10,.92)');
+  g.addColorStop(.40,'rgba(8,14,10,.55)');
+  g.addColorStop(.76,'rgba(8,14,10,.16)');
   g.addColorStop(1,'rgba(8,14,10,0)');
   x.fillStyle=g;x.fillRect(0,0,96,96);
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
   t.minFilter=THREE.LinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;
   return t;
 })();
-function aczoCreateSoftContactShadow(width,length,opacity=.18,zOffset=.035){
+function aczoCreateSoftContactShadow(width,length,opacity=.26,zOffset=.035){
   const texture=aczoContactShadowBaseTexture.clone();texture.needsUpdate=true;
   const material=new THREE.MeshBasicMaterial({
-    map:texture,color:0xffffff,transparent:true,opacity,depthWrite:false,
+    map:texture,color:0x263229,transparent:true,opacity,depthWrite:false,
     depthTest:true,toneMapped:false,side:THREE.DoubleSide,
     polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4
   });
@@ -10914,16 +10952,41 @@ function aczoCreateSoftContactShadow(width,length,opacity=.18,zOffset=.035){
   shadow.castShadow=false;shadow.receiveShadow=false;
   shadow.userData.aczoNoShadow=true;shadow.userData.aczoNoReceiveShadow=true;
   shadow.userData.aczoDynamicContactShadow=true;
+  shadow.userData.aczoBaseOpacity=opacity;
   shadow.raycast=()=>{};
   return shadow;
 }
-function aczoAttachDynamicContactShadow(root,width,length,opacity=.18,zOffset=.035){
+const aczoDynamicShadowLightVector=new THREE.Vector3();
+function aczoAttachDynamicContactShadow(root,width,length,opacity=.26,zOffset=.035,objectHeight=1.7){
   if(!root||root.userData.aczoDynamicContactShadow)return root?.userData?.aczoDynamicContactShadow||null;
   root.traverse(o=>{
     if(!o.isMesh)return;
     o.castShadow=false;o.userData.aczoNoShadow=true;
   });
   const shadow=aczoCreateSoftContactShadow(width,length,opacity,zOffset);
+  // Günstiger richtiger Schatteneindruck: Die einzelne Fläche folgt Sonnen-
+  // bzw. Mondrichtung und wird bei tiefem Licht länger. Kein Shadowmap-Neubau.
+  shadow.onBeforeRender=()=>{
+    const light=(typeof aczoStructureShadowLight!=='undefined'&&aczoStructureShadowLight.visible)
+      ?aczoStructureShadowLight:(typeof sun!=='undefined'?sun:null);
+    if(!light){shadow.visible=false;return;}
+    aczoDynamicShadowLightVector.copy(light.position).sub(light.target.position).normalize();
+    const planar=Math.hypot(aczoDynamicShadowLightVector.x,aczoDynamicShadowLightVector.y);
+    const lit=!simulationEnabled||(light.visible&&light.intensity>.01);
+    shadow.visible=!is2D&&root.visible&&lit;
+    if(!shadow.visible)return;
+    const worldX=planar>.001?-aczoDynamicShadowLightVector.x/planar:0;
+    const worldY=planar>.001?-aczoDynamicShadowLightVector.y/planar:-1;
+    const r=root.rotation.z||0,c=Math.cos(r),s=Math.sin(r);
+    const localX=c*worldX+s*worldY,localY=-s*worldX+c*worldY;
+    const projected=objectHeight*planar/Math.max(.22,aczoDynamicShadowLightVector.z);
+    const stretch=THREE.MathUtils.clamp(1+projected/Math.max(.45,length)*.34,1.12,4.1);
+    const offset=Math.min(projected*.28,length*stretch*.30);
+    shadow.rotation.z=Math.atan2(-localX,localY);
+    shadow.scale.set(1,stretch,1);
+    shadow.position.set(localX*offset,localY*offset,zOffset);
+    shadow.material.opacity=shadow.userData.aczoBaseOpacity*THREE.MathUtils.lerp(1,.72,sceneNightFactor);
+  };
   root.add(shadow);root.userData.aczoDynamicContactShadow=shadow;
   return shadow;
 }
@@ -11188,8 +11251,8 @@ var trafficActors=[
 ];
 
 for(const a of trafficActors){
-  if(a.obj.userData.kind==='bike')aczoAttachDynamicContactShadow(a.obj,1.02,1.72,.16,.037);
-  else aczoAttachDynamicContactShadow(a.obj,.56,.50,.15,.037);
+  if(a.obj.userData.kind==='bike')aczoAttachDynamicContactShadow(a.obj,1.02,1.72,.26,.037,1.45);
+  else aczoAttachDynamicContactShadow(a.obj,.62,.62,.28,.037,1.72);
   trafficGroup.add(a.obj);
 }
 for(const a of trafficActors){
@@ -11382,7 +11445,7 @@ function makeBird(){
   // Schatten wird als weiche, entlang der realen Lichtrichtung projizierte
   // Kontaktellipse gezeichnet.
   g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.aczoNoShadow=true;o.userData.aczoNoReceiveShadow=true;}});
-  const shadow=aczoCreateSoftContactShadow(1.90,.82,.12,ACZO_SATELLITE_GROUND_Z+.018);
+  const shadow=aczoCreateSoftContactShadow(2.35,1.05,.24,ACZO_SATELLITE_GROUND_Z+.018);
 
   return {
     obj:g,
@@ -11520,7 +11583,7 @@ function updateBirds(dt){
       b.shadow.rotation.z=b.obj.rotation.z;
       const blurScale=(1+height*.006)*b.obj.scale.x;
       b.shadow.scale.set(blurScale,blurScale,1);
-      b.shadow.material.opacity=(overPond||overMosel ? .09 : .12)*THREE.MathUtils.clamp(1-sceneNightFactor,.30,1);
+      b.shadow.material.opacity=(overPond||overMosel ? .17 : .22)*THREE.MathUtils.clamp(1-sceneNightFactor,.42,1);
       b.shadow.visible=!is2D&&!!light.visible&&light.intensity>.01
         &&Math.abs(sx)<span*.78&&Math.abs(sy)<span*.78;
     }
@@ -11869,7 +11932,7 @@ function createTestCar(color){
   aczoVehiclePlate(g,'AC ZO 56',2.015,.54,true);
   aczoVehiclePlate(g,'AC ZO 56',-1.955,.61,false);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-  aczoAttachDynamicContactShadow(g,1.92,4.22,.18,.014);
+  aczoAttachDynamicContactShadow(g,1.92,4.22,.25,.038,1.72);
   return g;
 }
 
@@ -11883,7 +11946,7 @@ function createVisitPerson(index){
       o.material.color.setHex(personColors[(index+Math.floor(Math.random()*personColors.length))%personColors.length]);
     }
   });
-  aczoAttachDynamicContactShadow(p,.56,.50,.15,.037);
+  aczoAttachDynamicContactShadow(p,.62,.62,.28,.037,1.72);
   return {
     obj:p,
     target:new THREE.Vector3(),
@@ -16421,7 +16484,7 @@ function createBmwX3E83(){
   const logo=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.025,16),logoMat);
   logo.position.set(0,2.326,1.34);logo.name='BMW_X3_EMBLEM';car.add(logo);
   car.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-  aczoAttachDynamicContactShadow(car,2.12,4.82,.19,.014);
+  aczoAttachDynamicContactShadow(car,2.12,4.82,.25,.038,1.82);
   return car;
 }
 
@@ -18042,10 +18105,10 @@ function updateAczoSurveyForestLod(){
   // Dadurch duerfen ausschliesslich in der weiten Gesamtansicht einige der
   // gleichmaessig gemischten visuellen Blattfaecher entfallen. Baumpositionen,
   // Stämme, Aeste, Nahansicht und Kronenform bleiben voll erhalten.
-  const sprayFarFactor=ACZO_MOBILE_PERF ? .64 : .82;
-  const sprayFactor=dist<=70
+  const sprayFarFactor=ACZO_MOBILE_PERF ? .48 : .68;
+  const sprayFactor=dist<=58
     ?1
-    :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,70,145));
+    :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,58,125));
   const key=Math.round(leafFactor*20)+'|s'+Math.round(sprayFactor*20)+'|'+(is2D?'2':'3');
   if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
   for(const mesh of aczoSurveyFineLodMeshes){
@@ -18065,8 +18128,8 @@ function updateAczoSurveyForestLod(){
 let aczoRealBirchLodKey='';
 function updateAczoRealBirchFineLod(){
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
-  const farFactor=ACZO_MOBILE_PERF?.10:.18;
-  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,34,68));
+  const farFactor=ACZO_MOBILE_PERF?.06:.14;
+  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,32,62));
   const key=Math.round(factor*50)+'|'+(is2D?'2':'3')+'|'+(fishMode?'f':'m');
   if(key===aczoRealBirchLodKey)return;aczoRealBirchLodKey=key;
   for(const mesh of realBirchFineLeafMeshes){
@@ -18157,7 +18220,7 @@ const aczoWildBoarActors=[];
   {seed:4103,scale:.88,offset:[-1.85,-1.08],piglet:false},
   {seed:4104,scale:.57,offset:[-2.85,.46],piglet:true},
   {seed:4105,scale:.53,offset:[-2.72,-.50],piglet:true}
-].forEach(cfg=>{const actor=aczoBuildWildBoar(cfg.seed,cfg.scale,cfg.piglet);actor.position.set(cfg.offset[0],cfg.offset[1],ACZO_SATELLITE_GROUND_Z);actor.userData.baseOffset=new THREE.Vector2(cfg.offset[0],cfg.offset[1]);aczoAttachDynamicContactShadow(actor,1.72,1.08,.17,.014);aczoWildBoarGroup.add(actor);aczoWildBoarActors.push(actor);});
+].forEach(cfg=>{const actor=aczoBuildWildBoar(cfg.seed,cfg.scale,cfg.piglet);actor.position.set(cfg.offset[0],cfg.offset[1],ACZO_SATELLITE_GROUND_Z);actor.userData.baseOffset=new THREE.Vector2(cfg.offset[0],cfg.offset[1]);aczoAttachDynamicContactShadow(actor,1.72,1.08,.27,.014,1.15);aczoWildBoarGroup.add(actor);aczoWildBoarActors.push(actor);});
 const aczoWildBoarRoute=[new THREE.Vector2(-84,79),new THREE.Vector2(-70,88),new THREE.Vector2(-53,92),new THREE.Vector2(-37,86),new THREE.Vector2(-45,76),new THREE.Vector2(-63,75),new THREE.Vector2(-79,72)];
 const aczoWildBoarRouteLengths=[];let aczoWildBoarRouteTotal=0;for(let i=0;i<aczoWildBoarRoute.length;i++){const a=aczoWildBoarRoute[i],b=aczoWildBoarRoute[(i+1)%aczoWildBoarRoute.length],l=a.distanceTo(b);aczoWildBoarRouteLengths.push(l);aczoWildBoarRouteTotal+=l;}
 let aczoWildBoarDistance=7.5,aczoWildBoarClock=0,aczoWildBoarLastUpdate=0;
@@ -30540,16 +30603,14 @@ function projectAnglingQte(){
   anglingQte.style.top='50%';
 }
 
-// P17: Pose- und Kunstkoeder-Livefenster liegen per Scissor direkt im selben
-// WebGL-Framebuffer wie das Hauptbild. Seit preserveDrawingBuffer=false aktiv ist,
-// duerfen diese Fenster nicht mehr auf 10/15 Hz gedrosselt werden: Jeder normale
-// Hauptrender ueberschreibt ihren Bildbereich. Deshalb werden die Livekameras bei
-// jedem tatsaechlich gerenderten Hauptframe unmittelbar danach neu gezeichnet.
-// Das globale P16-Framebudget bleibt unveraendert (Mobil max. 30, Desktop max. 40 FPS).
+// P8: Die kleinen Livefenster rendern teilweise die komplette 3D-Szene ein
+// zweites Mal. Auf Mobilgeräten reicht für diese Vorschau 10 Hz, am Desktop
+// 15 Hz. Das Hauptbild und die Spielsimulation behalten ihr eigenes Framebudget.
 let aczoLastAnglingFloatRenderAt=0;
 let aczoLastAnglingReelRenderAt=0;
 function aczoSecondaryCameraDue(lastAt,now){
-  return true;
+  const hz=ACZO_MOBILE_PERF?10:15;
+  return !lastAt||now-lastAt>=1000/hz;
 }
 
 function renderAnglingFloatCamera(){
@@ -32051,19 +32112,20 @@ let aczoLastRenderedFrameAt=0;
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
 
- // P16 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
- // Vögel erzwingen dank ihres leichten Kontaktschattens keinen teuren Modus
- // mehr. Auf dem iPhone steigt der ruhige Kartenbetrieb von 18 auf 24 FPS,
- // damit Wasser/Wolken sichtbar fluessiger laufen; Desktop bleibt sparsam.
+ // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
+ // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
+ // Im Stillstand sinkt die Last deutlich; während Bedienung und Kameraflügen
+ // bleibt das Budget hoch genug für eine gleichmäßige Bewegung.
  const aczoInteractive=viewerInputBusy()||fishMode||skyLookMode||anglingMode
    ||!!fishTransition||!!currentVisit||!!bmwX3Visit
    ||rainSystem.visible||seasonSnowPoints.visible
    ||!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
  // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
- // Wald-/Wasser-Renderpasses pro Sekunde. Aufloesung bleibt unveraendert.
+ // Wald-/Wasser-Renderpasses pro Sekunde. Die Ruheauflösung bleibt unverändert.
+ updateAczoMapGestureResolution();
  const aczoTargetFps=aczoInteractive
-   ?(ACZO_MOBILE_PERF?30:40)
-   :(ACZO_MOBILE_PERF?24:22);
+   ?(ACZO_MOBILE_PERF?30:32)
+   :(ACZO_MOBILE_PERF?18:16);
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
@@ -32436,6 +32498,7 @@ let aczoLastRenderedFrameAt=0;
   window.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open')){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}});
   populateFromCurrent();
 })();
-</script>\n<!-- P15: Shadow refresh + land shadow material restored exactly from V2.3.37 reference; P13 outer forest reduction retained. -->
+</script>
+<!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
 </body>
 </html>
