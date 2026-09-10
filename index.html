@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P64 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P65 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4582,7 +4582,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P64';
+const VIEWER_VERSION='ACZO56 · P65';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -21605,6 +21605,65 @@ function updateAnglingSelectionMarkerScale(){
   anglingMarkerGroup.scale.setScalar(selecting?(coarse?2.35:1.55):1);
 }
 
+// P65: 360°-Orientierungslicht für die Stellenauswahl bei Nacht.
+// PointLight beleuchtet echte 3D-Objekte, der weiche Kreis macht zusätzlich
+// den Satelliten-/Bodenbereich sichtbar, dessen Material selbst nicht auf
+// dynamische Beleuchtung reagieren muss.
+const anglingMarkerNightLight=new THREE.PointLight(0xfff0c2,0,15,2);
+anglingMarkerNightLight.castShadow=false;
+scene.add(anglingMarkerNightLight);
+
+const anglingMarkerHaloMat=new THREE.ShaderMaterial({
+  transparent:true,depthTest:true,depthWrite:false,toneMapped:false,
+  blending:THREE.AdditiveBlending,
+  uniforms:{uOpacity:{value:0}},
+  vertexShader:`
+    varying vec2 vUv;
+    void main(){
+      vUv=uv;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    }`,
+  fragmentShader:`
+    varying vec2 vUv;
+    uniform float uOpacity;
+    void main(){
+      float d=distance(vUv,vec2(.5));
+      float core=1.0-smoothstep(.02,.42,d);
+      float edge=1.0-smoothstep(.28,.50,d);
+      float a=(core*.24+edge*.76)*uOpacity;
+      gl_FragColor=vec4(1.0,.91,.68,a);
+    }`
+});
+const anglingMarkerHalo=new THREE.Mesh(new THREE.CircleGeometry(7.2,64),anglingMarkerHaloMat);
+anglingMarkerHalo.name='ANGELPLATZ_NACHTLICHT_360';
+anglingMarkerHalo.renderOrder=1472;
+anglingMarkerHalo.visible=false;
+scene.add(anglingMarkerHalo);
+
+function updateAnglingSelectionNightLight(){
+  const active=!!(anglingMode&&anglingState==='selecting'&&anglingSelection&&anglingMarkerGroup.visible);
+  const night=active?THREE.MathUtils.smoothstep(sceneNightFactor,.24,.78):0;
+  const visible=night>.015;
+  anglingMarkerHalo.visible=visible;
+  anglingMarkerNightLight.visible=visible;
+  if(!visible){
+    anglingMarkerHaloMat.uniforms.uOpacity.value=0;
+    anglingMarkerNightLight.intensity=0;
+    return;
+  }
+
+  const p=anglingSelection.shore;
+  // Kreis knapp über der jeweiligen Stellfläche. Auf Stegen liegt er damit
+  // auf Deckhöhe, am normalen Ufer knapp über dem Gelände.
+  const baseZ=Number.isFinite(Number(p.z))?Number(p.z):.10;
+  anglingMarkerHalo.position.set(p.x,p.y,baseZ+.035);
+  anglingMarkerNightLight.position.set(p.x,p.y,baseZ+2.15);
+
+  anglingMarkerHaloMat.uniforms.uOpacity.value=.42+.42*night;
+  anglingMarkerNightLight.intensity=.55+1.45*night;
+  anglingMarkerNightLight.distance=12.5+3.0*night;
+}
+
 // V6.42: echtes 3D-Zielkreuz auf der Wasseroberfläche. Es hat eine feste
 // Größe in der Welt und wird deshalb durch die Perspektive automatisch kleiner,
 // je weiter der Zielpunkt entfernt ist.
@@ -27166,66 +27225,105 @@ function anglingShoreHitRadiusWorld(clientX,clientY){
 
 let anglingSelectionMagnetUntil=0;
 let anglingSelectionMagnetKey='';
+let anglingSelectionMagnetSelection=null;
 
-function aczoP64PierSelectionKey(sel){
+function aczoP65PierSelectionKey(sel){
   if(!sel)return '';
   if(sel.boatPierSpot)return 'boat';
   if(sel.smallPierNumber)return 'small-'+sel.smallPierNumber;
   return sel.pierSpot?'north-'+sel.pierSpot:'';
 }
-function aczoP64MagneticPierSelection(point){
-  if(!point)return null;
-  let hit=(typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(point):null)
+
+function aczoP65SmallPierCandidate(point){
+  if(!point||typeof aczoSmallPierData==='undefined')return null;
+  let best=null,bestD=Infinity;
+  for(const pier of aczoSmallPierData){
+    // Mitte des sichtbaren 1x1-m-Rosts.
+    const cx=pier.shore.x+pier.inward.x*.50;
+    const cy=pier.shore.y+pier.inward.y*.50;
+    const dx=point.x-cx,dy=point.y-cy;
+    const d=Math.hypot(dx,dy);
+    if(d<bestD){bestD=d;best={pier,cx,cy,d};}
+  }
+  if(!best)return null;
+  const selection=aczoSmallPierSelectionFromPoint(
+    new THREE.Vector3(best.cx,best.cy,best.pier.topZ+.025)
+  );
+  return selection?{
+    selection,key:'small-'+best.pier.number,
+    distance:best.d,enterRadius:4.2,releaseRadius:6.0
+  }:null;
+}
+
+function aczoP65BoatPierCandidate(point){
+  if(!point||typeof EAST_BOAT_PIER_SHORE==='undefined')return null;
+  const rx=point.x-EAST_BOAT_PIER_SHORE.x,ry=point.y-EAST_BOAT_PIER_SHORE.y;
+  const lx=rx*EAST_BOAT_PIER_TANGENT.x+ry*EAST_BOAT_PIER_TANGENT.y;
+  const ly=rx*EAST_BOAT_PIER_INWARD.x+ry*EAST_BOAT_PIER_INWARD.y;
+  const clx=THREE.MathUtils.clamp(lx,-2.55,2.65);
+  const cly=THREE.MathUtils.clamp(ly,-.55,2.15);
+  const d=Math.hypot(lx-clx,ly-cly);
+  const probe=eastBoatPierLocalToWorld(clx,cly,EAST_BOAT_PIER_PLATFORM_TOP_Z+.025);
+  const selection=eastBoatPierSelectionFromPoint(probe);
+  return selection?{selection,key:'boat',distance:d,enterRadius:3.2,releaseRadius:4.8}:null;
+}
+
+function aczoP65NorthPierCandidate(point){
+  if(!point||typeof NORTH_PIER_SHORE==='undefined')return null;
+  const rx=point.x-NORTH_PIER_SHORE.x,ry=point.y-NORTH_PIER_SHORE.y;
+  const along=rx*NORTH_PIER_AXIS.x+ry*NORTH_PIER_AXIS.y;
+  const lateral=rx*NORTH_PIER_SIDE.x+ry*NORTH_PIER_SIDE.y;
+  const t=THREE.MathUtils.clamp(along/NORTH_PIER_LENGTH,0,1);
+  const nearestAlong=t*NORTH_PIER_LENGTH;
+  const d=Math.hypot(along-nearestAlong,lateral);
+  const probe=new THREE.Vector3(
+    NORTH_PIER_SHORE.x+NORTH_PIER_AXIS.x*nearestAlong+
+      NORTH_PIER_SIDE.x*THREE.MathUtils.clamp(lateral,-1.20,1.20),
+    NORTH_PIER_SHORE.y+NORTH_PIER_AXIS.y*nearestAlong+
+      NORTH_PIER_SIDE.y*THREE.MathUtils.clamp(lateral,-1.20,1.20),
+    .1
+  );
+  const selection=northPierSelectionFromPoint(probe);
+  return selection?{
+    selection,key:'north-'+selection.pierSpot,
+    distance:d,enterRadius:3.5,releaseRadius:5.1
+  }:null;
+}
+
+function aczoP65BestPierCandidate(point){
+  // Exakter Treffer hat immer Vorrang.
+  const exact=(typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(point):null)
     ||(typeof aczoSmallPierSelectionFromPoint==='function'?aczoSmallPierSelectionFromPoint(point):null)
     ||(typeof northPierSelectionFromPoint==='function'?northPierSelectionFromPoint(point):null);
-  if(hit)return hit;
-
-  let best=null,bestD2=Infinity;
-  if(typeof aczoSmallPierData!=='undefined'){
-    for(const pier of aczoSmallPierData){
-      const cx=pier.shore.x+pier.inward.x*.52,cy=pier.shore.y+pier.inward.y*.52;
-      const d2=(point.x-cx)**2+(point.y-cy)**2;
-      if(d2<bestD2){bestD2=d2;best={pier,cx,cy};}
-    }
-  }
-  if(best&&bestD2<=3.1*3.1){
-    hit=aczoSmallPierSelectionFromPoint(new THREE.Vector3(best.cx,best.cy,best.pier.topZ+.025));
-    if(hit)return hit;
+  if(exact){
+    return {selection:exact,key:aczoP65PierSelectionKey(exact),distance:0,enterRadius:99,releaseRadius:99};
   }
 
-  if(typeof EAST_BOAT_PIER_SHORE!=='undefined'){
-    const rx=point.x-EAST_BOAT_PIER_SHORE.x,ry=point.y-EAST_BOAT_PIER_SHORE.y;
-    const lx=rx*EAST_BOAT_PIER_TANGENT.x+ry*EAST_BOAT_PIER_TANGENT.y;
-    const ly=rx*EAST_BOAT_PIER_INWARD.x+ry*EAST_BOAT_PIER_INWARD.y;
-    const dx=Math.max(-2.65-lx,0,lx-2.75),dy=Math.max(-.65-ly,0,ly-2.25);
-    if(Math.hypot(dx,dy)<=2.4){
-      const probe=eastBoatPierLocalToWorld(
-        THREE.MathUtils.clamp(lx,-2.55,2.65),
-        THREE.MathUtils.clamp(ly,-.55,2.15),
-        EAST_BOAT_PIER_PLATFORM_TOP_Z+.025
-      );
-      hit=eastBoatPierSelectionFromPoint(probe);
-      if(hit)return hit;
-    }
+  const candidates=[
+    aczoP65SmallPierCandidate(point),
+    aczoP65BoatPierCandidate(point),
+    aczoP65NorthPierCandidate(point)
+  ].filter(Boolean);
+
+  if(!candidates.length)return null;
+
+  // Wenn bereits an einem Steg eingerastet, nicht bei jedem Zentimeter zu
+  // einem Nachbarsteg oder ans Ufer springen. Erst außerhalb der größeren
+  // Freigabezone lösen. Das ist das eigentliche "Magnet"-Verhalten.
+  if(anglingSelectionMagnetKey){
+    const current=candidates.find(c=>c.key===anglingSelectionMagnetKey);
+    if(current&&current.distance<=current.releaseRadius)return current;
   }
 
-  if(typeof NORTH_PIER_SHORE!=='undefined'){
-    const rx=point.x-NORTH_PIER_SHORE.x,ry=point.y-NORTH_PIER_SHORE.y;
-    const along=rx*NORTH_PIER_AXIS.x+ry*NORTH_PIER_AXIS.y;
-    const lateral=rx*NORTH_PIER_SIDE.x+ry*NORTH_PIER_SIDE.y;
-    const t=THREE.MathUtils.clamp(along/NORTH_PIER_LENGTH,0,1);
-    const nearestAlong=t*NORTH_PIER_LENGTH;
-    if(Math.hypot(along-nearestAlong,lateral)<=2.8){
-      const probe=new THREE.Vector3(
-        NORTH_PIER_SHORE.x+NORTH_PIER_AXIS.x*nearestAlong+NORTH_PIER_SIDE.x*THREE.MathUtils.clamp(lateral,-1.2,1.2),
-        NORTH_PIER_SHORE.y+NORTH_PIER_AXIS.y*nearestAlong+NORTH_PIER_SIDE.y*THREE.MathUtils.clamp(lateral,-1.2,1.2),
-        .1
-      );
-      hit=northPierSelectionFromPoint(probe);
-      if(hit)return hit;
-    }
-  }
-  return null;
+  candidates.sort((a,b)=>(a.distance/a.enterRadius)-(b.distance/b.enterRadius));
+  const best=candidates[0];
+  return best.distance<=best.enterRadius?best:null;
+}
+
+function aczoP65ClearPierMagnet(){
+  anglingSelectionMagnetUntil=0;
+  anglingSelectionMagnetKey='';
+  anglingSelectionMagnetSelection=null;
 }
 
 function selectAnglingShore(clientX,clientY,options={}){
@@ -27234,17 +27332,23 @@ function selectAnglingShore(clientX,clientY,options={}){
   const p=projectPointerToMapPlane(clientX,clientY);
   if(!p) return false;
   const now=performance.now();
-  if(dragging&&anglingSelection?.pierSpot&&now<anglingSelectionMagnetUntil)return true;
+  const pierCandidate=dragging
+    ?aczoP65BestPierCandidate(p)
+    :null;
   const pierSelection=dragging
-    ?aczoP64MagneticPierSelection(p)
+    ?pierCandidate?.selection
     :((typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(p):null)
       ||(typeof aczoSmallPierSelectionFromPoint==='function'?aczoSmallPierSelectionFromPoint(p):null)
       ||(typeof northPierSelectionFromPoint==='function'?northPierSelectionFromPoint(p):null));
   if(pierSelection){
-    const key=aczoP64PierSelectionKey(pierSelection);
+    const key=dragging?(pierCandidate?.key||aczoP65PierSelectionKey(pierSelection)):aczoP65PierSelectionKey(pierSelection);
     if(dragging&&key&&key!==anglingSelectionMagnetKey){
-      anglingSelectionMagnetKey=key;anglingSelectionMagnetUntil=now+360;
+      anglingSelectionMagnetKey=key;
+      anglingSelectionMagnetSelection=pierSelection;
+      anglingSelectionMagnetUntil=now+260;
       if(navigator.vibrate)navigator.vibrate(12);
+    }else if(dragging&&key){
+      anglingSelectionMagnetSelection=pierSelection;
     }
     anglingSelection=pierSelection;
     anglingMarkerGroup.position.set(pierSelection.shore.x,pierSelection.shore.y,pierSelection.shore.z+.055);
@@ -27259,7 +27363,19 @@ function selectAnglingShore(clientX,clientY,options={}){
         :(pierSelection.pierLabel+' · Spitze oder eine der beiden Stegseiten anklicken, um die Position zu wechseln.'));
     return true;
   }
-  if(dragging){anglingSelectionMagnetKey='';anglingSelectionMagnetUntil=0;}
+  // Magnet nur lösen, wenn der Finger wirklich aus der größeren Freigabezone
+  // des eingerasteten Stegs heraus ist. So flackert vor allem ein kleiner Steg
+  // nicht mehr zwischen Steg und normalem Ufer.
+  if(dragging&&anglingSelectionMagnetKey){
+    const keep=aczoP65BestPierCandidate(p);
+    if(keep&&keep.key===anglingSelectionMagnetKey&&keep.distance<=keep.releaseRadius){
+      if(anglingSelectionMagnetSelection){
+        anglingSelection=anglingSelectionMagnetSelection;
+        return true;
+      }
+    }
+    aczoP65ClearPierMagnet();
+  }
   const boundaryHit=nearestAnglingBoundary(p);
   if(!boundaryHit) return false;
   const hitRadius=anglingShoreHitRadiusWorld(clientX,clientY);
@@ -28860,6 +28976,7 @@ function confirmAnglingShore(){
 function resetAnglingSelection(){
   if(!anglingMode||anglingState!=='selecting') return;
   anglingSelection=null;anglingMarkerGroup.visible=false;anglingConfirmBtn.disabled=true;
+  anglingMarkerHalo.visible=false;anglingMarkerNightLight.visible=false;
   anglingSelectTitle.textContent='🎣 Anderen Angelplatz waehlen';
   anglingSelectText.textContent='Tippe erneut auf die gewuenschte Stelle am Ufer.';
 }
@@ -31761,6 +31878,7 @@ function finishLeaveAngling(){
   anglingPreviousLastActiveAt=new Date().toISOString();
   anglingWelcomeBackShownForSession=false;
   anglingMode=false;anglingState='idle';anglingSelection=null;anglingSaved=null;anglingPhotoHorizon.visible=false;
+  anglingMarkerHalo.visible=false;anglingMarkerNightLight.visible=false;
   anglingPendingCatch=null;anglingCandidateEntries=[];setAnglingReeling(false);stopAnglingActionHold?.();
   cancelAnglingPostCatchNotices();
   resetAnglingSurfaceEffects();
@@ -31941,6 +32059,7 @@ function updateAnglingMode(dt){
   updateAnglingTimeAvailability();
   anglingStateTime+=dt;
   if(anglingState==='selecting')updateAnglingSelectionMarkerScale();
+  updateAnglingSelectionNightLight();
   // V8.49: Die aufgesetzte Ufer-/Angelstellen-Geometrie darf in echter
   // Unterwasseransicht (Kunstköder) niemals sichtbar bleiben. Oberhalb der
   // Wasseroberfläche und in normalen Uferphasen bleibt sie unverändert aktiv.
@@ -32737,7 +32856,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     e.preventDefault();e.stopImmediatePropagation();return;
   }
   if(anglingState==='selecting'&&(e.pointerType!=='mouse'||e.button===0)){
-    anglingSelectionMagnetUntil=0;anglingSelectionMagnetKey='';
+    aczoP65ClearPierMagnet();
     selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:true});
     anglingPointerStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,dragX:0,moved:false,startedAt:performance.now(),selectingDrag:true,lastSelectAt:performance.now()});
     try{renderer.domElement.setPointerCapture?.(e.pointerId);}catch(err){}
@@ -32809,7 +32928,7 @@ renderer.domElement.addEventListener('pointerup',e=>{
   }
   if(start&&anglingState==='selecting'){
     selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:false});
-    anglingSelectionMagnetUntil=0;anglingSelectionMagnetKey='';
+    aczoP65ClearPierMagnet();
     try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch(err){}
   }else if(start&&anglingState==='ready'){
     setAnglingAimFromPointer(e.clientX,e.clientY,false,0,e.pointerType);anglingAimLocked=true;anglingUi.classList.add('aim-locked');
