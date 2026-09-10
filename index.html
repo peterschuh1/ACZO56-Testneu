@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P77 KONSTANT 30FPS TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P78 NATIVE RAF TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4610,7 +4610,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P77 KONSTANT 30FPS TEST';
+const VIEWER_VERSION='ACZO56 · P78 NATIVE RAF TEST';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33133,14 +33133,9 @@ let aczoMapGestureFrame=0;
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- // P77 DIAGNOSE: Ruhe-/Interaktiv-Governor voruebergehend neutralisiert.
- // Mobil und Desktop rendern in der normalen Karte konstant mit 30 FPS.
- // Nur der kurze Kunstkoeder-Flug behaelt sein bestehendes Sonderbudget.
- const aczoTargetFps=aczoArtificialCastFlight
-   ?(ACZO_MOBILE_PERF?40:46)
-   :30;
- const aczoFrameGap=1000/aczoTargetFps;
- if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
+ // P78 DIAGNOSE: eigener FPS-Governor komplett deaktiviert.
+ // Jeder native requestAnimationFrame von Safari wird verarbeitet. Damit testen
+ // wir direkt, ob die 30/15-Spruenge vom bisherigen Frame-Pacing stammen.
  aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
@@ -33533,7 +33528,7 @@ let aczoP72ShadowRequests=0;
            .forEach(([k,p])=>profLines.push(k.padEnd(10,' ')+' '+(p.sum/p.n).toFixed(2)+' / '+p.max.toFixed(1)+' ms'));
        }
        body.textContent=
-         'P77 30FPS TEST · '+mode+'\n'+
+         'P78 NATIVE RAF TEST · '+mode+'\n'+
          'FPS          '+fps.toFixed(1)+'\n'+
          'Draw Calls   '+(r.calls??'n/a')+'\n'+
          'Dreiecke     '+(r.triangles??'n/a')+'\n'+
