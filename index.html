@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P15 · Schattenstabilitaet ohne Spray-LOD</title>
+<title>ACZO56 V2.3.37-P16 · Performance- und Flackerfix</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4713,7 +4713,14 @@ const skyMat=new THREE.ShaderMaterial({
 const sky=new THREE.Mesh(skyGeo,skyMat);
 scene.add(sky);
 
-const camera=new THREE.PerspectiveCamera(42,1,0.1,2000);
+// P16 SCHATTEN-/TIEFENSTABILITAET: In der normalen Kartenansicht liegt kein
+// relevantes Objekt naeher als einen halben Meter vor der Kamera. Eine groessere
+// Near-Plane verteilt die 24-Bit-Tiefenpraezision wesentlich besser auf die bis
+// zu 2 km tiefe Szene und verhindert flimmernde, fast deckungsgleiche Flaechen
+// an Fassaden, Zaun und Schattenfaenger. Nahmodi setzen weiterhin ihre eigenen
+// kleinen Werte und werden dadurch nicht veraendert.
+const ACZO_MAIN_CAMERA_NEAR=.55;
+const camera=new THREE.PerspectiveCamera(42,1,ACZO_MAIN_CAMERA_NEAR,2000);
 
 // V38: Unsere Kartenwelt benutzt Z als Höhenachse.
 // DAS MUSS vor dem Erzeugen von OrbitControls gesetzt werden,
@@ -6658,6 +6665,7 @@ function createClubFlagPole(){
   flagPoleFlagMesh.rotation.x=Math.PI*.5;
   flagPoleFlagMesh.frustumCulled=false;
   flagPoleFlagMesh.renderOrder=12;
+  flagPoleFlagMesh.userData.aczoNoShadow=true;
   flagPoleFlagRoot.add(flagPoleFlagMesh);
 
   // V8.88: Eine doppelseitige Plane spiegelt auf ihrer Rückseite zwangsläufig
@@ -6677,6 +6685,7 @@ function createClubFlagPole(){
   flagPoleFlagBackMesh.rotation.x=Math.PI*.5;
   flagPoleFlagBackMesh.frustumCulled=false;
   flagPoleFlagBackMesh.renderOrder=12;
+  flagPoleFlagBackMesh.userData.aczoNoShadow=true;
   flagPoleFlagRoot.add(flagPoleFlagBackMesh);
 
   flagPoleFlagBasePositions=Float32Array.from(flagGeo.attributes.position.array);
@@ -6704,6 +6713,7 @@ function createClubFlagPole(){
   );
   marker.position.z=.004;
   marker.renderOrder=11;
+  marker.userData.aczoNoShadow=true;
   group.add(marker);
 
   // In echter Draufsicht ist eine senkrechte Fahne geometrisch fast unsichtbar.
@@ -6722,6 +6732,7 @@ function createClubFlagPole(){
   markerFlag.position.set(0,0,.008);
   markerFlag.renderOrder=12;
   markerFlag.userData.flagPole2DMarker=true;
+  markerFlag.userData.aczoNoShadow=true;
   group.add(markerFlag);
 
   flagPoleGroup=group;
@@ -6867,7 +6878,16 @@ let aczoWaterStructureShadowReceiver=null;
 let aczoWaterStructureShadowMat=null;
 let aczoMoselStructureShadowReceiver=null;
 let aczoMoselStructureShadowMat=null;
-let aczoShadowCasterRefreshAt=0;
+// P16: Unsichtbare, stark vereinfachte Kronen duerfen ausschliesslich in der
+// Schattenkamera erscheinen. Die normale Kamera bleibt auf Layer 0.
+const ACZO_TREE_SHADOW_PROXY_LAYER=2;
+let aczoNextAnimatedShadowRefreshAt=0;
+function aczoRequestAnimatedShadowRefresh(){
+  const now=performance.now();
+  if(now<aczoNextAnimatedShadowRefreshAt)return;
+  aczoNextAnimatedShadowRefreshAt=now+(ACZO_MOBILE_PERF?170:110);
+  renderer.shadowMap.needsUpdate=true;
+}
 // Feste, helle Tagesrichtung fuer die bewusst zeitunabhaengige NEUTRAL-
 // Ansicht. Sie darf niemals eine zuvor aktive Nachtposition erben.
 const aczoNeutralShadowSunPosition=new THREE.Vector3(
@@ -6893,6 +6913,7 @@ function aczoConfigureUnderwaterShadowLight(light){
   const span=sceneSpan*.64;
   light.shadow.camera.left=-span;light.shadow.camera.right=span;
   light.shadow.camera.top=span;light.shadow.camera.bottom=-span;
+  light.shadow.camera.layers.enable(ACZO_TREE_SHADOW_PROXY_LAYER);
   // Ohne diesen Aufruf blieb in Three.js r128 die kleine Standardprojektion
   // aktiv; Uferbaeume und Stege lagen dann ausserhalb der Schattenkarte.
   light.shadow.camera.updateProjectionMatrix();
@@ -7001,20 +7022,16 @@ function updateUnderwaterObstacleShadows(submerged){
   if(typeof updateAczoOpticalStructureShadows==='function'){
     updateAczoOpticalStructureShadows(structureActive,below,cloud,night);
   }
-  const shadowNow=performance.now();
-  // Statische Szenen bleiben sparsam. Fliegende Vögel benötigen dagegen eine
-  // viel dichtere Schattenfolge, sonst springt ihr projizierter Schatten in
-  // Viertelsekundenschritten über Boden, Wasser und Gebäudedächer.
-  const shifting=!!document.querySelector('.angling-ui.time-shifting');
-  const phone=document.documentElement.classList.contains('aczo-phone-layout');
-  const flyingBirds=(Number(window.__aczoFlyingBirdCount)||0)>0;
-  const refreshGap=flyingBirds
-    ?(phone?50:33)
-    :(shifting?(phone?120:80):(phone?700:600));
+  // P16 SCHATTENCACHE: Die vorherige periodische Komplettberechnung alle
+  // 0,6–0,7 Sekunden erzeugte selbst im Stillstand Lastspitzen und liess
+  // duenne Zaun-/Fassadenschatten sichtbar springen. Statische Schatten werden
+  // nur noch bei einer quantisierten Licht-/Wetteraenderung neu berechnet.
+  // Bewegte Tueren und Tore fordern unten gezielt und gedrosselt ein Update an;
+  // Tiere und Verkehr besitzen leichte optische Kontaktschatten.
   const lightChanged=key!==aczoUnderwaterShadowKey;
-  if(!lightChanged&&(!structureActive||shadowNow-aczoLastShadowRefreshAt<refreshGap))return;
-  if(lightChanged)aczoUnderwaterShadowKey=key;
-  aczoLastShadowRefreshAt=shadowNow;
+  if(!lightChanged)return;
+  aczoUnderwaterShadowKey=key;
+  aczoLastShadowRefreshAt=performance.now();
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
   // Totholz und alle modellierten Hindernisse bleiben dagegen Schattenwerfer.
   if(lightChanged&&typeof cleanOverhangGroup!=='undefined')cleanOverhangGroup.traverse(o=>{if(o.isMesh)o.castShadow=false;});
@@ -7051,9 +7068,7 @@ function aczoRefreshAboveWaterShadowCasters(){
   if(!aczoStaticShadowCastersPrepared){
     aczoStaticShadowCastersPrepared=true;
     aczoEnableShadowTree(flagPoleGroup);
-    aczoEnableShadowTree(trafficGroup);
     aczoEnableShadowTree(personalSceneGroup);
-    if(typeof birdGroup!=='undefined')aczoEnableShadowTree(birdGroup);
     if(typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
     if(typeof eastBoatPierGroup!=='undefined')aczoEnableShadowTree(eastBoatPierGroup);
     if(typeof eastBoatModel!=='undefined')aczoEnableShadowTree(eastBoatModel);
@@ -7064,14 +7079,6 @@ function aczoRefreshAboveWaterShadowCasters(){
     if(typeof aczoConstructionFenceGroup!=='undefined')aczoEnableShadowTree(aczoConstructionFenceGroup);
     if(typeof aczoSurveyedNatureGroup!=='undefined')aczoEnableShadowTree(aczoSurveyedNatureGroup);
   }
-  const now=performance.now();
-  if(now<aczoShadowCasterRefreshAt)return;
-  // Nur kleine, bewegte bzw. dynamisch erzeugte Gruppen benötigen noch einen
-  // Kontrolllauf. Dadurch bleibt ein neu erschienener Besucher schattenfähig,
-  // ohne den kompletten Wald erneut zu durchsuchen.
-  aczoShadowCasterRefreshAt=now+1800;
-  aczoEnableShadowTree(carTestGroup);
-  if(typeof bmwX3VisitGroup!=='undefined')aczoEnableShadowTree(bmwX3VisitGroup);
 }
 
 
@@ -9206,7 +9213,10 @@ aczoLandShadowMaskTex.minFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.magFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.generateMipmaps=false;
 const aczoLandShadowMat=new THREE.ShadowMaterial({
-  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true
+  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true,
+  // Derselbe stabile Tiefenversatz wie bei den bereits bewaehrten Wasser-
+  // Schattenfaengern. Er veraendert weder Geometrie noch Schattenstaerke.
+  polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
 });
 aczoLandShadowMat.alphaMap=aczoLandShadowMaskTex;
 aczoLandShadowMat.alphaTest=.025;
@@ -9267,6 +9277,7 @@ function set3D(){
  sky.visible=true;
  cloudGroup.visible=true;
  camera.fov=38;
+ camera.near=ACZO_MAIN_CAMERA_NEAR;
  camera.zoom=aczoMapViewZoom('3d');
  camera.updateProjectionMatrix();
 
@@ -9345,6 +9356,7 @@ function set2D(){
  sky.visible=false;
  cloudGroup.visible=false;
  camera.fov=34;
+ camera.near=ACZO_MAIN_CAMERA_NEAR;
  camera.zoom=aczoMapViewZoom('2d');
  camera.updateProjectionMatrix();
  camera.position.set(0,0,Math.max(D.sceneW,D.sceneH)*2.25);
@@ -10872,6 +10884,50 @@ if(RADWEG_DEBUG){
   scene.add(dbg);
 }
 
+// P16: Bewegte Kleinstobjekte duerfen die grosse Landschafts-Schattenkarte
+// nicht laufend invalidieren. Ein weicher, sehr leichter Kontaktschatten erdet
+// Personen, Fahrraeder, Fahrzeuge und Tiere optisch, kostet aber nur eine
+// transparente Flaeche pro Objekt und bewegt sich ohne Schattenkarten-Neubau.
+const aczoContactShadowBaseTexture=(()=>{
+  const c=document.createElement('canvas');c.width=c.height=96;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(48,48,3,48,48,46);
+  g.addColorStop(0,'rgba(8,14,10,.72)');
+  g.addColorStop(.42,'rgba(8,14,10,.34)');
+  g.addColorStop(.76,'rgba(8,14,10,.10)');
+  g.addColorStop(1,'rgba(8,14,10,0)');
+  x.fillStyle=g;x.fillRect(0,0,96,96);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  t.minFilter=THREE.LinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;
+  return t;
+})();
+function aczoCreateSoftContactShadow(width,length,opacity=.18,zOffset=.035){
+  const texture=aczoContactShadowBaseTexture.clone();texture.needsUpdate=true;
+  const material=new THREE.MeshBasicMaterial({
+    map:texture,color:0xffffff,transparent:true,opacity,depthWrite:false,
+    depthTest:true,toneMapped:false,side:THREE.DoubleSide,
+    polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4
+  });
+  material.userData.aczoOwnedContactTexture=true;
+  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(width,length),material);
+  shadow.position.z=zOffset;shadow.renderOrder=6.35;
+  shadow.castShadow=false;shadow.receiveShadow=false;
+  shadow.userData.aczoNoShadow=true;shadow.userData.aczoNoReceiveShadow=true;
+  shadow.userData.aczoDynamicContactShadow=true;
+  shadow.raycast=()=>{};
+  return shadow;
+}
+function aczoAttachDynamicContactShadow(root,width,length,opacity=.18,zOffset=.035){
+  if(!root||root.userData.aczoDynamicContactShadow)return root?.userData?.aczoDynamicContactShadow||null;
+  root.traverse(o=>{
+    if(!o.isMesh)return;
+    o.castShadow=false;o.userData.aczoNoShadow=true;
+  });
+  const shadow=aczoCreateSoftContactShadow(width,length,opacity,zOffset);
+  root.add(shadow);root.userData.aczoDynamicContactShadow=shadow;
+  return shadow;
+}
+
 // ---------- einfache, maßstäbliche Fußgänger ----------
 function createWalker(){
   const g=new THREE.Group();
@@ -11132,6 +11188,8 @@ var trafficActors=[
 ];
 
 for(const a of trafficActors){
+  if(a.obj.userData.kind==='bike')aczoAttachDynamicContactShadow(a.obj,1.02,1.72,.16,.037);
+  else aczoAttachDynamicContactShadow(a.obj,.56,.50,.15,.037);
   trafficGroup.add(a.obj);
 }
 for(const a of trafficActors){
@@ -11246,6 +11304,7 @@ const birdActors=[];
 // Vogelgruppe durchsuchen noch von deren später deklarierter Variable abhängen.
 window.__aczoFlyingBirdCount=0;
 let nextBirdSpawn=6+Math.random()*10;
+const aczoBirdLightVector=new THREE.Vector3();
 
 function makeBird(){
   const g=new THREE.Group();
@@ -11318,15 +11377,12 @@ function makeBird(){
   const tail=new THREE.Mesh(tailGeo,bodyMat);
   g.add(tail);
 
-  // V2.3.23: Der Vogel selbst wirft einen echten DirectionalLight-Schatten.
-  // Damit läuft der Schatten korrekt über Gelände, Wasser und Gebäudedächer
-  // und verschwindet hinter deren Tiefenflächen.
-  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-
-  // Der alte Sprite-Schatten war seit V2.3.23 dauerhaft unsichtbar, erzeugte
-  // aber für jeden Vogel weiterhin Canvas, Textur, Material und Szenenknoten.
-  // Es bleibt ausschließlich der echte, gebäudekorrekte Lichtschatten.
-  const shadow=null;
+  // P16: Die Fluegelschlaege invalidieren nicht mehr die Schattenkarte der
+  // kompletten 200-m-Szene. Der Vogel bleibt geometrisch unveraendert; nur sein
+  // Schatten wird als weiche, entlang der realen Lichtrichtung projizierte
+  // Kontaktellipse gezeichnet.
+  g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.aczoNoShadow=true;o.userData.aczoNoReceiveShadow=true;}});
+  const shadow=aczoCreateSoftContactShadow(1.90,.82,.12,ACZO_SATELLITE_GROUND_Z+.018);
 
   return {
     obj:g,
@@ -11388,6 +11444,7 @@ function spawnBird(){
   b.obj.scale.setScalar(scale);
 
   birdGroup.add(b.obj);
+  if(b.shadow)scene.add(b.shadow);
   birdActors.push(b);
   window.__aczoFlyingBirdCount=birdActors.length;
 }
@@ -11446,9 +11503,27 @@ function updateBirds(dt){
     b.leftWing.rotation.y=flap;
     b.rightWing.rotation.y=-flap;
 
-    // Der alte kamerafeste Sprite-Schatten ist deaktiviert. Der reale
-    // Lichtschatten entsteht jetzt ausschließlich aus der Vogelgeometrie.
-    if(b.shadow)b.shadow.visible=false;
+    if(b.shadow){
+      const light=(typeof aczoStructureShadowLight!=='undefined'&&aczoStructureShadowLight.visible)
+        ?aczoStructureShadowLight:sun;
+      aczoBirdLightVector.copy(light.position).sub(light.target.position).normalize();
+      const baseGroundZ=ACZO_SATELLITE_GROUND_Z+.018;
+      const height=Math.max(1,b.obj.position.z-baseGroundZ);
+      const travel=Math.min(58,height/Math.max(.16,aczoBirdLightVector.z));
+      const sx=b.obj.position.x-aczoBirdLightVector.x*travel;
+      const sy=b.obj.position.y-aczoBirdLightVector.y*travel;
+      const overPond=typeof pondDepthAt==='function'&&Number.isFinite(pondDepthAt(sx,sy));
+      const overMosel=!overPond&&typeof aczoSurveyPointInPolygon==='function'
+        &&typeof moselWorldPolygon!=='undefined'&&aczoSurveyPointInPolygon(sx,sy,moselWorldPolygon);
+      const surfaceZ=overPond?WATER_OVERLAY_Z+.012:(overMosel ? .254 : baseGroundZ);
+      b.shadow.position.set(sx,sy,surfaceZ);
+      b.shadow.rotation.z=b.obj.rotation.z;
+      const blurScale=(1+height*.006)*b.obj.scale.x;
+      b.shadow.scale.set(blurScale,blurScale,1);
+      b.shadow.material.opacity=(overPond||overMosel ? .09 : .12)*THREE.MathUtils.clamp(1-sceneNightFactor,.30,1);
+      b.shadow.visible=!is2D&&!!light.visible&&light.intensity>.01
+        &&Math.abs(sx)<span*.78&&Math.abs(sy)<span*.78;
+    }
 
     // Außerhalb des sichtbaren Kartenbereichs wieder entfernen.
     if(Math.abs(b.obj.position.x)>span*.92 ||
@@ -11794,6 +11869,7 @@ function createTestCar(color){
   aczoVehiclePlate(g,'AC ZO 56',2.015,.54,true);
   aczoVehiclePlate(g,'AC ZO 56',-1.955,.61,false);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  aczoAttachDynamicContactShadow(g,1.92,4.22,.18,.014);
   return g;
 }
 
@@ -11807,6 +11883,7 @@ function createVisitPerson(index){
       o.material.color.setHex(personColors[(index+Math.floor(Math.random()*personColors.length))%personColors.length]);
     }
   });
+  aczoAttachDynamicContactShadow(p,.56,.50,.15,.037);
   return {
     obj:p,
     target:new THREE.Vector3(),
@@ -11944,7 +12021,10 @@ function disposeSceneTree(obj){
     if(o.geometry) o.geometry.dispose();
     if(o.material){
       const mats=Array.isArray(o.material)?o.material:[o.material];
-      mats.forEach(m=>m.dispose());
+      mats.forEach(m=>{
+        if(m.userData&&m.userData.aczoOwnedContactTexture&&m.map)m.map.dispose();
+        m.dispose();
+      });
     }
   });
 }
@@ -14682,6 +14762,10 @@ const aczoBuildingStoneMat=new THREE.MeshStandardMaterial({color:0xa6a194,roughn
 const aczoBuildingFloorMat=new THREE.MeshStandardMaterial({color:0x55514b,roughness:.94,metalness:.02});
 const aczoBuildingPaverMat=new THREE.MeshStandardMaterial({color:0x34383a,roughness:.96,metalness:.01});
 const aczoBuildingPaverAltMat=new THREE.MeshStandardMaterial({color:0x414548,roughness:.95,metalness:.01});
+const aczoBuildingPaverTopMat=aczoBuildingPaverMat.clone();
+aczoBuildingPaverTopMat.polygonOffset=true;aczoBuildingPaverTopMat.polygonOffsetFactor=-3;aczoBuildingPaverTopMat.polygonOffsetUnits=-3;
+const aczoBuildingPaverTopAltMat=aczoBuildingPaverAltMat.clone();
+aczoBuildingPaverTopAltMat.polygonOffset=true;aczoBuildingPaverTopAltMat.polygonOffsetFactor=-3;aczoBuildingPaverTopAltMat.polygonOffsetUnits=-3;
 const aczoBuildingTileMat=new THREE.MeshStandardMaterial({color:0xe4e1d9,roughness:.52,metalness:.03});
 const aczoBuildingTileJointMat=new THREE.MeshStandardMaterial({color:0x8f9694,roughness:.85,metalness:.02});
 const aczoBuildingBlackMeshMat=new THREE.MeshStandardMaterial({color:0x171b1a,roughness:.72,metalness:.18,transparent:true,opacity:.82,side:THREE.DoubleSide});
@@ -14689,8 +14773,26 @@ const aczoBuildingStainlessMat=new THREE.MeshStandardMaterial({color:0xaab2b2,ro
 const aczoBuildingDoorRecessMat=new THREE.MeshStandardMaterial({color:0x101716,roughness:.98,metalness:0});
 const aczoMainEntranceLampLensMat=new THREE.MeshStandardMaterial({color:0xffe2a0,emissive:0xffb84d,emissiveIntensity:0,roughness:.38,metalness:.08});
 
+// P16: Bei rund 50 cm pro Schattenkarten-Texel erzeugen millimeterduenne
+// Zierleisten keinen lesbaren Schatten, sondern wechselnde Einzelpixel. Die
+// sichtbare Geometrie bleibt vollstaendig erhalten; nur solche Details werden
+// aus dem Schattenpass genommen. Waende, Daecher, Tueren und Tragwerk bleiben.
+const ACZO_FACILITY_MICRO_SHADOW_RE=/(?:FASSADENFUGE|BRETTFUGE|FLIESENFUGE|FENSTERRAHMEN|DACHFENSTER|_GLAS|FENSTER|_GITTER_[VH]|_GRIFF|SCHARNIER|LEUCHTGLAS|LEUCHTSTOFF|DACHSPARREN|WALMGRAT|FIRSTKAPPE|TRAUFKANTE|ECKBRETT|BEFESTIGUNG|ROHRSCHELLE|KABEL|SCHRAUBE|FELGENSPEICHE|TISCHBEIN|STUHLBEIN|BANKBEIN|FEUERLOESCHER)/;
+function aczoFacilityShadowAllowed(mesh,name,requested){
+  if(!requested||ACZO_FACILITY_MICRO_SHADOW_RE.test(name||''))return false;
+  const geo=mesh&&mesh.geometry;
+  if(!geo)return requested;
+  if(!geo.boundingBox)geo.computeBoundingBox();
+  const box=geo.boundingBox;
+  if(!box)return requested;
+  const dims=[box.max.x-box.min.x,box.max.y-box.min.y,box.max.z-box.min.z].sort((a,b)=>b-a);
+  return !(dims[1]<.115&&dims[0]<2.40);
+}
 function aczoFacilityMesh(parent,mesh,name,cast=true,receive=true){
-  mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;
+  const shadowCast=aczoFacilityShadowAllowed(mesh,name,cast);
+  mesh.name=name;mesh.castShadow=shadowCast;mesh.receiveShadow=receive;
+  mesh.userData.aczoNoShadow=!shadowCast;
+  mesh.userData.aczoNoReceiveShadow=!receive;
   mesh.userData.decorative=true;parent.add(mesh);return mesh;
 }
 function aczoFacilityBox(parent,size,pos,mat,name,rotationZ=0){
@@ -15034,8 +15136,21 @@ function aczoBuildMainClubhouse(){
   const terraceW=7.20,terraceD=6.35;
   terrace.position.set(-.28,-depth*.5-terraceD*.5,0);site.add(terrace);
   aczoFacilityBox(terrace,[terraceW,terraceD,.10],[0,0,.05],aczoBuildingPaverMat,'TERRASSE_PFLASTER_UNTERBAU');
+  // P16: dieselben 42 Platten in zwei InstancedMesh-Drawcalls. Ein kleiner
+  // PolygonOffset trennt ihre nur 2,5 mm entfernte Unterseite stabil vom
+  // Unterbau; damit verschwindet das Bodenflimmern neben dem westlichen Haus.
+  const paverGeo=new THREE.BoxGeometry(1.08,.82,.025);
+  const paverMatrices=[[],[]];
   for(let ix=0;ix<6;ix++)for(let iy=0;iy<7;iy++)
-    aczoFacilityBox(terrace,[1.08,.82,.025],[-2.85+ix*1.14,-2.58+iy*.86,.115],(ix+iy)%2?aczoBuildingPaverAltMat:aczoBuildingPaverMat,'TERRASSE_PFLASTERPLATTE');
+    paverMatrices[(ix+iy)%2].push(new THREE.Vector3(-2.85+ix*1.14,-2.58+iy*.86,.115));
+  paverMatrices.forEach((positions,tone)=>{
+    const mesh=new THREE.InstancedMesh(paverGeo,tone?aczoBuildingPaverTopAltMat:aczoBuildingPaverTopMat,positions.length);
+    const dummy=new THREE.Object3D();positions.forEach((p,i)=>{dummy.position.copy(p);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;
+    mesh.name='TERRASSE_PFLASTERPLATTEN_INSTANZIERT_'+(tone?'HELL':'DUNKEL');
+    mesh.castShadow=false;mesh.receiveShadow=true;mesh.userData.aczoNoShadow=true;
+    terrace.add(mesh);
+  });
   const terraceRoof=aczoFacilityBox(terrace,[terraceW+.35,terraceD+.21,.15],[0,0,2.85],aczoBuildingSlateMat,'TERRASSE_FLACHDACH');
   terraceRoof.rotation.x=.055;
   for(const x of [-3.28,0,3.28])
@@ -15431,8 +15546,11 @@ function aczoBuildConstructionFencePanels(){
   });
   for(const mesh of [grids,rails,posts,feet]){
     mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;
-    mesh.castShadow=mesh!==grids;mesh.receiveShadow=true;
-    if(mesh===grids)mesh.userData.aczoNoShadow=true;
+    // Die 512er Schattenkarte kann die 4–8 cm duennen Bauzaunteile nicht
+    // stabil abbilden. Das echte Zaunmodell bleibt sichtbar und empfaengt
+    // weiterhin Licht; nur sein nicht lesbarer Fernschatten entfaellt.
+    mesh.castShadow=false;mesh.receiveShadow=true;
+    mesh.userData.aczoNoShadow=true;
     aczoConstructionFenceGroup.add(mesh);
   }
   aczoConstructionFenceGroup.userData.panelCount=panels.length;
@@ -15470,14 +15588,14 @@ function aczoBuildFenceBanner(){
   front.name='BANNER_LESBAR_VON_DER_MOSELSEITE';
   back.name='BANNER_WEISSE_RUECKSEITE_ZUM_WEIHER';
   front.castShadow=true;front.receiveShadow=true;
-  back.castShadow=false;back.receiveShadow=true;
+  back.castShadow=false;back.receiveShadow=true;back.userData.aczoNoShadow=true;
   holder.add(front,back);
 
   const tieMat=new THREE.MeshStandardMaterial({color:0xd9ddd9,roughness:.46,metalness:.66});
   for(const x of [-width*.5,width*.5])for(const z of [-height*.5,height*.5]){
     const tie=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.10,8),tieMat);
     tie.rotation.x=Math.PI*.5;tie.position.set(x,-.072,z);
-    tie.name='BANNER_BEFEESTIGUNG';tie.castShadow=true;holder.add(tie);
+    tie.name='BANNER_BEFEESTIGUNG';tie.castShadow=false;tie.userData.aczoNoShadow=true;holder.add(tie);
   }
 }
 
@@ -15549,11 +15667,14 @@ function aczoBuildConstructionFence(){
 function updateAczoConstructionGates(dt){
   aczoConstructionFenceGroup.visible=!is2D;
   if(is2D)return;
+  let shadowMoved=false;
   for(const gate of aczoConstructionGates){
     // Flügeltor nur durch die sichtbare Person bedienen; das Schiebetor
     // bleibt geschlossen, weil Crafter und Angler davor parken.
     const wanted=gate.type==='swing'&&aczoSwingGateCommandOpen?1:0;
+    const previousOpen=gate.open;
     gate.open+=(wanted-gate.open)*(1-Math.exp(-2.7*dt));
+    if(Math.abs(gate.open-previousOpen)>.00035)shadowMoved=true;
     const eased=gate.open*gate.open*(3-2*gate.open);
     if(gate.type==='swing'){
       // Beide Flügel schwenken auf die südwestliche Innenseite zu den
@@ -15562,6 +15683,7 @@ function updateAczoConstructionGates(dt){
       gate.leafB.rotation.z=gate.leafB.userData.closedYaw-eased*Math.PI*.46;
     }else gate.gate.position.copy(gate.closed).addScaledVector(gate.slide,eased);
   }
+  if(shadowMoved)aczoRequestAnimatedShadowRefresh();
 }
 aczoBuildConstructionFence();
 
@@ -16152,12 +16274,16 @@ function aczoCollectActiveVisitorPositions(){
 function updateAczoFacilityDoors(dt){
   const visitors=aczoCollectActiveVisitorPositions();
   const wp=new THREE.Vector3();
+  let shadowMoved=false;
   for(const door of aczoFacilityDoorLeaves){
     door.getWorldPosition(wp);
     const near=visitors.some(p=>wp.distanceToSquared(p)<3.0);
     const wanted=near?door.userData.openAngle:0;
+    const previous=door.rotation.z;
     door.rotation.z+=(wanted-door.rotation.z)*(1-Math.exp(-5.4*dt));
+    if(Math.abs(door.rotation.z-previous)>.00035)shadowMoved=true;
   }
+  if(shadowMoved)aczoRequestAnimatedShadowRefresh();
 }
 function updateAczoMainEntranceMotionLight(dt){
   if(!aczoMainEntranceLamp||!aczoMainEntranceLampLens)return;
@@ -16295,6 +16421,7 @@ function createBmwX3E83(){
   const logo=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.025,16),logoMat);
   logo.position.set(0,2.326,1.34);logo.name='BMW_X3_EMBLEM';car.add(logo);
   car.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  aczoAttachDynamicContactShadow(car,2.12,4.82,.19,.014);
   return car;
 }
 
@@ -16340,7 +16467,7 @@ function spawnBmwX3Visit(){
   car.rotation.z=Math.atan2(-bmwX3TmpDir.x,bmwX3TmpDir.y);
   const person=createVisitPerson(4);
   person.speed=.92;person.obj.visible=false;person.obj.name='BMW_X3_BESUCHER';
-  person.obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  person.obj.traverse(o=>{if(o.isMesh){o.castShadow=!(o.userData&&o.userData.aczoNoShadow);o.receiveShadow=!(o.userData&&o.userData.aczoNoReceiveShadow);}});
   bmwX3VisitGroup.add(car,person.obj);
   bmwX3Visit={state:'arriving',car,person,distance:0,speed:4.65,waypoints:[],waypointIndex:0,timer:0,returning:false,lookYaw:0};
 }
@@ -16535,6 +16662,71 @@ function aczoBirchRandom(seed){
     return ((t^(t>>>14))>>>0)/4294967296;
   };
 }
+// P16 WALDSCHATTEN: Die sichtbaren Blaetter bleiben ihre bisherigen echten
+// Instanzen. Fuer die nur 512 px grosse Schattenkarte werden ihre zehntausend
+// subpixelgrossen Flaechen jedoch durch wenige organische Kronenlappen ersetzt.
+// Das beseitigt Zaehne/Flackern am Schattenrand und reduziert den Schattenpass
+// drastisch, ohne die Baumdarstellung der Hauptkamera anzutasten.
+const aczoSeasonalTreeShadowProxyItems=[];
+const aczoEvergreenTreeShadowProxyItems=[];
+const aczoTreeSeasonalShadowProxyMeshes=[];
+function aczoAddTreeShadowLobes(center,rx,ry,rz,seed,lobeCount=3,angle=0){
+  const rnd=aczoBirchRandom(seed+9271);
+  for(let i=0;i<lobeCount;i++){
+    const a=(i/lobeCount)*Math.PI*2+(rnd()-.5)*.65;
+    const lx=Math.cos(a)*rx*(.18+rnd()*.18);
+    const ly=Math.sin(a)*ry*(.16+rnd()*.18);
+    const ca=Math.cos(angle),sa=Math.sin(angle);
+    aczoSeasonalTreeShadowProxyItems.push({
+      p:new THREE.Vector3(
+        center.x+lx*ca-ly*sa,
+        center.y+lx*sa+ly*ca,
+        center.z+(rnd()-.5)*rz*.28
+      ),
+      scale:new THREE.Vector3(
+        rx*(.54+rnd()*.16),
+        ry*(.54+rnd()*.16),
+        rz*(.70+rnd()*.22)
+      ),
+      rot:new THREE.Euler(0,0,angle+(rnd()-.5)*.24)
+    });
+  }
+}
+function aczoAddConiferShadowProxy(x,y,baseZ,height,radius,seed){
+  const rnd=aczoBirchRandom(seed+1956);
+  aczoEvergreenTreeShadowProxyItems.push({
+    p:new THREE.Vector3(x,y,baseZ+height*.53),
+    scale:new THREE.Vector3(radius*(.88+rnd()*.08),height*.82,radius*(.88+rnd()*.08)),
+    rot:new THREE.Euler(0,0,rnd()*Math.PI*2)
+  });
+}
+function aczoShuffleShadowProxyItems(items,seed){
+  const rnd=aczoBirchRandom(seed);
+  for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}
+}
+function aczoBuildTreeShadowProxyMesh(items,geometry,name,seasonal){
+  if(!items.length)return null;
+  aczoShuffleShadowProxyItems(items,seasonal?731925:731926);
+  const material=new THREE.MeshBasicMaterial({color:0x000000,colorWrite:false,depthWrite:false});
+  const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();
+  items.forEach((item,i)=>{
+    dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);
+    dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+  });
+  mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;
+  mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=false;mesh.frustumCulled=false;
+  mesh.userData.aczoNoReceiveShadow=true;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;
+  mesh.layers.set(ACZO_TREE_SHADOW_PROXY_LAYER);mesh.raycast=()=>{};
+  aczoSurveyedNatureGroup.add(mesh);
+  if(seasonal)aczoTreeSeasonalShadowProxyMeshes.push(mesh);
+  return mesh;
+}
+function aczoBuildTreeShadowProxies(){
+  aczoBuildTreeShadowProxyMesh(aczoSeasonalTreeShadowProxyItems,new THREE.IcosahedronGeometry(1,0),'NATURWALD_STABILE_KRONENSCHATTEN_PROXIES',true);
+  // ConeGeometry liegt entlang Y und passt damit direkt zu den gespeicherten
+  // Instanzskalierungen der Nadelbaeume.
+  aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,8,3,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
+}
 function aczoBirchWorldPoint(frame,local){
   return new THREE.Vector3(
     frame.x+frame.tx*local[0]+frame.nx*local[1],
@@ -16594,6 +16786,11 @@ const ACZO_REAL_BIRCH_CONFIGS=[
 function aczoBuildRealBirch(cfg){
   const frame=aczoMasterBoundaryFrame(cfg.center[0],cfg.center[1]);
   if(!frame)return null;
+  const proxyCenter=aczoBirchWorldPoint(frame,[0,cfg.crownDepth*.50,(cfg.crownBase+cfg.crownTop)*.50]);
+  aczoAddTreeShadowLobes(
+    proxyCenter,cfg.crownWidth*.50,cfg.crownDepth*.50,
+    (cfg.crownTop-cfg.crownBase)*.50,cfg.seed,4,Math.atan2(frame.ty,frame.tx)
+  );
   const tree=new THREE.Group();
   tree.name='3D_WEIDE_'+cfg.id;tree.userData.config=cfg;
   realBirchGroup.add(tree);
@@ -16880,10 +17077,10 @@ function aczoBuildRealBirch(cfg){
   };
   addLeafInstances(leavesAbove,realBirchLeafGeometry,realBirchLeafMat,'BIRKE_'+cfg.id+'_EINZELBLAETTER',false,false);
   addLeafInstances(leavesBelow,realBirchLeafGeometry,realBirchUnderwaterLeafMat,'BIRKE_'+cfg.id+'_UNTERWASSERBLAETTER',false,true);
-  // Die Blattfaecher liefern eine zusammenhaengende Kronensilhouette und den
-  // deutlich sichtbaren, fein aufgebrochenen Laubschatten.
-  addLeafInstances(spraysAbove,realBirchSprayGeometry,realBirchCanopyMat,'BIRKE_'+cfg.id+'_DICHTE_KRONE',true,false);
-  addLeafInstances(spraysBelow,realBirchSprayGeometry,realBirchUnderwaterCanopyMat,'BIRKE_'+cfg.id+'_DICHTER_UNTERWASSERSAUM',true,true);
+  // Die Blattfaecher liefern weiterhin unveraendert die sichtbare Silhouette.
+  // Ihr Schatten stammt in P16 aus den stabilen Kronenproxies oben.
+  addLeafInstances(spraysAbove,realBirchSprayGeometry,realBirchCanopyMat,'BIRKE_'+cfg.id+'_DICHTE_KRONE',false,false);
+  addLeafInstances(spraysBelow,realBirchSprayGeometry,realBirchUnderwaterCanopyMat,'BIRKE_'+cfg.id+'_DICHTER_UNTERWASSERSAUM',false,true);
   return tree;
 }
 ACZO_REAL_BIRCH_CONFIGS.forEach(aczoBuildRealBirch);
@@ -17193,6 +17390,15 @@ function aczoSurveyBuildDeciduous(tree){
   const rnd=aczoSurveyRandom(tree.seed),birch=tree.type==='birch',baseZ=ACZO_SATELLITE_GROUND_Z;
   const straight=rnd()<.38;
   const bend=(straight?.08+rnd()*.16:.34+rnd()*.80),bendAngle=rnd()*Math.PI*2;
+  aczoAddTreeShadowLobes(
+    new THREE.Vector3(
+      tree.x+Math.cos(bendAngle)*bend*.56,
+      tree.y+Math.sin(bendAngle)*bend*.56,
+      baseZ+tree.height*(birch?.79:.76)
+    ),
+    tree.crownRadius,tree.crownDepth,tree.height*(birch?.13:.16),
+    tree.seed,tree.filler?2:3,bendAngle
+  );
   const sideWobble=(rnd()-.5)*(straight?.12:.38);
   const trunk=[];
   for(let i=0;i<7;i++){
@@ -17270,6 +17476,7 @@ function aczoSurveyBuildConifer(object,index,forestMix=false){
   const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+5500)),baseZ=ACZO_SATELLITE_GROUND_Z;
   // Die vier Labor-Tannen bleiben sehr grosse Landmarken; Waldmischung bleibt niedriger.
   const height=forestMix?(13.5+rnd()*6.5):(23.0+rnd()*6.0+(index%4===1?2.2:0)),radius=height*(.145+rnd()*.038),bend=.12+rnd()*(forestMix?.62:.42),angle=rnd()*Math.PI*2;
+  aczoAddConiferShadowProxy(object.x,object.y,baseZ,height,radius,aczoSurveySeed(object.x,object.y,index+5501));
   const trunk=[];for(let i=0;i<7;i++){const u=i/6;trunk.push(new THREE.Vector3(object.x+Math.cos(angle)*bend*u*u,object.y+Math.sin(angle)*bend*u*u,baseZ+height*.98*u));}
   for(let i=0;i<6;i++)aczoSurveyPushSegment(aczoSurveyConiferSegments,trunk[i],trunk[i+1],(.30+height*.0055)*Math.pow(1-i/6,.72));
   const levels=forestMix?14:20;for(let level=0;level<levels;level++){
@@ -17287,6 +17494,11 @@ function aczoSurveyBuildBush(object,index){
   const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+8800)),baseZ=ACZO_SATELLITE_GROUND_Z;
   // Gewuenschte Streuung ungefaehr +/- 1,5 m, ohne negative Kleinstwerte.
   const height=.48+rnd()*2.92,radius=.42+rnd()*1.42,species=aczoSurveySpecies[Math.floor(rnd()*aczoSurveySpecies.length)];
+  aczoAddTreeShadowLobes(
+    new THREE.Vector3(object.x,object.y,baseZ+height*.64),
+    radius,radius*.94,height*.31,
+    aczoSurveySeed(object.x,object.y,index+8801),height>2?2:1,0
+  );
   const toneBand=Math.floor(rnd()*aczoSurveyToneProfiles.length),tone=aczoSurveyToneProfiles[toneBand];
   const hueShift=tone.h,satShift=tone.s,lightShift=tone.l;
   const branchColor=aczoSurveyShadeColor(species.bark,rnd,.16),anchors=[];
@@ -17369,7 +17581,7 @@ function aczoSurveyBuildSegments(items,material,name,cast=true,receive=true){
 }
 function aczoSurveyShuffle(items,seed){const rnd=aczoSurveyRandom(seed);for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}}
 const aczoSurveyFineLodMeshes=[],aczoSurveySprayLodMeshes=[];
-function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor){mesh.instanceColor.setUsage(THREE.StaticDrawUsage);mesh.instanceColor.needsUpdate=true;}mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
+function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor){mesh.instanceColor.setUsage(THREE.StaticDrawUsage);mesh.instanceColor.needsUpdate=true;}mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
 
 // Pro Art und Farbcharakter entsteht ein eigenes Kronenmaterial. Damit bleibt
 // die natürliche Mischung auch in der Luftansicht sichtbar; die frühere eine
@@ -17401,7 +17613,7 @@ function aczoSurveyBuildFoliageBatches(items,geometry,name,cast=false,receive=fa
     mesh.castShadow=cast;mesh.receiveShadow=receive;
     mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;
     mesh.frustumCulled=false;
-    mesh.userData.items=batch;mesh.userData.maxCount=batch.length;mesh.userData.seasonCount=batch.length;
+    mesh.userData.maxCount=batch.length;mesh.userData.seasonCount=batch.length;
     mesh.userData.species=first.species;mesh.userData.hueShift=first.hueShift||0;
     mesh.userData.satShift=first.satShift||0;mesh.userData.lightShift=first.lightShift||0;
     aczoSurveyedNatureGroup.add(mesh);aczoSurveySeasonMeshes.push(mesh);
@@ -17535,9 +17747,28 @@ aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANT
 aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EINZELHALME',true);
 aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',true);
 aczoSurveyBuildFoliageBatches(aczoSurveyLeafItems,realBirchLeafGeometry,'NATURWALD_EINZELBLAETTER',false,false,true);
-aczoSurveyBuildFoliageBatches(aczoSurveySprayItems,realBirchSprayGeometry,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',true,false,false);
+aczoSurveyBuildFoliageBatches(aczoSurveySprayItems,realBirchSprayGeometry,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',false,false,false);
 aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,true,false);
 aczoSurveyBuildColored(aczoSurveyReedBladeItems,realBirchLeafGeometry,aczoSurveyReedMat,'UFER_SCHILF_SCHMALE_BLAETTER',false,true);
+aczoBuildTreeShadowProxies();
+
+// Nach dem Upload der Instanzmatrizen auf die GPU werden die hunderttausenden
+// temporaeren Vector3/Euler-Objekte nicht mehr benoetigt. Ihre Anzahl bleibt
+// fuer Diagnosezwecke erhalten; die eigentlichen Listen duerfen der GC und
+// damit besonders Safari/iOS sofort freigeben.
+const aczoSurveyInstanceStats=Object.freeze({
+  leaves:aczoSurveyLeafItems.length,
+  sprays:aczoSurveySprayItems.length,
+  seasonalShadowProxies:aczoSeasonalTreeShadowProxyItems.length,
+  evergreenShadowProxies:aczoEvergreenTreeShadowProxyItems.length
+});
+[
+  aczoSurveyWoodSegments,aczoSurveyBirchSegments,aczoSurveyBirchMarks,
+  aczoSurveyConiferSegments,aczoSurveyReedSegments,aczoSurveyReedHeads,
+  aczoSurveyLeafItems,aczoSurveySprayItems,aczoSurveyNeedleItems,
+  aczoSurveyReedBladeItems,aczoSeasonalTreeShadowProxyItems,
+  aczoEvergreenTreeShadowProxyItems
+].forEach(items=>{items.length=0;});
 
 function aczoSurveyBuildStump(object,index){
   const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+15000)),g=new THREE.Group(),h=.36+rnd()*.66,r=.19+rnd()*.17;
@@ -17787,6 +18018,11 @@ function updateAczoSurveyedNatureSeason(day){
     mesh.material.emissiveIntensity=mesh.material.userData.aczoDayEmissiveIntensity*(1-night);
     mesh.visible=!is2D&&mesh.count>0;
   }
+  for(const mesh of aczoTreeSeasonalShadowProxyMeshes){
+    mesh.userData.seasonCount=Math.max(0,Math.round(mesh.userData.maxCount*density));
+    mesh.count=mesh.userData.seasonCount;
+    mesh.visible=!is2D&&mesh.count>0;
+  }
   aczoSurveyedNatureGroup.visible=!is2D;renderer.shadowMap.needsUpdate=true;
 }
 // P14: stabile schattenpraegende Kronen trotz Kamera-Zoom.
@@ -17802,11 +18038,14 @@ function updateAczoSurveyForestLod(){
   }
   if(dist>=60)leafFactor=0;
 
-  // P14 SCHATTENSTABILITAET: Kronen-Sprays sind schattenpraegend und bleiben
-  // deshalb unabhaengig von Kameradistanz und Zoom immer in konstanter Zahl aktiv.
-  // Die grosse P13-Aussenwaldreduktion liefert den Performancegewinn bereits beim
-  // Aufbau. Nur die schattenfreien Feinblaetter behalten ihr Distanz-LOD.
-  const sprayFactor=1;
+  // P16: Die Kronenschatten stammen nun aus distanzunabhaengigen Proxies.
+  // Dadurch duerfen ausschliesslich in der weiten Gesamtansicht einige der
+  // gleichmaessig gemischten visuellen Blattfaecher entfallen. Baumpositionen,
+  // Stämme, Aeste, Nahansicht und Kronenform bleiben voll erhalten.
+  const sprayFarFactor=ACZO_MOBILE_PERF ? .64 : .82;
+  const sprayFactor=dist<=70
+    ?1
+    :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,70,145));
   const key=Math.round(leafFactor*20)+'|s'+Math.round(sprayFactor*20)+'|'+(is2D?'2':'3');
   if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
   for(const mesh of aczoSurveyFineLodMeshes){
@@ -17850,8 +18089,10 @@ aczoSurveyedNatureGroup.userData.fillerCandidateCount=aczoSurveyFillerCandidateC
 aczoSurveyedNatureGroup.userData.fillerRejectedByDepth=aczoSurveyFillerRejectedByDepth;
 aczoSurveyedNatureGroup.userData.forestBushesRemoved=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush'&&aczoSurveyForestAreas.some(a=>aczoSurveyPointInPolygon(o.x,o.y,a.points))).length;
 aczoSurveyedNatureGroup.userData.foliagePaletteBatches=aczoSurveyFoliageMaterials.length;
-aczoSurveyedNatureGroup.userData.leafInstanceCount=aczoSurveyLeafItems.length;
-aczoSurveyedNatureGroup.userData.crownSprayInstanceCount=aczoSurveySprayItems.length;
+aczoSurveyedNatureGroup.userData.leafInstanceCount=aczoSurveyInstanceStats.leaves;
+aczoSurveyedNatureGroup.userData.crownSprayInstanceCount=aczoSurveyInstanceStats.sprays;
+aczoSurveyedNatureGroup.userData.seasonalShadowProxyCount=aczoSurveyInstanceStats.seasonalShadowProxies;
+aczoSurveyedNatureGroup.userData.evergreenShadowProxyCount=aczoSurveyInstanceStats.evergreenShadowProxies;
 aczoSurveyedNatureGroup.userData.legacyOuterForestEnabled=ACZO_LEGACY_OUTER_FOREST_ENABLED;
 aczoSurveyedNatureGroup.userData.hasSouthFlowerBoat=true;
 aczoSurveyedNatureGroup.userData.hasSouthTreeLifebuoy=true;
@@ -17916,7 +18157,7 @@ const aczoWildBoarActors=[];
   {seed:4103,scale:.88,offset:[-1.85,-1.08],piglet:false},
   {seed:4104,scale:.57,offset:[-2.85,.46],piglet:true},
   {seed:4105,scale:.53,offset:[-2.72,-.50],piglet:true}
-].forEach(cfg=>{const actor=aczoBuildWildBoar(cfg.seed,cfg.scale,cfg.piglet);actor.position.set(cfg.offset[0],cfg.offset[1],ACZO_SATELLITE_GROUND_Z);actor.userData.baseOffset=new THREE.Vector2(cfg.offset[0],cfg.offset[1]);aczoWildBoarGroup.add(actor);aczoWildBoarActors.push(actor);});
+].forEach(cfg=>{const actor=aczoBuildWildBoar(cfg.seed,cfg.scale,cfg.piglet);actor.position.set(cfg.offset[0],cfg.offset[1],ACZO_SATELLITE_GROUND_Z);actor.userData.baseOffset=new THREE.Vector2(cfg.offset[0],cfg.offset[1]);aczoAttachDynamicContactShadow(actor,1.72,1.08,.17,.014);aczoWildBoarGroup.add(actor);aczoWildBoarActors.push(actor);});
 const aczoWildBoarRoute=[new THREE.Vector2(-84,79),new THREE.Vector2(-70,88),new THREE.Vector2(-53,92),new THREE.Vector2(-37,86),new THREE.Vector2(-45,76),new THREE.Vector2(-63,75),new THREE.Vector2(-79,72)];
 const aczoWildBoarRouteLengths=[];let aczoWildBoarRouteTotal=0;for(let i=0;i<aczoWildBoarRoute.length;i++){const a=aczoWildBoarRoute[i],b=aczoWildBoarRoute[(i+1)%aczoWildBoarRoute.length],l=a.distanceTo(b);aczoWildBoarRouteLengths.push(l);aczoWildBoarRouteTotal+=l;}
 let aczoWildBoarDistance=7.5,aczoWildBoarClock=0,aczoWildBoarLastUpdate=0;
@@ -31808,20 +32049,19 @@ let aczoLastRenderedFrameAt=0;
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
 
- // V2.3.37 PERFORMANCE: Im ruhigen Kartenbetrieb reichen 24 Bilder/s für
- // Wasser und Wolken. Interaktion, Spiel-/Tauchübergänge, Zeitraffer, Verkehr,
- // Besucher, Regen und Vögel schalten sofort wieder auf die volle Browser-
- // Bildrate. Dadurch arbeitet die GPU nicht länger permanent am Anschlag.
+ // P16 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
+ // Vögel erzwingen dank ihres leichten Kontaktschattens keinen teuren Modus
+ // mehr. Auf dem iPhone steigt der ruhige Kartenbetrieb von 18 auf 24 FPS,
+ // damit Wasser/Wolken sichtbar fluessiger laufen; Desktop bleibt sparsam.
  const aczoInteractive=viewerInputBusy()||fishMode||skyLookMode||anglingMode
    ||!!fishTransition||!!currentVisit||!!bmwX3Visit
-   ||(Number(window.__aczoFlyingBirdCount)||0)>0
    ||rainSystem.visible||seasonSnowPoints.visible
    ||!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
  // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
  // Wald-/Wasser-Renderpasses pro Sekunde. Aufloesung bleibt unveraendert.
  const aczoTargetFps=aczoInteractive
-   ?(ACZO_MOBILE_PERF?30:45)
-   :(ACZO_MOBILE_PERF?18:22);
+   ?(ACZO_MOBILE_PERF?30:40)
+   :(ACZO_MOBILE_PERF?24:22);
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
