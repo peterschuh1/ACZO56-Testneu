@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P21 · PolyPlus-Wald dichter und stabil</title>
+<title>ACZO56 P29 · Angel-Performance, Zielhilfe und Input-Stabilität</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -2420,8 +2420,6 @@ html,body{
   .angling-leaderboard-row .weight{font-size:10.5px!important}
 }
 
-/* V7.25 TESTLABOR: Jahreszeiten/Wetter */
-
 /* V7.52: kleine Spiel-Uhrzeit, bewusst ohne zusätzliches Bedienfeld. */
 .angling-clock-display{
   position:absolute;right:10px;top:10px;left:auto;z-index:430;display:none;pointer-events:none;
@@ -3885,18 +3883,7 @@ html,body{
 
 </style>
 
-<style id="seasonWeatherLabStyles">
-#seasonWeatherLabBtn{grid-column:1/-1!important;min-height:30px!important;background:#173f32!important;color:#fff!important;border-color:#275f4c!important}
-#seasonWeatherLabBtn.active{background:#7a4e12!important;border-color:#d39b3a!important;color:#fff7d7!important}
-.season-weather-lab{display:none;position:absolute;z-index:540;left:10px;top:10px;width:min(430px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;-webkit-overflow-scrolling:touch;padding:11px;border-radius:15px;background:rgba(7,34,26,.94);border:1px solid rgba(230,255,240,.62);box-shadow:0 10px 38px rgba(0,0,0,.42);color:#effff4;backdrop-filter:blur(8px);font-family:Arial,Helvetica,sans-serif}
-.season-weather-lab.open{display:block}
-.swl-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.swl-head div{display:flex;flex-direction:column;gap:1px}.swl-head small{font-size:8px;font-weight:900;letter-spacing:.12em;color:#a9d8bd}.swl-head strong{font-size:15px}.swl-close{flex:0 0 31px!important;width:31px!important;height:31px!important;min-width:31px!important;min-height:31px!important;padding:0!important;border-radius:50%!important;background:#274b3e!important;color:#fff!important;font-size:20px!important;border:1px solid rgba(255,255,255,.35)!important}
-.swl-status{padding:6px 8px;margin-bottom:8px;border-radius:9px;background:rgba(255,255,255,.09);font-size:9px;font-weight:900;color:#ffe391;text-align:center}.swl-status.active{background:rgba(155,103,19,.38);color:#fff0ae}
-.swl-section{display:grid;gap:5px;margin-top:8px;padding:9px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.swl-section>b{font-size:10px;color:#bde7c9;margin-bottom:1px}.swl-section label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:9px;font-weight:850;color:#e9f8ee}.swl-section label strong{color:#ffe493;font-size:9px}.swl-section input[type=range]{width:100%;accent-color:#d7a23a}.swl-select-label select{min-width:115px;padding:4px 6px;border-radius:7px;border:1px solid rgba(255,255,255,.24);background:#173f32;color:#fff;font:800 9px Arial}
-.swl-presets{display:grid;gap:4px}.swl-four{grid-template-columns:repeat(4,minmax(0,1fr))}.swl-three{grid-template-columns:repeat(3,minmax(0,1fr))}.swl-presets button{min-height:28px!important;padding:4px 5px!important;border-radius:8px!important;background:#174c38!important;border:1px solid rgba(255,255,255,.20)!important;color:#fff!important;font-size:8.5px!important;font-weight:900!important}.swl-presets button:hover{filter:brightness(1.08)}
-.swl-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.swl-actions button{min-height:34px!important;border-radius:9px!important;font-size:9px!important;font-weight:900!important}.swl-actions .primary{background:#a66d16!important;color:#fff!important;border-color:#dda641!important}.swl-note{margin-top:7px;font-size:8px;line-height:1.35;color:#b8ccbf;text-align:center}
-@media(max-width:650px){#seasonWeatherLabBtn{min-height:28px!important}.season-weather-lab{left:5px;top:5px;width:calc(100% - 10px);max-height:calc(100% - 10px);padding:8px;border-radius:12px}.swl-section{padding:7px}.swl-four{grid-template-columns:repeat(2,minmax(0,1fr))}.swl-presets button{min-height:27px!important;font-size:8px!important}.swl-actions{grid-template-columns:1fr}.swl-head strong{font-size:13px}}
-</style>
+
 </head>
 <body>
 <div class="wrap">
@@ -3914,69 +3901,12 @@ html,body{
   <button id="measureBtn" aria-label="Entfernung messen">📏 Messen</button>
   <button id="locBtn" aria-label="Mein Standort">📍 Standort</button>
   <button id="overlayBtn" class="on" aria-label="Legenden und Kompass ein- oder ausblenden">👁️ Anzeigen</button>
-  <button id="seasonWeatherLabBtn" aria-label="Jahreszeiten- und Wetterlabor öffnen">🧪 Jahreszeiten- & Wetterlabor</button>
  </div>
  <div id="fishCollection" class="fish-collection" aria-label="Gefundene Fischarten">
    <div id="fishCollectionProgress" class="fish-collection-progress">0 von 16 Fischarten gefunden</div>
    <div id="fishCollectionItems" class="fish-collection-items"></div>
  </div>
  <div id="viewer">
-<div id="seasonWeatherLab" class="season-weather-lab" aria-hidden="true">
-  <div class="swl-head">
-    <div><small>ACZO56 TESTLABOR</small><strong>🧪 Jahreszeit & Wetter</strong></div>
-    <button id="swlClose" class="swl-close" aria-label="Labor schließen">×</button>
-  </div>
-  <div id="swlStatus" class="swl-status">LABOR INAKTIV · Echtzeit</div>
-
-  <div class="swl-section">
-    <b>Jahreszeit</b>
-    <div class="swl-presets swl-four">
-      <button data-season-day="15">❄️ Winter</button>
-      <button data-season-day="105">🌱 Frühling</button>
-      <button data-season-day="196">☀️ Sommer</button>
-      <button data-season-day="288">🍂 Herbst</button>
-    </div>
-    <label><span>Tag im Jahr</span><strong id="swlDayValue">–</strong></label>
-    <input id="swlDay" type="range" min="1" max="365" step="1">
-    <label><span>Uhrzeit</span><strong id="swlHourValue">–</strong></label>
-    <input id="swlHour" type="range" min="0" max="23.75" step="0.25">
-    <div class="swl-presets swl-four">
-      <button data-hour="6.5">Morgen</button><button data-hour="12">Mittag</button>
-      <button data-hour="19">Abend</button><button data-hour="23">Nacht</button>
-    </div>
-  </div>
-
-  <div class="swl-section">
-    <b>Wetter-Presets</b>
-    <div class="swl-presets swl-three">
-      <button data-weather="clear">☀️ Klar</button><button data-weather="cloudy">☁️ Bewölkt</button><button data-weather="rain">🌧️ Regen</button>
-      <button data-weather="storm">🌪️ Sturm</button><button data-weather="snow">🌨️ Schnee</button><button data-weather="fog">🌫️ Nebel</button>
-    </div>
-    <label><span>Bewölkung</span><strong id="swlCloudValue">0 %</strong></label>
-    <input id="swlCloud" type="range" min="0" max="100" step="1">
-    <label><span>Windgeschwindigkeit</span><strong id="swlWindValue">0 km/h</strong></label>
-    <input id="swlWind" type="range" min="0" max="80" step="1">
-    <label><span>Windrichtung</span><strong id="swlWindDirValue">0°</strong></label>
-    <input id="swlWindDir" type="range" min="0" max="359" step="1">
-    <label><span>Niederschlag</span><strong id="swlPrecipValue">0.0 mm/h</strong></label>
-    <input id="swlPrecip" type="range" min="0" max="8" step="0.1">
-    <label class="swl-select-label"><span>Art</span>
-      <select id="swlPrecipType"><option value="none">Keiner</option><option value="rain">Regen</option><option value="snow">Schnee</option></select>
-    </label>
-    <label><span>Nebel</span><strong id="swlFogValue">0 %</strong></label>
-    <input id="swlFog" type="range" min="0" max="100" step="1">
-    <label><span>Schneedecke</span><strong id="swlSnowCoverValue">0 %</strong></label>
-    <input id="swlSnowCover" type="range" min="0" max="100" step="1">
-    <label><span>Winter-Braunfärbung</span><strong id="swlWinterBrownValue">0 %</strong></label>
-    <input id="swlWinterBrown" type="range" min="0" max="100" step="1">
-  </div>
-
-  <div class="swl-actions">
-    <button id="swlApply" class="primary">🧪 Labor aktivieren</button>
-    <button id="swlRealtime">↻ Echtzeit wiederherstellen</button>
-  </div>
-  <div class="swl-note">Die Szene bleibt während des Einstellens sichtbar. Laborwerte beeinflussen nur diese Testdatei und werden nicht gespeichert.</div>
-</div>
 <div id="mapStartupLoader" aria-hidden="true">
   <div class="map-loader-water"></div>
   <div class="map-loader-card">
@@ -4592,7 +4522,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.165 · V2.3.37-P6 · JAHRESZEITEN/WETTER-LABOR · P5 PERFORMANCEBASIS';
+const VIEWER_VERSION='ACZO56 · P29';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4826,17 +4756,12 @@ function releaseViewerPointer(e){
 function viewerInputBusy(){
   return activeViewerPointers.size>0 || performance.now()-lastViewerInputAt<450;
 }
-// P17 PERFORMANCE: Während eines Fingerzugs und der kurzen Auslaufbewegung
-// wird die interne Kartenauflösung leicht abgesenkt. Danach ist die volle P16-
-// Schärfe wieder da. Angel- und Unterwassermodi verwalten ihre Auflösung selbst.
-let aczoMapGestureResolutionReduced=false;
-function updateAczoMapGestureResolution(){
-  const reduce=viewerInputBusy()&&!fishMode&&!anglingMode&&!skyLookMode;
-  if(reduce===aczoMapGestureResolutionReduced)return;
-  aczoMapGestureResolutionReduced=reduce;
-  const factor=reduce?(ACZO_MOBILE_PERF?.82:.88):1;
-  renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO*factor);
-}
+// P28 INPUT-STABILITAET: Die Renderaufloesung bleibt auch waehrend Kamera-
+// gesten konstant. Ein setPixelRatio()-Wechsel baut den WebGL-Zeichenpuffer neu
+// auf und kann besonders unter iOS mehrere Sekunden Eingabelatenz erzeugen.
+// Performance wird deshalb ueber Renderarbeit/Framebudget geregelt, nicht ueber
+// eine Aufloesungsumschaltung mitten im Fingerzug.
+function updateAczoMapGestureResolution(){ /* bewusst keine DPR-Umschaltung */ }
 renderer.domElement.addEventListener('pointerdown',e=>{
   activeViewerPointers.add(e.pointerId);
   markViewerInput();
@@ -6945,7 +6870,10 @@ function aczoConfigureUnderwaterShadowLight(light){
   // Natur-Schatten optisch ausreichend. Gegenüber 768 sinkt die pro Update
   // zu rasternde Fläche um 56 %, sodass Vögel häufiger und damit flüssiger
   // aktualisiert werden können, ohne die GPU dauerhaft auszulasten.
-  const shadowMapSize=512;
+  // P28: Auf Mobilgeraeten 384 statt 512 Schattenpixel. Die weichen Proxy-
+  // Kronen verlieren kaum sichtbare Struktur, die Shadowmap-Flaeche sinkt aber
+  // um rund 44 %. Desktop behaelt den bewaehrten 512er Referenzstand.
+  const shadowMapSize=ACZO_MOBILE_PERF?384:512;
   light.shadow.mapSize.set(shadowMapSize,shadowMapSize);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
@@ -7843,7 +7771,7 @@ function applyWeatherScene(){
     if(sunDisc.material) sunDisc.material.opacity=1.0;
   }
 
-  // Regenintensität in sichtbare Tropfenzahl umsetzen. Im Saison-Testlabor
+  // Regenintensität in sichtbare Tropfenzahl umsetzen. Im Jahreszeitensystem
   // darf bei Schnee kein gleichzeitiger Regen dargestellt werden.
   const precip=Math.max(liveWeather.precipitation||0,liveWeather.rain||0);
   const liquidRain=seasonTestRaining();
@@ -7852,7 +7780,7 @@ function applyWeatherScene(){
   rainGeo.setDrawRange(0,dropCount*2);
   rainSystem.visible=!is2D && liquidRain && dropCount>0;
 
-  // Nebel im Testlabor frei regelbar.
+  // Nebelstaerke aus dem aktuellen Wetter-/Jahreszeitenzustand.
   if(seasonTestMode && seasonTestFog>0){
     scene.fog=new THREE.FogExp2(0xd9e3e4,THREE.MathUtils.lerp(.0015,.012,seasonTestFog/100));
   }else if(liveWeather.weatherCode===45 || liveWeather.weatherCode===48){
@@ -7988,7 +7916,7 @@ function loadLiveWeather(){
     const c=data.current||{};
 
     const fetchedWeather={temperature:Number(c.temperature_2m),humidity:Number(c.relative_humidity_2m),precipitation:Number(c.precipitation)||0,rain:Number(c.rain)||0,weatherCode:Number(c.weather_code)||0,cloud:Number(c.cloud_cover)||0,windSpeed:Number(c.wind_speed_10m)||0,windDirection:Number(c.wind_direction_10m)||0};
-    seasonRealWeather=fetchedWeather;if(!window.__aczoSeasonWeatherLabActive)liveWeather={...fetchedWeather};
+    seasonRealWeather=fetchedWeather;liveWeather={...fetchedWeather};
     updateWeatherText();
     updateAstronomy();
     // updateAstronomy wendet die Wetterszene bereits mit denselben Daten an.
@@ -8009,11 +7937,6 @@ function loadLiveWeather(){
 }
 
 function updateSimulationButton(){
-  if(window.__aczoSeasonWeatherLabActive){
-    simBtn.classList.add('on');
-    simBtn.textContent='🧪 Wetter: LABOR';
-    return;
-  }
   simBtn.classList.toggle('on',simulationEnabled);
   simBtn.textContent=simulationEnabled ? '🌦️ Wetter: LIVE' : '☀️ Wetter: NEUTRAL';
 }
@@ -26836,11 +26759,17 @@ function updateAnglingAimFromSettings(forceLook=true){
   updateAnglingSetupUi();
 }
 
-function setAnglingAimFromPointer(clientX,clientY,panView=false,moveX=0){
+function setAnglingAimFromPointer(clientX,clientY,panView=false,moveX=0,pointerType=''){
   if(!anglingSelection||anglingState!=='ready'||anglingCameraTransition)return;
   const rect=renderer.domElement.getBoundingClientRect();
-  const nx=THREE.MathUtils.clamp((clientX-rect.left)/Math.max(1,rect.width),0,1);
-  const ny=THREE.MathUtils.clamp((clientY-rect.top)/Math.max(1,rect.height),0,1);
+  const rawNx=THREE.MathUtils.clamp((clientX-rect.left)/Math.max(1,rect.width),0,1);
+  const rawNy=THREE.MathUtils.clamp((clientY-rect.top)/Math.max(1,rect.height),0,1);
+  const touchFine=pointerType==='touch';
+  // P28: Touch-Zielwahl bewusst traeger. Kleine Fingerbewegungen duerfen nicht
+  // sofort mehrere Meter bzw. einen grossen Kameraschwenk erzeugen.
+  const follow=touchFine?.20:.52;
+  const nx=THREE.MathUtils.lerp(Number.isFinite(anglingAimScreenX)?anglingAimScreenX:rawNx,rawNx,follow);
+  const ny=THREE.MathUtils.lerp(Number.isFinite(anglingAimScreenY)?anglingAimScreenY:rawNy,rawNy,follow);
   anglingAimScreenX=nx;anglingAimScreenY=ny;
 
   // V2.3.3: dynamische Ego-Kamera.
@@ -26856,7 +26785,7 @@ function setAnglingAimFromPointer(clientX,clientY,panView=false,moveX=0){
     const smooth=u*u*(3-2*u);
     pan=Math.sign(centered)*smooth;
   }
-  const maxViewYaw=THREE.MathUtils.degToRad(32);
+  const maxViewYaw=THREE.MathUtils.degToRad(touchFine?24:28);
   anglingViewYawOffset=pan*maxViewYaw;
   applyAnglingStraightShoreCamera(false);
 
@@ -26876,18 +26805,20 @@ function setAnglingAimFromPointer(clientX,clientY,panView=false,moveX=0){
   yaw=anglingBaseYaw+relative;
   const reach=anglingMaxCastDistance(yaw);
   if(reach<ANGLING_MIN_CAST_DISTANCE)return;
-  anglingYawOffset=relative;
-  anglingCastDistance=THREE.MathUtils.clamp(
+  const targetDistance=THREE.MathUtils.clamp(
     rawDistance,
     ANGLING_MIN_CAST_DISTANCE,
     Math.min(ANGLING_MAX_CAST_DISTANCE,reach)
   );
+  const aimFollow=touchFine?.24:.58;
+  anglingYawOffset=THREE.MathUtils.lerp(anglingYawOffset,relative,aimFollow);
+  anglingCastDistance=THREE.MathUtils.lerp(anglingCastDistance,targetDistance,aimFollow);
   updateAnglingAimFromSettings(false);
 
   // Nach dem finalen Zielpunkt den Blick sanft in dieselbe Richtung nachführen.
   // Maximal 32°, damit der künstliche Uferstreifen niemals seitlich aufreißt.
   const desiredView=THREE.MathUtils.clamp(anglingYawOffset*.68,-maxViewYaw,maxViewYaw);
-  anglingViewYawOffset=THREE.MathUtils.lerp(anglingViewYawOffset,desiredView,.55);
+  anglingViewYawOffset=THREE.MathUtils.lerp(anglingViewYawOffset,desiredView,touchFine?.18:.42);
   applyAnglingStraightShoreCamera(false);
 }
 
@@ -30842,19 +30773,38 @@ function aczoSecondaryCameraDue(lastAt,now){
   return true;
 }
 
+// P28 LIVEFENSTER-PERFORMANCE: Sekundaerkameras brauchen fuer die kleine
+// Ziel-/Posenansicht keine komplette Fernkulisse. Die teuren, weit entfernten
+// Dekogruppen werden nur fuer diesen einen Zusatzrender kurz ausgeblendet und
+// unmittelbar danach exakt auf ihren vorherigen Zustand gesetzt.
+function aczoRenderLightweightAnglingInset(cam){
+  const groups=[cloudGroup,cloudReflectionGroup,aczoOuterForestGroup,aczoSurveyedNatureGroup,
+    realBirchGroup,birdGroup,aczoWildBoarGroup,carTestGroup,personalSceneGroup,bmwX3VisitGroup];
+  const states=groups.map(g=>g?g.visible:false);
+  for(const g of groups)if(g)g.visible=false;
+  try{renderer.render(scene,cam);}
+  finally{groups.forEach((g,i)=>{if(g)g.visible=states[i];});}
+}
+
 function renderAnglingTargetAssistCamera(){
   // Platzwahl: erst anzeigen, sobald wirklich ein Ufer-/Stegpunkt gesetzt ist.
   // Wurfziel: anzeigen, solange die Angelstelle gewaehlt wird und noch keine
   // Schnur aktiv ist. Pose und Kunstkoeder benutzen damit dieselbe Zielhilfe.
   const selecting=!!(anglingMode&&anglingState==='selecting'&&anglingSelection);
   const aiming=!!(anglingMode&&anglingState==='ready'&&anglingSelection&&!anglingUi.classList.contains('line-active'));
-  if(!selecting&&!aiming){
+  // P28: Beim Kunstkoederflug bleibt dasselbe Fenster sichtbar und verfolgt
+  // den Koeder von oben. P26 hatte das Zweitrendering komplett abgeschaltet,
+  // wodurch das Fenster waehrend des Fluges leer blieb.
+  const lureFlight=!!(anglingMode&&anglingState==='casting'&&anglingSelection
+    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
+    &&anglingCinematicView==='flight'&&anglingLure.visible);
+  if(!selecting&&!aiming&&!lureFlight){
     anglingTargetAssistGroup.visible=false;
     anglingFloatZoom.classList.remove('target-assist');
     return false;
   }
 
-  const target=selecting?anglingSelection.shore:anglingSelection.aim;
+  const target=selecting?anglingSelection.shore:(lureFlight?anglingLure.position:anglingSelection.aim);
   if(!target)return false;
   const z=selecting?(Number(target.z)||0):anglingSurfaceZ(target.x,target.y);
 
@@ -30862,7 +30812,7 @@ function renderAnglingTargetAssistCamera(){
   anglingFloatZoom.classList.add('target-assist');
   anglingFloatZoom.style.display='block';
   anglingFloatZoom.setAttribute('aria-hidden','false');
-  anglingFloatCaption.textContent=selecting?'Angelplatz':'Wurfziel';
+  anglingFloatCaption.textContent=selecting?'Angelplatz':(lureFlight?'Kunstköder · Flug':'Wurfziel');
 
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return true;
@@ -30872,18 +30822,17 @@ function renderAnglingTargetAssistCamera(){
   const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
 
   anglingTargetAssistGroup.position.set(target.x,target.y,z+.055);
-  anglingTargetAssistGroup.scale.setScalar(selecting?1.15:1.0);
+  anglingTargetAssistGroup.scale.setScalar(selecting?1.15:(lureFlight?.92:1.0));
   anglingTargetAssistMat.color.setHex(aiming&&anglingAimLocked?0x69f28a:0xffe45f);
   anglingTargetAssistGroup.visible=true;
 
-  // Echte Draufsicht aus rund drei Metern ueber dem Zielpunkt. Bei der
-  // Stellenauswahl etwas weiter, damit etwas Uferumgebung zur Orientierung
-  // sichtbar bleibt; beim Wurfziel bewusst naeher.
-  const height=selecting?3.6:3.0;
+  // P28: Einheitliche Draufsicht aus rund sechs Metern. Das vergroessert den
+  // sichtbaren Orientierungsbereich auf dem kleinen iPhone-Fenster deutlich.
+  const height=6.0;
   anglingFloatCamera.position.set(target.x,target.y,z+height);
   anglingFloatCamera.up.set(0,1,0);
   anglingFloatCameraTarget.set(target.x,target.y,z);
-  anglingFloatCamera.fov=aiming?43:48;
+  anglingFloatCamera.fov=lureFlight?46:(aiming?45:48);
   anglingFloatCamera.aspect=w/h;
   anglingFloatCamera.updateProjectionMatrix();
   anglingFloatCamera.lookAt(anglingFloatCameraTarget);
@@ -30893,7 +30842,7 @@ function renderAnglingTargetAssistCamera(){
   const savedAimMarker=anglingAim3DGroup.visible;
   anglingMarkerGroup.visible=false;
   anglingAim3DGroup.visible=false;
-  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);renderer.render(scene,anglingFloatCamera);
+  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);aczoRenderLightweightAnglingInset(anglingFloatCamera);
   renderer.setScissorTest(false);renderer.setViewport(0,0,anglingFloatBufferSize.x,anglingFloatBufferSize.y);
   anglingMarkerGroup.visible=savedSelectionMarker;
   anglingAim3DGroup.visible=savedAimMarker;
@@ -30952,7 +30901,7 @@ function renderAnglingFloatCamera(){
       anglingFeedSpotMaterials[idx].opacity=.30;
     }
   }
-  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);renderer.render(scene,anglingFloatCamera);
+  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);aczoRenderLightweightAnglingInset(anglingFloatCamera);
   renderer.setScissorTest(false);renderer.setViewport(0,0,anglingFloatBufferSize.x,anglingFloatBufferSize.y);
   anglingFeedSpotMeshes.forEach((mesh,i)=>{mesh.visible=feedSpotVisibleState[i];});
   anglingFeedSpotMaterials.forEach((mat,i)=>{mat.opacity=feedSpotOpacityState[i];});
@@ -32245,7 +32194,7 @@ renderer.domElement.addEventListener('pointermove',e=>{
   if(p){
     const dx=e.clientX-p.lastX,dy=e.clientY-p.lastY;p.lastX=e.clientX;p.lastY=e.clientY;p.dragX+=dx;
     if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>8)p.moved=true;
-    if(anglingState==='ready')setAnglingAimFromPointer(e.clientX,e.clientY,true,dx);
+    if(anglingState==='ready')setAnglingAimFromPointer(e.clientX,e.clientY,true,dx,e.pointerType);
     else if(anglingState==='drilling')setAnglingDrillRodFromPointer(e.clientX,e.clientY);
     else if(anglingState==='landing'){
       setAnglingLandingNetFromPointer(e.clientX);
@@ -32259,7 +32208,7 @@ renderer.domElement.addEventListener('pointermove',e=>{
     setAnglingLureSteerFromPointer(e.clientX,e.clientY);
   }else if(!anglingUsesArtificialLure()&&!anglingUsesDeeper()&&anglingUi.classList.contains('line-active')&&e.pointerType==='mouse'){
     setAnglingFloatRodFromPointer(e.clientX,e.clientY);
-  }else if(anglingState==='ready'&&e.pointerType==='mouse'&&!anglingAimLocked)setAnglingAimFromPointer(e.clientX,e.clientY,false,0);
+  }else if(anglingState==='ready'&&e.pointerType==='mouse'&&!anglingAimLocked)setAnglingAimFromPointer(e.clientX,e.clientY,false,0,e.pointerType);
   e.preventDefault();e.stopImmediatePropagation();
 },{capture:true,passive:false});
 
@@ -32286,7 +32235,7 @@ renderer.domElement.addEventListener('pointerup',e=>{
   }
   if(start&&anglingState==='selecting'&&!start.moved&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<10)selectAnglingShore(e.clientX,e.clientY);
   else if(start&&anglingState==='ready'){
-    setAnglingAimFromPointer(e.clientX,e.clientY,false,0);anglingAimLocked=true;anglingUi.classList.add('aim-locked');
+    setAnglingAimFromPointer(e.clientX,e.clientY,false,0,e.pointerType);anglingAimLocked=true;anglingUi.classList.add('aim-locked');
     anglingActionBtn.disabled=false;anglingActionBtn.textContent='Auswerfen';setAnglingStatus('Ziel gesetzt',Math.round(anglingCastDistance)+' m');
   }
   e.preventDefault();e.stopImmediatePropagation();
@@ -32410,7 +32359,7 @@ function updateCelestialLensFlare(){
   setInlineStyle(lensFlareParts[4],'transform','translate(-50%,-50%) rotate('+angle.toFixed(2)+'deg)');
 }
 
-// ---------------- V7.25 Jahreszeiten-/Wetter-Testlabor ----------------
+// ---------------- Jahreszeiten- und Wetterdarstellung ----------------
 const seasonParticleGroup=new THREE.Group();scene.add(seasonParticleGroup);
 const seasonFlakeCount=1100,seasonLeafCount=180;
 function makeSeasonPoints(count,color,size){const arr=new Float32Array(count*3);for(let i=0;i<count;i++){arr[i*3]=(Math.random()-.5)*D.sceneW;arr[i*3+1]=(Math.random()-.5)*D.sceneH;arr[i*3+2]=2+Math.random()*55;}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(arr,3));const mat=new THREE.PointsMaterial({color,size,transparent:true,opacity:.72,depthWrite:false,sizeAttenuation:true});const pts=new THREE.Points(geo,mat);pts.visible=false;pts.renderOrder=80;seasonParticleGroup.add(pts);return pts;}
@@ -32719,104 +32668,7 @@ let aczoLastRenderedFrameAt=0;
 
 
 
-\n<script id="seasonWeatherLabLogic">
-(function(){
-  const byId=id=>document.getElementById(id);
-  const panel=byId('seasonWeatherLab'),openBtn=byId('seasonWeatherLabBtn'),closeBtn=byId('swlClose');
-  if(!panel||!openBtn)return;
 
-  const c={
-    day:byId('swlDay'),hour:byId('swlHour'),cloud:byId('swlCloud'),wind:byId('swlWind'),windDir:byId('swlWindDir'),
-    precip:byId('swlPrecip'),precipType:byId('swlPrecipType'),fog:byId('swlFog'),snow:byId('swlSnowCover'),brown:byId('swlWinterBrown')
-  };
-  const v={
-    day:byId('swlDayValue'),hour:byId('swlHourValue'),cloud:byId('swlCloudValue'),wind:byId('swlWindValue'),windDir:byId('swlWindDirValue'),
-    precip:byId('swlPrecipValue'),fog:byId('swlFogValue'),snow:byId('swlSnowCoverValue'),brown:byId('swlWinterBrownValue')
-  };
-  const status=byId('swlStatus');
-  let applyFrame=0;
-
-  function dayDate(day){
-    const d=new Date();d.setMonth(0,1);d.setHours(12,0,0,0);d.setDate(Math.max(1,Math.min(365,Math.round(Number(day)||1))));return d;
-  }
-  function dayLabel(day){return dayDate(day).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}
-  function hourLabel(hour){
-    let h=Math.max(0,Math.min(23.75,Number(hour)||0));const hh=Math.floor(h),mm=Math.round((h-hh)*60);return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-  }
-  function updateLabels(){
-    v.day.textContent=dayLabel(c.day.value)+' · Tag '+Math.round(c.day.value);v.hour.textContent=hourLabel(c.hour.value);
-    v.cloud.textContent=Math.round(c.cloud.value)+' %';v.wind.textContent=Math.round(c.wind.value)+' km/h';v.windDir.textContent=Math.round(c.windDir.value)+'°';
-    v.precip.textContent=Number(c.precip.value).toFixed(1)+' mm/h';v.fog.textContent=Math.round(c.fog.value)+' %';v.snow.textContent=Math.round(c.snow.value)+' %';v.brown.textContent=Math.round(c.brown.value)+' %';
-  }
-  function weatherCode(){
-    const type=c.precipType.value,prec=Number(c.precip.value)||0,fog=Number(c.fog.value)||0,cloud=Number(c.cloud.value)||0;
-    if(type==='snow'&&prec>0)return 71;if(type==='rain'&&prec>0)return 61;if(fog>45)return 45;if(cloud>80)return 3;if(cloud>35)return 2;if(cloud>10)return 1;return 0;
-  }
-  function applyLab(){
-    window.__aczoSeasonWeatherLabActive=true;
-    seasonTestMode=true;simulationEnabled=true;
-    seasonTestDay=Math.round(Number(c.day.value)||1);seasonTestHour=Number(c.hour.value)||0;
-    setSeasonTimeAnchor(seasonDateFromDayHour(seasonTestDay,seasonTestHour));
-    seasonTestFog=Number(c.fog.value)||0;seasonTestSnowCover=Number(c.snow.value)||0;seasonTestWinterBrown=Number(c.brown.value)||0;
-    const type=c.precipType.value,prec=Math.max(0,Number(c.precip.value)||0);
-    seasonTestPrecipType=type==='snow'?'snow':'rain';
-    liveWeather={...liveWeather,cloud:Number(c.cloud.value)||0,windSpeed:Number(c.wind.value)||0,windDirection:Number(c.windDir.value)||0,
-      precipitation:type==='none'?0:prec,rain:type==='rain'?prec:0,weatherCode:weatherCode()};
-    if(typeof updateSimulationButton==='function')updateSimulationButton();
-    if(typeof updateWeatherText==='function')updateWeatherText();
-    if(typeof updateAstronomy==='function')updateAstronomy();else if(typeof applyWeatherScene==='function')applyWeatherScene();
-    const d=seasonDayOfDate(viewerNow());
-    if(typeof updateAczoSurveyedNatureSeason==='function')updateAczoSurveyedNatureSeason(d);
-    if(typeof updateRealBirchSeason==='function')updateRealBirchSeason(d);
-    if(typeof updateSeasonTestVisuals==='function')updateSeasonTestVisuals(0);
-    if(typeof updateClubFlagPole==='function')updateClubFlagPole(0);
-    if(typeof renderer!=='undefined'&&renderer.shadowMap)renderer.shadowMap.needsUpdate=true;
-    openBtn.classList.add('active');
-    status.classList.add('active');status.textContent='LABOR AKTIV · '+dayLabel(seasonTestDay)+' · '+hourLabel(seasonTestHour)+' · '+Math.round(liveWeather.cloud)+' % Wolken';
-  }
-  function scheduleApply(){updateLabels();if(!window.__aczoSeasonWeatherLabActive)return;cancelAnimationFrame(applyFrame);applyFrame=requestAnimationFrame(applyLab);}
-
-  function populateFromCurrent(){
-    const now=viewerNow();c.day.value=seasonDayOfDate(now);c.hour.value=seasonHourOfDate(now);
-    c.cloud.value=Math.round(Number(liveWeather.cloud)||0);c.wind.value=Math.round(Number(liveWeather.windSpeed)||0);c.windDir.value=Math.round(Number(liveWeather.windDirection)||0);
-    const snowing=typeof seasonTestSnowing==='function'&&seasonTestSnowing();const rain=Math.max(Number(liveWeather.precipitation)||0,Number(liveWeather.rain)||0);
-    c.precip.value=Math.min(8,rain);c.precipType.value=rain<=.01?'none':(snowing?'snow':'rain');c.fog.value=Number(seasonTestFog)||0;c.snow.value=Number(seasonTestSnowCover)||0;c.brown.value=Number(seasonTestWinterBrown)||0;updateLabels();
-  }
-  function restoreRealtime(){
-    window.__aczoSeasonWeatherLabActive=false;
-    const now=new Date();seasonTestMode=true;seasonTestDay=seasonDayOfDate(now);seasonTestHour=seasonHourOfDate(now);setSeasonTimeAnchor(now);
-    seasonTestFog=0;seasonTestSnowCover=0;seasonTestPrecipType='rain';seasonTestWinterBrown=0;
-    if(seasonRealWeather)liveWeather={...seasonRealWeather};
-    simulationEnabled=true;
-    if(typeof updateSimulationButton==='function')updateSimulationButton();
-    if(typeof updateWeatherText==='function')updateWeatherText();
-    if(typeof updateAstronomy==='function')updateAstronomy();else if(typeof applyWeatherScene==='function')applyWeatherScene();
-    if(typeof updateAczoSurveyedNatureSeason==='function')updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
-    if(typeof updateRealBirchSeason==='function')updateRealBirchSeason(seasonDayOfDate(viewerNow()));
-    if(typeof updateSeasonTestVisuals==='function')updateSeasonTestVisuals(0);
-    if(typeof renderer!=='undefined'&&renderer.shadowMap)renderer.shadowMap.needsUpdate=true;
-    openBtn.classList.remove('active');status.classList.remove('active');status.textContent='LABOR INAKTIV · Echtzeit';populateFromCurrent();
-  }
-
-  const weatherPresets={
-    clear:{cloud:4,wind:4,dir:245,precip:0,type:'none',fog:0,snow:0},
-    cloudy:{cloud:86,wind:12,dir:250,precip:0,type:'none',fog:0,snow:0},
-    rain:{cloud:96,wind:18,dir:235,precip:3.2,type:'rain',fog:8,snow:0},
-    storm:{cloud:100,wind:52,dir:225,precip:6.5,type:'rain',fog:12,snow:0},
-    snow:{cloud:92,wind:16,dir:40,precip:2.8,type:'snow',fog:12,snow:75},
-    fog:{cloud:72,wind:2,dir:180,precip:0,type:'none',fog:88,snow:0}
-  };
-  panel.querySelectorAll('[data-season-day]').forEach(b=>b.addEventListener('click',()=>{c.day.value=b.dataset.seasonDay;updateLabels();applyLab();}));
-  panel.querySelectorAll('[data-hour]').forEach(b=>b.addEventListener('click',()=>{c.hour.value=b.dataset.hour;updateLabels();applyLab();}));
-  panel.querySelectorAll('[data-weather]').forEach(b=>b.addEventListener('click',()=>{const p=weatherPresets[b.dataset.weather];if(!p)return;c.cloud.value=p.cloud;c.wind.value=p.wind;c.windDir.value=p.dir;c.precip.value=p.precip;c.precipType.value=p.type;c.fog.value=p.fog;c.snow.value=p.snow;updateLabels();applyLab();}));
-  Object.values(c).forEach(el=>{if(!el)return;el.addEventListener('input',scheduleApply);el.addEventListener('change',scheduleApply);});
-  byId('swlApply').addEventListener('click',applyLab);byId('swlRealtime').addEventListener('click',restoreRealtime);
-  openBtn.addEventListener('click',()=>{populateFromCurrent();panel.classList.add('open');panel.setAttribute('aria-hidden','false');});
-  closeBtn.addEventListener('click',()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');});
-  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open')){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}});
-  populateFromCurrent();
-})();
-</script>
 <!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
 </body>
 </html>
