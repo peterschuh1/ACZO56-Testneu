@@ -1622,6 +1622,12 @@ html,body{
    Pose = Schwimmerkamera. Kunstköder = Rute/Rolle. */
 .angling-reel-zoom{display:none!important}
 .angling-ui.artificial-lure .angling-float-zoom{display:none!important}
+/* P27: Das vorhandene Schwimmer-Livefenster dient vor dem Wurf auch als
+   Zielhilfe. Gleiche Position/Abmessung, nur anderer Inhalt und Titel. */
+.angling-float-zoom.target-assist{display:block!important;visibility:visible!important}
+.angling-float-zoom.target-assist::before{content:"ZIEL · DRAUFSICHT"!important}
+.angling-float-zoom.target-assist .angling-float-caption{display:block!important}
+
 .angling-ui.artificial-lure.line-active .angling-reel-zoom{display:block!important;left:12px!important;bottom:88px!important}
 .angling-ui.is-returning .angling-float-zoom,
 .angling-ui.is-returning .angling-reel-zoom{display:none!important;visibility:hidden!important}
@@ -21497,6 +21503,15 @@ anglingMarkerArrow.renderOrder=61;
 anglingMarkerGroup.add(anglingMarkerArrow);
 keepAboveAnglingPanoramaShadows(anglingMarkerGroup,1465);
 
+// P26 MOBILE: Der gelbe Stellenauswahl-Marker war in der weit herausgezoomten
+// Draufsicht auf dem iPhone zu klein. Nur seine Anzeige wird vergroessert, die
+// exakt berechnete Uferposition und Blickrichtung bleiben unveraendert.
+function updateAnglingSelectionMarkerScale(){
+  const coarse=(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)||window.innerWidth<=700;
+  const selecting=!!(anglingMode&&anglingState==='selecting');
+  anglingMarkerGroup.scale.setScalar(selecting?(coarse?2.35:1.55):1);
+}
+
 // V6.42: echtes 3D-Zielkreuz auf der Wasseroberfläche. Es hat eine feste
 // Größe in der Welt und wird deshalb durch die Perspektive automatisch kleiner,
 // je weiter der Zielpunkt entfernt ist.
@@ -21524,6 +21539,20 @@ function updateAnglingAim3DMarker(){
   const pulse=locked?1+.05*Math.sin(performance.now()*.007):1;
   anglingAim3DGroup.scale.setScalar(pulse);
 }
+
+// P27: Separater, kompakter Marker nur fuer die Draufsicht im bestehenden
+// Schwimmer-Livefenster. So bleibt der grosse Auswahlpfeil der Hauptansicht
+// unveraendert und das Inset kann aus ca. 3 m Hoehe sauber framed werden.
+const anglingTargetAssistGroup=new THREE.Group();
+anglingTargetAssistGroup.visible=false;anglingScene.add(anglingTargetAssistGroup);
+const anglingTargetAssistMat=new THREE.MeshBasicMaterial({color:0xffe45f,transparent:true,opacity:.98,depthTest:false,depthWrite:false,side:THREE.DoubleSide});
+const anglingTargetAssistRing=new THREE.Mesh(new THREE.RingGeometry(.32,.46,40),anglingTargetAssistMat);
+anglingTargetAssistRing.renderOrder=250;anglingTargetAssistGroup.add(anglingTargetAssistRing);
+const anglingTargetAssistH=new THREE.Mesh(new THREE.BoxGeometry(.96,.045,.014),anglingTargetAssistMat);
+anglingTargetAssistH.renderOrder=250;anglingTargetAssistGroup.add(anglingTargetAssistH);
+const anglingTargetAssistV=new THREE.Mesh(new THREE.BoxGeometry(.045,.96,.014),anglingTargetAssistMat);
+anglingTargetAssistV.renderOrder=250;anglingTargetAssistGroup.add(anglingTargetAssistV);
+keepAboveAnglingPanoramaShadows(anglingTargetAssistGroup,1480);
 
 // V6.43: Futterball-Ziel als echtes 3D-Zielkreuz auf der Wasseroberflaeche.
 const anglingFeedAim3DGroup=new THREE.Group();
@@ -26987,7 +27016,7 @@ function selectAnglingShore(clientX,clientY){
     anglingMarkerGroup.position.set(pierSelection.shore.x,pierSelection.shore.y,pierSelection.shore.z+.055);
     anglingMarkerGroup.rotation.set(0,0,Math.atan2(-pierSelection.inward.x,pierSelection.inward.y));
     camera.up.set(0,1,0);camera.position.x=0;camera.position.y=0;controls.target.set(0,0,0);camera.lookAt(controls.target);camera.updateMatrixWorld(true);
-    anglingMarkerGroup.visible=true;anglingConfirmBtn.disabled=false;
+    anglingMarkerGroup.visible=true;updateAnglingSelectionMarkerScale();anglingConfirmBtn.disabled=false;
     anglingSelectTitle.textContent='✅ Angelplatz auf dem Steg';
     anglingSelectText.textContent=pierSelection.boatPierSpot
       ?(pierSelection.pierLabel+' · Der komplette Bootssteg ist als Trefferfläche auswählbar.')
@@ -27035,7 +27064,7 @@ function selectAnglingShore(clientX,clientY){
   camera.position.x=0;camera.position.y=0;
   controls.target.set(0,0,0);
   camera.lookAt(controls.target);camera.updateMatrixWorld(true);
-  anglingMarkerGroup.visible=true;
+  anglingMarkerGroup.visible=true;updateAnglingSelectionMarkerScale();
   anglingConfirmBtn.disabled=false;
   anglingSelectTitle.textContent='✅ Angelplatz markiert';
   anglingSelectText.textContent='Der gelbe Pfeil steht 90° zur lokalen Uferlinie und zeigt gerade zum gegenüberliegenden Ufer.';
@@ -29610,6 +29639,7 @@ function startAnglingCast(){
   anglingUi.classList.add('line-active');
   updateAnglingLiveHud();updateAnglingFeedUi();
   anglingState='casting';anglingStateTime=0;
+  updateAnglingSelectionMarkerScale();
   // Vor dem Speichern noch einmal exakt die kanonische Gerade herstellen.
   applyAnglingStraightShoreCamera(true);
   anglingShoreCameraPos.copy(camera.position);
@@ -30812,7 +30842,69 @@ function aczoSecondaryCameraDue(lastAt,now){
   return true;
 }
 
+function renderAnglingTargetAssistCamera(){
+  // Platzwahl: erst anzeigen, sobald wirklich ein Ufer-/Stegpunkt gesetzt ist.
+  // Wurfziel: anzeigen, solange die Angelstelle gewaehlt wird und noch keine
+  // Schnur aktiv ist. Pose und Kunstkoeder benutzen damit dieselbe Zielhilfe.
+  const selecting=!!(anglingMode&&anglingState==='selecting'&&anglingSelection);
+  const aiming=!!(anglingMode&&anglingState==='ready'&&anglingSelection&&!anglingUi.classList.contains('line-active'));
+  if(!selecting&&!aiming){
+    anglingTargetAssistGroup.visible=false;
+    anglingFloatZoom.classList.remove('target-assist');
+    return false;
+  }
+
+  const target=selecting?anglingSelection.shore:anglingSelection.aim;
+  if(!target)return false;
+  const z=selecting?(Number(target.z)||0):anglingSurfaceZ(target.x,target.y);
+
+  anglingFloatZoom.classList.remove('lure-cam','cast-cam');
+  anglingFloatZoom.classList.add('target-assist');
+  anglingFloatZoom.style.display='block';
+  anglingFloatZoom.setAttribute('aria-hidden','false');
+  anglingFloatCaption.textContent=selecting?'Angelplatz':'Wurfziel';
+
+  const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
+  if(zoomRect.width<20||zoomRect.height<20)return true;
+  renderer.getSize(anglingFloatBufferSize);
+  const sx=anglingFloatBufferSize.x/Math.max(1,canvasRect.width),sy=anglingFloatBufferSize.y/Math.max(1,canvasRect.height);
+  const x=Math.round((zoomRect.left-canvasRect.left+2)*sx),y=Math.round((canvasRect.bottom-zoomRect.bottom+2)*sy);
+  const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
+
+  anglingTargetAssistGroup.position.set(target.x,target.y,z+.055);
+  anglingTargetAssistGroup.scale.setScalar(selecting?1.15:1.0);
+  anglingTargetAssistMat.color.setHex(aiming&&anglingAimLocked?0x69f28a:0xffe45f);
+  anglingTargetAssistGroup.visible=true;
+
+  // Echte Draufsicht aus rund drei Metern ueber dem Zielpunkt. Bei der
+  // Stellenauswahl etwas weiter, damit etwas Uferumgebung zur Orientierung
+  // sichtbar bleibt; beim Wurfziel bewusst naeher.
+  const height=selecting?3.6:3.0;
+  anglingFloatCamera.position.set(target.x,target.y,z+height);
+  anglingFloatCamera.up.set(0,1,0);
+  anglingFloatCameraTarget.set(target.x,target.y,z);
+  anglingFloatCamera.fov=aiming?43:48;
+  anglingFloatCamera.aspect=w/h;
+  anglingFloatCamera.updateProjectionMatrix();
+  anglingFloatCamera.lookAt(anglingFloatCameraTarget);
+
+  // Den grossen Hauptansichtsmarker im Inset nicht doppelt zeigen.
+  const savedSelectionMarker=anglingMarkerGroup.visible;
+  const savedAimMarker=anglingAim3DGroup.visible;
+  anglingMarkerGroup.visible=false;
+  anglingAim3DGroup.visible=false;
+  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);renderer.render(scene,anglingFloatCamera);
+  renderer.setScissorTest(false);renderer.setViewport(0,0,anglingFloatBufferSize.x,anglingFloatBufferSize.y);
+  anglingMarkerGroup.visible=savedSelectionMarker;
+  anglingAim3DGroup.visible=savedAimMarker;
+  anglingTargetAssistGroup.visible=false;
+  return true;
+}
+
 function renderAnglingFloatCamera(){
+  if(renderAnglingTargetAssistCamera())return;
+  anglingTargetAssistGroup.visible=false;
+  anglingFloatZoom.classList.remove('target-assist');
   if(anglingState==='fast-retrieving'||anglingCinematicView==='reset-return'||anglingUi.classList.contains('is-returning')){
     anglingFloatZoom.style.display='none';
     anglingFloatZoom.setAttribute('aria-hidden','true');
@@ -30867,6 +30959,23 @@ function renderAnglingFloatCamera(){
 }
 
 function renderAnglingReelCamera(){
+  // P27: Vor dem Kunstkoederwurf gehoert die feste Livefenster-Position der
+  // Ziel-Draufsicht. Das Rollenfenster beginnt erst mit der aktiven Schnur.
+  if(anglingMode&&anglingState==='ready'&&anglingSelection&&!anglingUi.classList.contains('line-active')){
+    anglingReelZoom.style.display='none';
+    anglingReelZoom.setAttribute('aria-hidden','true');
+    return;
+  }
+  // P26 PERFORMANCE: Beim Kunstkoeder-Auswurf rendert die Hauptkamera bereits
+  // die schnelle Flugverfolgung. Das Rollenfenster wuerde dieselbe grosse Szene
+  // parallel ein zweites Mal zeichnen. Fuer diese 1,18 Sekunden bleibt es daher
+  // aus und wird unmittelbar nach dem Auftreffen wieder normal aktiviert.
+  const aczoReelCastFlight=anglingState==='casting'&&anglingCinematicView==='flight';
+  if(aczoReelCastFlight){
+    anglingReelZoom.style.display='none';
+    anglingReelZoom.setAttribute('aria-hidden','true');
+    return;
+  }
   if(anglingState==='fast-retrieving'||anglingCinematicView==='reset-return'||anglingUi.classList.contains('is-returning')){
     anglingReelZoom.style.display='none';
     anglingReelZoom.setAttribute('aria-hidden','true');
@@ -30875,6 +30984,8 @@ function renderAnglingReelCamera(){
   if(!anglingUsesArtificialLure())return;
   const reelStates=['casting','lure-waiting','lure-retrieving','lure-attack','lure-missed','strike'];
   if(!anglingMode||!reelStates.includes(anglingState)||!anglingUi.classList.contains('line-active'))return;
+  anglingReelZoom.style.display='';
+  anglingReelZoom.setAttribute('aria-hidden','false');
   const aczoReelNow=performance.now();
   if(!aczoSecondaryCameraDue(aczoLastAnglingReelRenderAt,aczoReelNow))return;
   aczoLastAnglingReelRenderAt=aczoReelNow;
@@ -31333,6 +31444,7 @@ function updateAnglingMode(dt){
   if(anglingUi.classList.contains('main-menu-open'))syncAnglingHallOfFameMenuAvailability();
   updateAnglingTimeAvailability();
   anglingStateTime+=dt;
+  if(anglingState==='selecting')updateAnglingSelectionMarkerScale();
   // V8.49: Die aufgesetzte Ufer-/Angelstellen-Geometrie darf in echter
   // Unterwasseransicht (Kunstköder) niemals sichtbar bleiben. Oberhalb der
   // Wasseroberfläche und in normalen Uferphasen bleibt sie unverändert aktiv.
@@ -32322,9 +32434,16 @@ let aczoLastRenderedFrameAt=0;
  // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
  // Wald-/Wasser-Renderpasses pro Sekunde. Die Ruheauflösung bleibt unverändert.
  updateAczoMapGestureResolution();
- const aczoTargetFps=aczoInteractive
-   ?(ACZO_MOBILE_PERF?30:32)
-   :(ACZO_MOBILE_PERF?18:16);
+ // P26: Die Kunstkoeder-Flugkamera sitzt sehr nah am bewegten Koeder. Fuer
+ // diese kurze Phase bekommt sie ein hoeheres Framebudget. Gleichzeitig setzt
+ // P26 das teure zweite Vollrendering des Rollen-Livefensters waehrend des
+ // Fluges aus, sodass die Gesamtlast dabei sogar sinkt.
+ const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
+   &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
+   &&anglingCinematicView==='flight');
+ const aczoTargetFps=aczoArtificialCastFlight
+   ?(ACZO_MOBILE_PERF?40:46)
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
