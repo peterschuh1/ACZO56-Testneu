@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P66 · NATIVE RAF TEST</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -33073,29 +33073,27 @@ const clock=new THREE.Clock();
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
-// P66 iOS RESUME-FIX:
-// Nach Screenshot/App-Wechsel kann WebKit den naechsten RAF mit einem alten
-// Zeitstempel bzw. grosser Pause liefern. Wir verwerfen ausschliesslich diesen
-// Resume-Sprung und starten Clock/Framebudget sauber neu. Kein Renderer-Rebuild,
-// kein DPR-Wechsel und keine Aenderung an Wasser, Schatten oder Spielsystemen.
-let aczoResumeResetFrames=0;
-function aczoResetRenderTimingAfterResume(){
-  aczoLastRenderedFrameAt=0;
-  aczoMapGestureFrame=0;
-  activeViewerPointers.clear();
-  try{ clock.stop(); clock.start(); }catch(err){}
-  aczoResumeResetFrames=2;
+let aczoNativeTestLastRaf=0, aczoNativeTestRafSum=0, aczoNativeTestRafN=0;
+let aczoNativeTestMainSum=0, aczoNativeTestMainN=0, aczoNativeTestLastUi=0;
+let aczoNativeTestPanel=null;
+function aczoNativeTestEnsurePanel(){
+ if(aczoNativeTestPanel)return;
+ const p=document.createElement('div');
+ p.id='aczo-native-raf-test';
+ p.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
+ p.textContent='NATIVE RAF TEST\nFPS --\nRAF -- ms\nMainJS -- ms';
+ document.body.appendChild(p); aczoNativeTestPanel=p;
 }
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible')aczoResetRenderTimingAfterResume();
-});
-window.addEventListener('pageshow',aczoResetRenderTimingAfterResume);
-window.addEventListener('focus',()=>{
-  if(document.visibilityState==='visible')aczoResetRenderTimingAfterResume();
-});
+setTimeout(aczoNativeTestEnsurePanel,500);
 
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
+ const aczoNativeTestMainStart=performance.now();
+ if(aczoNativeTestLastRaf){
+   const gap=frameNow-aczoNativeTestLastRaf;
+   aczoNativeTestRafSum+=gap; aczoNativeTestRafN++;
+ }
+ aczoNativeTestLastRaf=frameNow;
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33115,13 +33113,9 @@ window.addEventListener('focus',()=>{
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- const aczoTargetFps=aczoArtificialCastFlight
-   ?(ACZO_MOBILE_PERF?40:46)
-   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
- const aczoFrameGap=1000/aczoTargetFps;
- if(aczoResumeResetFrames<=0 && aczoLastRenderedFrameAt && frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
+ // P66 NATIVE RAF TEST: kein eigener 18/30/40-FPS-Deckel.
+ // Der Browser darf jeden requestAnimationFrame zeichnen.
  aczoLastRenderedFrameAt=frameNow;
- if(aczoResumeResetFrames>0)aczoResumeResetFrames--;
 
  const rawDt=clock.getDelta();
  // Nach App-Wechseln oder einzelnen Safari-Aussetzern darf kein riesiger
@@ -33395,6 +33389,16 @@ window.addEventListener('focus',()=>{
  renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
   renderAnglingReelCamera();
  updateViewerDebug(rawDt);
+ const aczoNativeTestMainMs=performance.now()-aczoNativeTestMainStart;
+ aczoNativeTestMainSum+=aczoNativeTestMainMs; aczoNativeTestMainN++;
+ if(aczoNativeTestPanel&&frameNow-aczoNativeTestLastUi>=750){
+   aczoNativeTestLastUi=frameNow;
+   const rafAvg=aczoNativeTestRafN?aczoNativeTestRafSum/aczoNativeTestRafN:0;
+   const mainAvg=aczoNativeTestMainN?aczoNativeTestMainSum/aczoNativeTestMainN:0;
+   const fps=rafAvg?1000/rafAvg:0;
+   aczoNativeTestPanel.textContent='NATIVE RAF TEST\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
+   aczoNativeTestRafSum=0; aczoNativeTestRafN=0; aczoNativeTestMainSum=0; aczoNativeTestMainN=0;
+ }
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
