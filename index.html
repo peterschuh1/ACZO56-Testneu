@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P70 SHADOW OPT · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P71 SHADOW OPT · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3952,7 +3952,7 @@ html,body{
  min-width:64px;height:34px;padding:0 9px;border-radius:8px;
  border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.10);
  color:#fff;font:800 10px system-ui,-apple-system,sans-serif;
- touch-action:manipulation
+ touch-action:manipulation;pointer-events:auto;-webkit-user-select:none;user-select:none
 }
 #aczoP69TimeToggle button.active{background:rgba(206,161,45,.84);color:#fff}
 #aczoP69TimeToggle button.night.active{background:rgba(54,77,126,.90)}
@@ -4598,7 +4598,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P70 SHADOW OPT';
+const VIEWER_VERSION='ACZO56 · P71 SHADOW OPT';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33403,29 +33403,55 @@ let aczoMapGestureFrame=0;
  schedulePersonalCampScene();
 })();
 
-// P70: einfacher Tag/Nacht-Schalter. Nur Testzeit, keine Wetter-/Saisonlogik verändert.
+// P71: einfacher Tag/Nacht-Schalter. DOM-sicher initialisiert.
 (()=>{
- const day=document.getElementById('aczoP69DayBtn');
- const night=document.getElementById('aczoP69NightBtn');
- const setMode=(hour)=>{
-   aczoP69ForcedHour=hour;
-   day?.classList.toggle('active',hour===13);
-   night?.classList.toggle('active',hour===1);
-   try{updateAstronomy();}catch(err){}
-   try{renderer.shadowMap.needsUpdate=true;}catch(err){}
- };
- day?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setMode(aczoP69ForcedHour===13?null:13);});
- night?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setMode(aczoP69ForcedHour===1?null:1);});
+ function initAczoP71TimeToggle(){
+   const day=document.getElementById('aczoP69DayBtn');
+   const night=document.getElementById('aczoP69NightBtn');
+   const host=document.getElementById('aczoP69TimeToggle');
+   if(!day||!night||!host)return;
 
- const host=document.getElementById('aczoP69TimeToggle');
- function syncVisibility(){
-   if(!host)return;
-   const in2D=(typeof is2D!=='undefined')?!!is2D:false;
-   const fishing=(typeof anglingMode!=='undefined')?!!anglingMode:false;
-   host.style.display=(!in2D&&!fishing)?'flex':'none';
+   const setMode=(hour)=>{
+     aczoP69ForcedHour=hour;
+     day.classList.toggle('active',hour===13);
+     night.classList.toggle('active',hour===1);
+     try{updateAstronomy();}catch(err){}
+     try{
+       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
+         renderer.shadowMap.needsUpdate=true;
+       }
+     }catch(err){}
+   };
+
+   const bindTap=(btn,hour)=>{
+     const handler=(e)=>{
+       e.preventDefault();
+       e.stopPropagation();
+       if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+       setMode(aczoP69ForcedHour===hour?null:hour);
+     };
+     btn.addEventListener('pointerup',handler,{passive:false});
+     btn.addEventListener('click',handler,{passive:false});
+     btn.addEventListener('touchend',handler,{passive:false});
+   };
+
+   bindTap(day,13);
+   bindTap(night,1);
+
+   function syncVisibility(){
+     const in2D=(typeof is2D!=='undefined')?!!is2D:false;
+     const fishing=(typeof anglingMode!=='undefined')?!!anglingMode:false;
+     host.style.display=(!in2D&&!fishing)?'flex':'none';
+   }
+   syncVisibility();
+   window.setInterval(syncVisibility,350);
  }
- syncVisibility();
- window.setInterval(syncVisibility,350);
+
+ if(document.readyState==='loading'){
+   document.addEventListener('DOMContentLoaded',initAczoP71TimeToggle,{once:true});
+ }else{
+   initAczoP71TimeToggle();
+ }
 })();
 
 // P70 SHADOW OPT ---------------------------------------------------------
