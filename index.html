@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P63 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P64 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -2472,11 +2472,18 @@ html,body{
 .angling-daily-quest-intro.show{display:block;animation:anglingDailyQuestIntroIn .42s cubic-bezier(.2,.8,.2,1) both}
 @keyframes anglingDailyQuestIntroIn{from{opacity:0;transform:translate(-50%,-46%) scale(.94);filter:blur(5px)}to{opacity:1;transform:translate(-50%,-50%) scale(1);filter:blur(0)}}
 .angling-daily-quest-intro-card{
-  border-radius:22px;border:1px solid rgba(238,255,244,.72);
+  position:relative;border-radius:22px;border:1px solid rgba(238,255,244,.72);
   background:linear-gradient(180deg,rgba(7,45,33,.97),rgba(4,27,29,.98));
   box-shadow:0 20px 70px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.05);
   padding:18px 20px 16px;backdrop-filter:blur(9px)
 }
+.angling-daily-quest-intro-close{
+  position:absolute;right:9px;top:8px;z-index:3;width:30px;height:30px;padding:0;
+  display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.48);
+  background:rgba(0,0,0,.28);color:#fff;font-size:23px;line-height:1;font-weight:500;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent
+}
+.angling-daily-quest-intro-close:active{transform:scale(.94)}
 .angling-daily-quest-intro-head{text-align:center;margin-bottom:13px}
 .angling-daily-quest-intro-head small{display:block;font-size:9px;font-weight:1000;letter-spacing:.14em;color:#86c9ad}
 .angling-daily-quest-intro-head strong{display:block;margin-top:4px;font-size:clamp(21px,3.4vw,34px);color:#ffe375;line-height:1.05}
@@ -4357,6 +4364,7 @@ html,body{
      <div id="anglingIntroSlogan" class="angling-intro-slogan" aria-hidden="true"><strong>ACZO56</strong><span>Rute raus, der Spaß beginnt!</span></div>
      <div id="anglingDailyQuestIntro" class="angling-daily-quest-intro" aria-hidden="true" role="dialog" aria-label="Heutige Tagesaufgaben">
        <div class="angling-daily-quest-intro-card">
+         <button id="anglingDailyQuestIntroClose" class="angling-daily-quest-intro-close" type="button" aria-label="Tagesaufgaben schließen">×</button>
          <div class="angling-daily-quest-intro-head"><small>HEUTE AM VEREINSWEIHER</small><strong>🎯 Tagesaufgaben</strong><div id="anglingDailyQuestIntroDate" class="angling-daily-quest-date"></div></div>
          <div id="anglingDailyQuestIntroList" class="angling-daily-quest-list"></div>
          <div class="angling-daily-quest-footer"><span>Alle drei geschafft</span><strong>🏆 +25 EP Tagesbonus</strong></div>
@@ -4574,7 +4582,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P63';
+const VIEWER_VERSION='ACZO56 · P64';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -18462,7 +18470,7 @@ function aczoSmallPierSelectionFromPoint(point){
     pier.shore.y+pier.inward.y*.52,
     pier.topZ+.025
   );
-  const cameraPos=shore.clone();cameraPos.z=shore.z+1.595;
+  const cameraPos=shore.clone().addScaledVector(inward,-.24);cameraPos.z=shore.z+1.52;
   const aim=anglingCenterInitialAim(shore,inward);
   const lookTarget=anglingStraightLookTarget(cameraPos,inward,new THREE.Vector3());
   return {
@@ -18486,7 +18494,7 @@ function eastBoatPierSelectionFromPoint(point){
   const footX=THREE.MathUtils.clamp(localX,-1.62,1.62);
   const shore=eastBoatPierLocalToWorld(footX,1.08,EAST_BOAT_PIER_PLATFORM_TOP_Z+.025);
   const inward=new THREE.Vector3(EAST_BOAT_PIER_INWARD.x,EAST_BOAT_PIER_INWARD.y,0);
-  const cameraPos=shore.clone();cameraPos.z=shore.z+1.595;
+  const cameraPos=shore.clone().addScaledVector(inward,-.38);cameraPos.z=shore.z+1.52;
   const aim=anglingCenterInitialAim(shore,inward);
   const lookTarget=anglingStraightLookTarget(cameraPos,inward,new THREE.Vector3());
   return {
@@ -18524,7 +18532,8 @@ function northPierSelectionFromPoint(point){
     inward=new THREE.Vector3(-NORTH_PIER_SIDE.x,-NORTH_PIER_SIDE.y,0);
   }
   const shore=foot.clone();
-  const cameraPos=foot.clone();cameraPos.z=foot.z+1.595;
+  const pierBack=(id==='tip'?.34:.18);
+  const cameraPos=foot.clone().addScaledVector(inward,-pierBack);cameraPos.z=foot.z+1.52;
   const aim=anglingCenterInitialAim(shore,inward);
   const lookTarget=anglingStraightLookTarget(cameraPos,inward,new THREE.Vector3());
   return {shore,inward,aim,cameraPos,lookTarget,shoreNumber:2,pierSpot:id,pierLabel:label};
@@ -23431,6 +23440,7 @@ const anglingTimeBackwardLeft=document.getElementById('anglingTimeBackwardLeft')
 const anglingTimeStart=document.getElementById('anglingTimeStart');
 const anglingIntroSlogan=document.getElementById('anglingIntroSlogan');
 const anglingDailyQuestIntro=document.getElementById('anglingDailyQuestIntro');
+const anglingDailyQuestIntroClose=document.getElementById('anglingDailyQuestIntroClose');
 const anglingDailyQuestIntroDate=document.getElementById('anglingDailyQuestIntroDate');
 const anglingDailyQuestIntroList=document.getElementById('anglingDailyQuestIntroList');
 const anglingDailyQuestToast=document.getElementById('anglingDailyQuestToast');
@@ -27154,14 +27164,88 @@ function anglingShoreHitRadiusWorld(clientX,clientY){
   return THREE.MathUtils.clamp(worldRadius,coarse?9.5:7.5,coarse?13.5:10.0);
 }
 
-function selectAnglingShore(clientX,clientY){
-  if(!anglingMode||anglingState!=='selecting') return;
+let anglingSelectionMagnetUntil=0;
+let anglingSelectionMagnetKey='';
+
+function aczoP64PierSelectionKey(sel){
+  if(!sel)return '';
+  if(sel.boatPierSpot)return 'boat';
+  if(sel.smallPierNumber)return 'small-'+sel.smallPierNumber;
+  return sel.pierSpot?'north-'+sel.pierSpot:'';
+}
+function aczoP64MagneticPierSelection(point){
+  if(!point)return null;
+  let hit=(typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(point):null)
+    ||(typeof aczoSmallPierSelectionFromPoint==='function'?aczoSmallPierSelectionFromPoint(point):null)
+    ||(typeof northPierSelectionFromPoint==='function'?northPierSelectionFromPoint(point):null);
+  if(hit)return hit;
+
+  let best=null,bestD2=Infinity;
+  if(typeof aczoSmallPierData!=='undefined'){
+    for(const pier of aczoSmallPierData){
+      const cx=pier.shore.x+pier.inward.x*.52,cy=pier.shore.y+pier.inward.y*.52;
+      const d2=(point.x-cx)**2+(point.y-cy)**2;
+      if(d2<bestD2){bestD2=d2;best={pier,cx,cy};}
+    }
+  }
+  if(best&&bestD2<=3.1*3.1){
+    hit=aczoSmallPierSelectionFromPoint(new THREE.Vector3(best.cx,best.cy,best.pier.topZ+.025));
+    if(hit)return hit;
+  }
+
+  if(typeof EAST_BOAT_PIER_SHORE!=='undefined'){
+    const rx=point.x-EAST_BOAT_PIER_SHORE.x,ry=point.y-EAST_BOAT_PIER_SHORE.y;
+    const lx=rx*EAST_BOAT_PIER_TANGENT.x+ry*EAST_BOAT_PIER_TANGENT.y;
+    const ly=rx*EAST_BOAT_PIER_INWARD.x+ry*EAST_BOAT_PIER_INWARD.y;
+    const dx=Math.max(-2.65-lx,0,lx-2.75),dy=Math.max(-.65-ly,0,ly-2.25);
+    if(Math.hypot(dx,dy)<=2.4){
+      const probe=eastBoatPierLocalToWorld(
+        THREE.MathUtils.clamp(lx,-2.55,2.65),
+        THREE.MathUtils.clamp(ly,-.55,2.15),
+        EAST_BOAT_PIER_PLATFORM_TOP_Z+.025
+      );
+      hit=eastBoatPierSelectionFromPoint(probe);
+      if(hit)return hit;
+    }
+  }
+
+  if(typeof NORTH_PIER_SHORE!=='undefined'){
+    const rx=point.x-NORTH_PIER_SHORE.x,ry=point.y-NORTH_PIER_SHORE.y;
+    const along=rx*NORTH_PIER_AXIS.x+ry*NORTH_PIER_AXIS.y;
+    const lateral=rx*NORTH_PIER_SIDE.x+ry*NORTH_PIER_SIDE.y;
+    const t=THREE.MathUtils.clamp(along/NORTH_PIER_LENGTH,0,1);
+    const nearestAlong=t*NORTH_PIER_LENGTH;
+    if(Math.hypot(along-nearestAlong,lateral)<=2.8){
+      const probe=new THREE.Vector3(
+        NORTH_PIER_SHORE.x+NORTH_PIER_AXIS.x*nearestAlong+NORTH_PIER_SIDE.x*THREE.MathUtils.clamp(lateral,-1.2,1.2),
+        NORTH_PIER_SHORE.y+NORTH_PIER_AXIS.y*nearestAlong+NORTH_PIER_SIDE.y*THREE.MathUtils.clamp(lateral,-1.2,1.2),
+        .1
+      );
+      hit=northPierSelectionFromPoint(probe);
+      if(hit)return hit;
+    }
+  }
+  return null;
+}
+
+function selectAnglingShore(clientX,clientY,options={}){
+  if(!anglingMode||anglingState!=='selecting') return false;
+  const quiet=!!options.quiet,dragging=!!options.dragging;
   const p=projectPointerToMapPlane(clientX,clientY);
-  if(!p) return;
-  const boatPierSelection=typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(p):null;
-  const smallPierSelection=typeof aczoSmallPierSelectionFromPoint==='function'?aczoSmallPierSelectionFromPoint(p):null;
-  const pierSelection=boatPierSelection||smallPierSelection||(typeof northPierSelectionFromPoint==='function'?northPierSelectionFromPoint(p):null);
+  if(!p) return false;
+  const now=performance.now();
+  if(dragging&&anglingSelection?.pierSpot&&now<anglingSelectionMagnetUntil)return true;
+  const pierSelection=dragging
+    ?aczoP64MagneticPierSelection(p)
+    :((typeof eastBoatPierSelectionFromPoint==='function'?eastBoatPierSelectionFromPoint(p):null)
+      ||(typeof aczoSmallPierSelectionFromPoint==='function'?aczoSmallPierSelectionFromPoint(p):null)
+      ||(typeof northPierSelectionFromPoint==='function'?northPierSelectionFromPoint(p):null));
   if(pierSelection){
+    const key=aczoP64PierSelectionKey(pierSelection);
+    if(dragging&&key&&key!==anglingSelectionMagnetKey){
+      anglingSelectionMagnetKey=key;anglingSelectionMagnetUntil=now+360;
+      if(navigator.vibrate)navigator.vibrate(12);
+    }
     anglingSelection=pierSelection;
     anglingMarkerGroup.position.set(pierSelection.shore.x,pierSelection.shore.y,pierSelection.shore.z+.055);
     anglingMarkerGroup.rotation.set(0,0,Math.atan2(-pierSelection.inward.x,pierSelection.inward.y));
@@ -27173,14 +27257,16 @@ function selectAnglingShore(clientX,clientY){
       :(pierSelection.smallPierNumber
         ?(pierSelection.pierLabel+' · Dieser Steg besitzt genau eine Blickrichtung.')
         :(pierSelection.pierLabel+' · Spitze oder eine der beiden Stegseiten anklicken, um die Position zu wechseln.'));
-    return;
+    return true;
   }
+  if(dragging){anglingSelectionMagnetKey='';anglingSelectionMagnetUntil=0;}
   const boundaryHit=nearestAnglingBoundary(p);
-  if(!boundaryHit) return;
+  if(!boundaryHit) return false;
   const hitRadius=anglingShoreHitRadiusWorld(clientX,clientY);
-  if(boundaryHit.distance>hitRadius){
-    showAnglingToast('Bitte etwas näher an die Uferkante tippen.',1350);
-    return;
+  const effectiveHitRadius=dragging?Math.max(hitRadius,18):hitRadius;
+  if(boundaryHit.distance>effectiveHitRadius){
+    if(!quiet)showAnglingToast('Bitte etwas näher an die Uferkante tippen.',1350);
+    return false;
   }
   const sample=boundaryHit.sample;
   const shore=new THREE.Vector3(sample.x,sample.y,.1);
@@ -27191,16 +27277,16 @@ function selectAnglingShore(clientX,clientY){
   const inward2=anglingLocalPerpendicularInward(sample,new THREE.Vector2());
   const inward=new THREE.Vector3(inward2.x,inward2.y,0);
   if(!anglingShoreHasSafeLocalAxis(shore,inward)){
-    showAnglingToast('Hier ist kein sauberer 90°-Blick zum gegenüberliegenden Ufer möglich.',1600);
-    return;
+    if(!quiet)showAnglingToast('Hier ist kein sauberer 90°-Blick zum gegenüberliegenden Ufer möglich.',1600);
+    return false;
   }
   const straightYaw=Math.atan2(inward.x,inward.y);
 
   const aim=anglingCenterInitialAim(shore,inward);
   const cameraPos=anglingCenterLandCamera(shore,inward);
   if(!cameraPos||pondDepthAt(cameraPos.x,cameraPos.y)!=null){
-    showAnglingToast('Dieser Uferpunkt ist für den Angelplatz nicht sicher nutzbar.',1500);
-    return;
+    if(!quiet)showAnglingToast('Dieser Uferpunkt ist für den Angelplatz nicht sicher nutzbar.',1500);
+    return false;
   }
   const lookTarget=anglingStraightLookTarget(cameraPos,inward,new THREE.Vector3());
   anglingSelection={shore,inward,aim,cameraPos,lookTarget,shoreNumber};
@@ -27218,6 +27304,7 @@ function selectAnglingShore(clientX,clientY){
   anglingConfirmBtn.disabled=false;
   anglingSelectTitle.textContent='✅ Angelplatz markiert';
   anglingSelectText.textContent='Der gelbe Pfeil steht 90° zur lokalen Uferlinie und zeigt gerade zum gegenüberliegenden Ufer.';
+  return true;
 }
 
 function setAnglingStatus(title,text){
@@ -32489,6 +32576,9 @@ anglingOnlinePromptLater.addEventListener('click',()=>{
   hideAnglingOnlinePrompt(anglingOnlinePromptMode==='intro');
 });
 ['pointerdown','pointermove','pointerup'].forEach(type=>anglingDailyQuestIntro?.addEventListener(type,e=>e.stopPropagation()));
+anglingDailyQuestIntroClose?.addEventListener('click',e=>{
+  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();hideAnglingDailyQuestIntro(false);
+});
 anglingDailyQuestIntro?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();hideAnglingDailyQuestIntro(true);});
 ['pointerdown','pointermove','pointerup','click'].forEach(type=>{
   anglingSnagPrompt?.addEventListener(type,e=>e.stopPropagation());
@@ -32646,6 +32736,13 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     anglingPointerStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,dragX:0,moved:false});
     e.preventDefault();e.stopImmediatePropagation();return;
   }
+  if(anglingState==='selecting'&&(e.pointerType!=='mouse'||e.button===0)){
+    anglingSelectionMagnetUntil=0;anglingSelectionMagnetKey='';
+    selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:true});
+    anglingPointerStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,dragX:0,moved:false,startedAt:performance.now(),selectingDrag:true,lastSelectAt:performance.now()});
+    try{renderer.domElement.setPointerCapture?.(e.pointerId);}catch(err){}
+    e.preventDefault();e.stopImmediatePropagation();return;
+  }
   if(anglingState==='ready'){
     anglingAimLocked=false;anglingUi.classList.remove('aim-locked');anglingActionBtn.disabled=true;anglingActionBtn.textContent='Ziel wählen';
   }else if(anglingUi.classList.contains('line-active')&&anglingCanManualRetrieve()&&(e.pointerType!=='mouse'||e.button===0)){
@@ -32665,7 +32762,13 @@ renderer.domElement.addEventListener('pointermove',e=>{
   if(p){
     const dx=e.clientX-p.lastX,dy=e.clientY-p.lastY;p.lastX=e.clientX;p.lastY=e.clientY;p.dragX+=dx;
     if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>8)p.moved=true;
-    if(anglingState==='ready')setAnglingAimFromPointer(e.clientX,e.clientY,true,dx,e.pointerType);
+    if(anglingState==='selecting'&&p.selectingDrag){
+      const now=performance.now();
+      if(!p.lastSelectAt||now-p.lastSelectAt>=28){
+        p.lastSelectAt=now;
+        selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:true});
+      }
+    }else if(anglingState==='ready')setAnglingAimFromPointer(e.clientX,e.clientY,true,dx,e.pointerType);
     else if(anglingState==='drilling')setAnglingDrillRodFromPointer(e.clientX,e.clientY);
     else if(anglingState==='landing'){
       setAnglingLandingNetFromPointer(e.clientX);
@@ -32704,8 +32807,11 @@ renderer.domElement.addEventListener('pointerup',e=>{
     try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch(err){}
     e.preventDefault();e.stopImmediatePropagation();return;
   }
-  if(start&&anglingState==='selecting'&&!start.moved&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<10)selectAnglingShore(e.clientX,e.clientY);
-  else if(start&&anglingState==='ready'){
+  if(start&&anglingState==='selecting'){
+    selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:false});
+    anglingSelectionMagnetUntil=0;anglingSelectionMagnetKey='';
+    try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch(err){}
+  }else if(start&&anglingState==='ready'){
     setAnglingAimFromPointer(e.clientX,e.clientY,false,0,e.pointerType);anglingAimLocked=true;anglingUi.classList.add('aim-locked');
     anglingActionBtn.disabled=false;anglingActionBtn.textContent='Auswerfen';setAnglingStatus('Ziel gesetzt',Math.round(anglingCastDistance)+' m');
   }
