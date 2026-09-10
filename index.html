@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P58 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P60 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3889,6 +3889,43 @@ html,body{
   }
 }
 
+
+/* P59: Stellenauswahl-Livefenster absolut stabil halten.
+   Das Fenster ist nur der DOM-Rahmen für den Scissor-Render. Historisch liegen
+   mehrere ältere Größen-/Livefenster-Regeln im CSS. Bei laufender Mausbewegung
+   konnten konkurrierende Layoutzustände dadurch sichtbar zwischen zwei
+   Geometrien springen. Diese späte Regel friert NUR die Zielhilfe ein. */
+.angling-float-zoom.target-assist{
+  width:190px!important;
+  height:145px!important;
+  min-width:190px!important;
+  max-width:190px!important;
+  min-height:145px!important;
+  max-height:145px!important;
+  left:12%!important;
+  right:auto!important;
+  bottom:88px!important;
+  top:auto!important;
+  transform:none!important;
+  transition:none!important;
+  animation:none!important;
+  box-sizing:border-box!important;
+  contain:layout paint!important;
+}
+@media(max-width:680px){
+  .angling-float-zoom.target-assist{
+    width:104px!important;
+    height:122px!important;
+    min-width:104px!important;
+    max-width:104px!important;
+    min-height:122px!important;
+    max-height:122px!important;
+    left:7px!important;
+    right:auto!important;
+    bottom:72px!important;
+    top:auto!important;
+  }
+}
 </style>
 
 
@@ -4530,7 +4567,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P58';
+const VIEWER_VERSION='ACZO56 · P60';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -19949,7 +19986,10 @@ function updateHuntSchedule(){
   if(activeHunt&&fishWorldTime-activeHunt.startedAt>9) finishHuntEvent();
 }
 
-let anglingVisibleStrikeActor=null; // P49: echter sichtbarer Räuber bleibt bis zum Anhieb derselbe Fisch
+let anglingVisibleStrikeActor=null;
+// P60: Erfolgreicher Kunstköder-Anhieb bekommt eine geschützte Kopie des Fangs,
+// damit der Rückflug zum Ufer den Übergang in den Drill nicht mehr verlieren kann.
+let anglingLockedStrikeCatch=null; // P49: echter sichtbarer Räuber bleibt bis zum Anhieb derselbe Fisch
 const anglingLurePrevWorldPos=new THREE.Vector3();
 let anglingLurePrevValid=false,anglingLureWorldSpeed=0,anglingSnagCooldownUntil=0;
 function anglingTriggerSnaggedFish(actor){
@@ -29973,7 +30013,21 @@ function pulseAnglingDrillReel(){
 }
 
 function beginAnglingDrill(){
-  if(!anglingPendingCatch){resetAnglingCast();return;}
+  // P60: Beim erfolgreichen Kunstköder-Anhieb darf der Drill nie mehr lautlos
+  // ausfallen. Falls irgendein Nebenpfad anglingPendingCatch während des
+  // Rückflugs geleert hat, wird die gesicherte Fangkopie wiederhergestellt.
+  if(!anglingPendingCatch&&anglingLockedStrikeCatch){
+    anglingPendingCatch={...anglingLockedStrikeCatch};
+  }
+  if(!anglingPendingCatch){
+    // Kein stiller Reset mehr: Dieser Zustand ist ein echter interner Fehler.
+    showAnglingToast('Interner Fangübergang fehlgeschlagen',1500);
+    setAnglingStatus('Fangfehler','Der gehakte Fisch konnte nicht in den Drill übernommen werden.');
+    anglingLockedStrikeCatch=null;
+    resetAnglingCast();
+    return;
+  }
+  anglingLockedStrikeCatch=null;
   closeAnglingAllMenusForAction();
   clearAnglingToastClasses();
   anglingState='drilling';anglingStateTime=0;anglingDrillClickPulseUntil=0;
@@ -30315,6 +30369,7 @@ function missArtificialLureStrike(reason='Reaktion verpasst'){
   anglingSnagCooldownUntil=Math.max(anglingSnagCooldownUntil,performance.now()+1800);
 
   anglingPendingCatch=null;
+  anglingLockedStrikeCatch=null;
   anglingFishVisual.visible=false;
   anglingState='lure-waiting';anglingStateTime=0;
   anglingLureSinkAnchor.copy(anglingLure.position);
@@ -30339,6 +30394,18 @@ function finishAnglingStrike(success,reason=''){
     }
     return;
   }
+  // P59: Ein erfolgreicher Kunstköder-Anhieb bekommt sofort einen eigenen
+  // Rückkehrzustand. Bisher blieb anglingState während des ca. 1-s-Kameraflugs
+  // auf 'strike'. Dadurch lief der QTE-Timer im Hintergrund weiter und konnte
+  // nach einem KORREKTEN Treffer noch finishAnglingStrike(false) auslösen,
+  // anglingPendingCatch löschen und den anschließenden Drill verhindern.
+  if(anglingUsesArtificialLure()){
+    // Fangzustand vor der Kamerarückfahrt unveränderlich sichern.
+    anglingLockedStrikeCatch=anglingPendingCatch?{...anglingPendingCatch}:null;
+    anglingState='strike-return';
+    anglingStateTime=0;
+  }
+
   // Sichtbarer Kunstköder-Räuber wird jetzt erst NACH erfolgreichem Anhieb
   // aus der Unterwasserpopulation genommen. Bis dahin war exakt derselbe Fisch sichtbar.
   if(anglingVisibleStrikeActor){
@@ -30785,7 +30852,7 @@ function resetAnglingCast(){
   resetAnglingSurfaceEffects();
   anglingLine.material.color.setHex(0xe6eee7);
   anglingRodGroup.visible=true;anglingRodGroup.rotation.set(0,0,0);resetAnglingRodFlex();
-  anglingPendingCatch=null;anglingCandidateEntries=[];setAnglingReeling(false);stopAnglingActionHold?.();
+  anglingPendingCatch=null;anglingLockedStrikeCatch=null;anglingCandidateEntries=[];setAnglingReeling(false);stopAnglingActionHold?.();
   anglingAimLocked=false;anglingUi.classList.remove('aim-locked');
   anglingFloatRodX=anglingFloatRodY=anglingFloatRodTargetX=anglingFloatRodTargetY=0;
   anglingFloatNudge=0;anglingFloatNudgeSide=0;anglingFloatLastPointerX=anglingFloatLastPointerY=null;
