@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P62 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P63 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3890,6 +3890,13 @@ html,body{
 }
 
 
+/* P63: In der reinen Wurfziel-/Stellenauswahl keine untere Infozeile.
+   Die bestehenden Liveinformationen nach dem Auswurf bleiben unverändert. */
+.angling-float-zoom.target-assist .angling-float-caption{
+  display:none!important;
+  visibility:hidden!important;
+}
+
 /* P59: Stellenauswahl-Livefenster absolut stabil halten.
    Das Fenster ist nur der DOM-Rahmen für den Scissor-Render. Historisch liegen
    mehrere ältere Größen-/Livefenster-Regeln im CSS. Bei laufender Mausbewegung
@@ -4567,7 +4574,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P62';
+const VIEWER_VERSION='ACZO56 · P63';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -20331,8 +20338,8 @@ function updateFishActors(dt){
       if(dist<captureDistance){finishHuntEvent();continue;}
     }
     // P62: Nur geeignete Grundfresser gehen am Futter mit dem Kopf nach unten.
-    // Hecht, Zander, Barsch, Wels und Stör bleiben dabei immer waagerecht.
-    const feedBottomGrazer=feedSeeking&&!['pike','zander','perch','catfish','sturgeon'].includes(species);
+    // Hecht, Zander, Barsch, Wels, Stör und Grundel bleiben dabei immer waagerecht.
+    const feedBottomGrazer=feedSeeking&&!['pike','zander','perch','catfish','sturgeon','goby'].includes(species);
     const feedBottomLocked=feedBottomGrazer&&(f.feedBottomUntil||0)>fishWorldTime;
     const arrivalThreshold=feedBottomGrazer?.28:(feedSeeking?.09:.22);
 
@@ -20386,7 +20393,7 @@ function updateFishActors(dt){
           f.visualPitch=-THREE.MathUtils.degToRad(45);
           f.pause=0;
         }else{
-          // Hecht, Zander, Barsch, Wels und Stör bleiben am Futterplatz horizontal.
+          // Hecht, Zander, Barsch, Wels, Stör und Grundel bleiben am Futterplatz horizontal.
           f.visualPitch=0;
           f.phase+=step*(.75+f.speed*.45);
           if(f.obj.userData.tail)f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.07;
@@ -20455,6 +20462,9 @@ function updateFishActors(dt){
         Math.atan2(fishMoveDelta.z,Math.max(.0001,horizontalSpeed)),
         -pitchLimit,pitchLimit
       );
+      // P63: Grundeln bleiben optisch immer horizontal. Ihre Bodennähe wird
+      // ausschließlich über die Z-Position geregelt, nicht über Kopfneigung.
+      if(species==='goby')targetPitch=0;
 
       // V7.96: Die Fotofische dürfen ihrer tatsächlichen Steig-/Sinkrichtung folgen,
       // aber nicht mehr jeden winzigen Richtungswechsel sofort sichtbar mitmachen.
@@ -20473,7 +20483,8 @@ function updateFishActors(dt){
         blendedPitch-f.visualPitch,
         -maxPitchStep,maxPitchStep
       );
-      if(targetPitch===0&&Math.abs(f.visualPitch)<THREE.MathUtils.degToRad(.18))f.visualPitch=0;
+      if(species==='goby')f.visualPitch=0;
+      else if(targetPitch===0&&Math.abs(f.visualPitch)<THREE.MathUtils.degToRad(.18))f.visualPitch=0;
 
       f.obj.quaternion.copy(camera.quaternion);
       f.obj.rotateZ(f.screenSide<0 ? f.visualPitch : -f.visualPitch);
@@ -26928,7 +26939,9 @@ function updateAnglingSetupUi(){
     anglingFloatZoom.classList.toggle('is-free',rig.state==='free');
     anglingFloatZoom.classList.toggle('is-bottom',rig.state==='bottom');
     anglingFloatZoom.classList.toggle('is-over',rig.state==='over');
-    anglingFloatCaption.textContent='Angeltiefe '+anglingRigDepth.toFixed(1).replace('.',',')+' m';
+    if(!anglingFloatZoom.classList.contains('target-assist')){
+      anglingFloatCaption.textContent='Angeltiefe '+anglingRigDepth.toFixed(1).replace('.',',')+' m';
+    }
   }
   const degrees=Math.round(Math.abs(THREE.MathUtils.radToDeg(anglingYawOffset)));
   const direction=degrees<2?'geradeaus':degrees+'° '+(anglingYawOffset>0?'rechts':'links');
