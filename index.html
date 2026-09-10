@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P39 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P41 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P39';
+const VIEWER_VERSION='ACZO56 · P41';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -7036,14 +7036,6 @@ function updateUnderwaterObstacleShadows(submerged){
   // Tiere und Verkehr besitzen leichte optische Kontaktschatten.
   const lightChanged=key!==aczoUnderwaterShadowKey;
   if(!lightChanged)return;
-  // P39 PERFORMANCE: Waehrend einer aktiven 3D-Kartengeste bleibt die zuletzt
-  // gueltige Shadowmap stehen. Sonne/Wetter duerfen sich intern weiterbewegen,
-  // aber die teure Schattenkarte wird erst nach Loslassen des Fingers/Maus-
-  // zeigers aktualisiert. Unterwasser- und Angelansicht sind davon ausgenommen.
-  const aczoPlainShadowGesture=(typeof viewerInputBusy==='function'&&viewerInputBusy())
-    &&!(typeof fishMode!=='undefined'&&fishMode)
-    &&!(typeof anglingMode!=='undefined'&&anglingMode);
-  if(aczoPlainShadowGesture)return;
   aczoUnderwaterShadowKey=key;
   aczoLastShadowRefreshAt=performance.now();
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
@@ -16654,7 +16646,7 @@ function aczoBuildTreeShadowProxies(){
   aczoBuildTreeShadowProxyMesh(aczoSeasonalTreeShadowProxyItems,new THREE.IcosahedronGeometry(1,0),'NATURWALD_STABILE_KRONENSCHATTEN_PROXIES',true);
   // P21: ConeGeometry liegt lokal entlang Y, die Welt benutzt aber Z als Hoehe.
   // Deshalb werden auch die Schatten-Proxies exakt um X=90 Grad aufgerichtet.
-  aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,6,1,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
+  aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,8,3,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
 }
 function aczoBirchWorldPoint(frame,local){
   return new THREE.Vector3(
@@ -20155,14 +20147,17 @@ function updateFishActors(dt){
     // P30: 34 m Sicht-Radius machte auf dem iPhone praktisch den gesamten
     // Weiher und damit hunderte Fotofische pro Bild aktiv. Nah an der Kamera
     // bleibt die Population dicht, entfernte Fische werden zeitversetzt simuliert.
-    const aczoFishVisualRadius=ACZO_MOBILE_PERF?(lureUnderwaterActive?18:21):28;
+    // P41: Keine mobile Fisch-Reduktion mehr. Mobil zeigt exakt denselben
+    // Sichtbereich der Fischpopulation wie Desktop.
+    const aczoFishVisualRadius=28;
     const nearEnough=f.obj.position.distanceToSquared(fishViewCamera.position)<aczoFishVisualRadius*aczoFishVisualRadius;
     // Außerhalb Fischsicht/Kunstköder-Unterwasserkamera wird die Population nur
     // simuliert. Die Modelle selbst bleiben im normalen Angelbild unsichtbar.
     f.obj.visible=fishVisualActive&&nearEnough;
     // Unsichtbare Fernfische werden zeitversetzt statt in jedem Bild simuliert.
     // Ihre zurückgelegte Strecke bleibt identisch, die CPU-Arbeit sinkt jedoch.
-    const aczoFarFishStride=ACZO_MOBILE_PERF?24:16;
+    // P41: Auch die Simulationsfrequenz entfernter Fische entspricht Desktop.
+    const aczoFarFishStride=16;
     if(!nearEnough&&(fishActorFrame+f.index)%aczoFarFishStride!==0) continue;
     const step=nearEnough?dt:dt*aczoFarFishStride;
     let activity=1;
@@ -22670,8 +22665,10 @@ anglingScene.add(anglingFishShadow);
 // auch beim Drill und im Kescher verwendet. Das Objekt wird je Fang neu
 // texturiert und exakt auf die ausgeloste Fanglänge skaliert.
 const anglingFishVisualMat=new THREE.MeshBasicMaterial({
-  color:0xb9d9dd,transparent:true,opacity:0,depthTest:true,depthWrite:false,
-  side:THREE.DoubleSide,alphaTest:.025
+  // P41: Derselbe unverfaelschte Fisch-Fototextur-Look wie beim normalen
+  // Unterwasserbestand. Kein blau/cyaner Sonder-Tint fuer Attacke/Drill.
+  color:0xffffff,transparent:true,opacity:0,depthTest:true,depthWrite:false,
+  side:THREE.DoubleSide,alphaTest:.025,fog:true
 });
 const anglingFishVisual=new THREE.Mesh(new THREE.PlaneGeometry(1,1),anglingFishVisualMat);
 anglingFishVisual.visible=false;anglingFishVisual.renderOrder=61;anglingScene.add(anglingFishVisual);
@@ -24574,7 +24571,7 @@ function saveAnglingPlayerProfile(){try{localStorage.setItem(ANGLING_PLAYER_KEY,
 // V7.70: vollständiger dauerhafter Cloud-Spielstand.
 // NICHT synchronisiert wird ausschließlich das Fangbuch (anglingProgress.catches)
 // sowie flüchtige Sitzungszustände wie aktueller Drill, Wurfposition oder Futterplatz.
-let anglingCloudSyncTimer=null,anglingCloudSyncInFlight=false,anglingCloudSyncPending=false;
+let anglingCloudSyncTimer=null,anglingCloudSyncInFlight=false,anglingCloudSyncPending=false,anglingCloudSyncPromise=null;
 const ANGLING_CLOUD_STATE_VERSION=6;
 
 function normalizeAnglingRecoveryCode(value){
@@ -24856,54 +24853,62 @@ async function loadAnglingPlayerCloud(){
 
 async function syncAnglingPlayerCloud(){
   if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return false;
-  if(anglingCloudSyncInFlight){anglingCloudSyncPending=true;return false;}
-  anglingCloudSyncInFlight=true;
 
-  // V8.02: Snapshot genau des Zustands, der jetzt hochgeladen wird.
-  // Kauft der Spieler während dieses Requests noch etwas, darf die ältere
-  // Serverantwort diesen neueren lokalen Zustand anschließend NICHT zurückdrehen.
+  // P40: Wenn bereits ein Cloud-Save laeuft, wartet der zweite Aufrufer auf
+  // genau diesen Request, statt sofort false zurueckzubekommen. Dadurch meldet
+  // das Einstellungsmenue keinen Fehlversuch mehr, nur weil im Hintergrund
+  // bereits derselbe Spielstand gespeichert wird.
+  if(anglingCloudSyncPromise){
+    anglingCloudSyncPending=true;
+    return await anglingCloudSyncPromise;
+  }
+
+  anglingCloudSyncInFlight=true;
   const requestRevision=Math.max(0,Math.floor(Number(anglingProgress.xpRevision)||0));
   const requestSignature=anglingCloudSignature();
   const requestPayload=anglingCloudSyncPayload();
 
-  try{
-    const res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify(requestPayload)
-    },15000);
+  const run=(async()=>{
+    try{
+      const res=await anglingLeaderboardFetch(ANGLING_LEADERBOARD_ENDPOINT,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(requestPayload)
+      },15000);
 
-    if(!res.ok)return false;
+      if(!res.ok)return false;
+      const data=await res.json().catch(()=>null);
+      if(!data||data.ok===false||!data.player)return false;
+      captureAnglingRecoveryCode(data);
+      anglingLastCloudSuccessAt=Date.now();
+      anglingLastCloudMessage='Gespeichert';
 
-    const data=await res.json().catch(()=>null);
-    if(!data||data.ok===false||!data.player)return false;
-    captureAnglingRecoveryCode(data);
-    anglingLastCloudSuccessAt=Date.now();
-    anglingLastCloudMessage='Gespeichert';
+      const currentRevision=Math.max(0,Math.floor(Number(anglingProgress.xpRevision)||0));
+      const currentSignature=anglingCloudSignature();
+      const changedWhileSaving=
+        currentRevision!==requestRevision||
+        currentSignature!==requestSignature;
 
-    const currentRevision=Math.max(0,Math.floor(Number(anglingProgress.xpRevision)||0));
-    const currentSignature=anglingCloudSignature();
-    const changedWhileSaving=
-      currentRevision!==requestRevision||
-      currentSignature!==requestSignature;
+      if(changedWhileSaving){
+        // Lokaler Stand wurde waehrend des Requests veraendert. Die alte
+        // Serverantwort nicht anwenden, sondern den neueren Stand nachsenden.
+        anglingCloudSyncPending=true;
+        return true;
+      }
 
-    if(changedWhileSaving){
-      // Die Antwort gehört zu einem älteren Snapshot. Nicht anwenden.
-      // Stattdessen den inzwischen neueren lokalen Spielstand direkt nachsenden.
-      anglingCloudSyncPending=true;
+      applyAnglingCloudPlayer(data.player);
       return true;
+    }catch(err){
+      console.warn('Google-Spielstand konnte nicht gespeichert werden:',err);
+      return false;
     }
+  })();
 
-    // Nur wenn sich lokal während des Requests nichts geändert hat,
-    // darf die Serverantwort zum kanonischen Stand werden.
-    applyAnglingCloudPlayer(data.player);
-    return true;
-
-  }catch(err){
-    console.warn('Google-Spielstand konnte nicht gespeichert werden:',err);
-    return false;
-
+  anglingCloudSyncPromise=run;
+  try{
+    return await run;
   }finally{
+    anglingCloudSyncPromise=null;
     anglingCloudSyncInFlight=false;
     if(anglingCloudSyncPending){
       anglingCloudSyncPending=false;
@@ -24911,7 +24916,6 @@ async function syncAnglingPlayerCloud(){
     }
   }
 }
-
 
 function flushAnglingCloudSync(){
   if(!anglingSetupComplete||!anglingCloudEnabled||!ANGLING_LEADERBOARD_ENDPOINT||!anglingPlayerProfile?.id)return;
@@ -25272,14 +25276,16 @@ function saveAnglingMainProfile(){
       anglingMainStatus.textContent=ok
         ?'☁️ Cloud-Spielstand ist aktiviert und abgeglichen.'
         :'⚠️ Cloud ist aktiviert, der Abgleich konnte aber noch nicht bestätigt werden.';
+      // P40: Erst den eigentlichen Spielstand-Abgleich abschliessen. Danach
+      // duerfen Bestenliste und Presence ihre eigenen Requests starten.
+      if(ok&&anglingPlayerProfile.shareRecords)syncAnglingExistingPersonalBests();
+      if(anglingMode)startAnglingPresence();
     });
   }else{
     if(anglingCloudSyncTimer){window.clearTimeout(anglingCloudSyncTimer);anglingCloudSyncTimer=null;}
     anglingMainStatus.textContent='📱 Online-Speicherung deaktiviert. Der lokale Spielstand bleibt erhalten.';
   }
   syncAnglingLeaderboardProfileUi();
-  if(anglingPlayerProfile.shareRecords&&anglingCloudEnabled)syncAnglingExistingPersonalBests();
-  if(anglingMode)startAnglingPresence();
   updateAnglingCloudStatus();
 }
 
@@ -30792,9 +30798,7 @@ function renderAnglingTargetAssistCamera(){
   if(!selecting&&!aiming){
     anglingTargetAssistGroup.visible=false;
     anglingFloatZoom.classList.remove('target-assist');
-    // P39: Kein verwaister Rahmen waehrend Spielstart, shore-flight oder
-    // sonstigen Kamerafluegen. Ein Livefenster wird nur von seinem wirklich
-    // aktiven Renderpfad wieder eingeblendet.
+    // P40: Bei Spielstart/Kameraflug darf kein leerer Live-Rahmen stehen bleiben.
     if(anglingState!=='casting'){
       anglingFloatZoom.style.setProperty('display','none','important');
       anglingFloatZoom.setAttribute('aria-hidden','true');
