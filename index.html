@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P72 RUNTIME DIAG · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P73 RUNTIME DIAG · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3941,31 +3941,25 @@ html,body{
   }
 }
 
-/* P69: kompakter Testschalter für die 3D-Karte. */
-#aczoP69TimeToggle{
- position:fixed;right:12px;bottom:14px;z-index:99999;
- display:flex;gap:5px;padding:5px;border-radius:10px;
- background:rgba(5,20,24,.72);border:1px solid rgba(255,255,255,.30);
- box-shadow:0 5px 18px rgba(0,0,0,.28);pointer-events:auto
-}
-#aczoP69TimeToggle button{
- min-width:64px;height:34px;padding:0 9px;border-radius:8px;
- border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.10);
- color:#fff;font:800 10px system-ui,-apple-system,sans-serif;
- touch-action:manipulation;pointer-events:auto;-webkit-user-select:none;user-select:none
-}
-#aczoP69TimeToggle button.active{background:rgba(206,161,45,.84);color:#fff}
-#aczoP69TimeToggle button.night.active{background:rgba(54,77,126,.90)}
 
-/* P72: Laufzeitdiagnose. Rein beobachtend, keine Renderqualität geändert. */
-#aczoP72Diag{
- position:fixed;left:8px;top:8px;z-index:100000;min-width:178px;
- padding:7px 8px;border-radius:9px;background:rgba(0,0,0,.74);
- border:1px solid rgba(255,255,255,.28);color:#fff;
+/* P73: Laufzeitdiagnose mit eigenständigen, klickbaren Steuerelementen. */
+#aczoP73DiagPanel{
+ position:fixed;left:8px;top:8px;z-index:100000;min-width:194px;
+ padding:8px;border-radius:10px;background:rgba(0,0,0,.78);
+ border:1px solid rgba(255,255,255,.30);color:#fff;
  font:700 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
- white-space:pre;pointer-events:none;user-select:none;-webkit-user-select:none;
- box-shadow:0 4px 14px rgba(0,0,0,.3)
+ box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:auto;
+ -webkit-user-select:none;user-select:none
 }
+#aczoP73DiagHeader{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+#aczoP73DiagHeader button{
+ height:28px;padding:0 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);
+ background:rgba(255,255,255,.10);color:#fff;font:800 10px system-ui,-apple-system,sans-serif;
+ pointer-events:auto;touch-action:manipulation
+}
+#aczoP73DiagHeader button.active{background:rgba(206,161,45,.86)}
+#aczoP73DiagHeader button.night.active{background:rgba(54,77,126,.92)}
+#aczoP73DiagBody{white-space:pre;pointer-events:none}
 </style>
 
 
@@ -4608,7 +4602,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P72 RUNTIME DIAG';
+const VIEWER_VERSION='ACZO56 · P73 RUNTIME DIAG';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33415,56 +33409,8 @@ let aczoMapGestureFrame=0;
  schedulePersonalCampScene();
 })();
 
-// P71: einfacher Tag/Nacht-Schalter. DOM-sicher initialisiert.
-(()=>{
- function initAczoP71TimeToggle(){
-   const day=document.getElementById('aczoP69DayBtn');
-   const night=document.getElementById('aczoP69NightBtn');
-   const host=document.getElementById('aczoP69TimeToggle');
-   if(!day||!night||!host)return;
+// P73: alter P71-Schalter deaktiviert; Steuerung erfolgt über das Diagnosepanel.
 
-   const setMode=(hour)=>{
-     aczoP69ForcedHour=hour;
-     day.classList.toggle('active',hour===13);
-     night.classList.toggle('active',hour===1);
-     try{updateAstronomy();}catch(err){}
-     try{
-       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
-         renderer.shadowMap.needsUpdate=true;
-       }
-     }catch(err){}
-   };
-
-   const bindTap=(btn,hour)=>{
-     const handler=(e)=>{
-       e.preventDefault();
-       e.stopPropagation();
-       if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-       setMode(aczoP69ForcedHour===hour?null:hour);
-     };
-     btn.addEventListener('pointerup',handler,{passive:false});
-     btn.addEventListener('click',handler,{passive:false});
-     btn.addEventListener('touchend',handler,{passive:false});
-   };
-
-   bindTap(day,13);
-   bindTap(night,1);
-
-   function syncVisibility(){
-     const in2D=(typeof is2D!=='undefined')?!!is2D:false;
-     const fishing=(typeof anglingMode!=='undefined')?!!anglingMode:false;
-     host.style.display=(!in2D&&!fishing)?'flex':'none';
-   }
-   syncVisibility();
-   window.setInterval(syncVisibility,350);
- }
-
- if(document.readyState==='loading'){
-   document.addEventListener('DOMContentLoaded',initAczoP71TimeToggle,{once:true});
- }else{
-   initAczoP71TimeToggle();
- }
-})();
 
 // P70 SHADOW OPT ---------------------------------------------------------
 // Ziel: sichtbare Geometrie unverändert lassen, aber teure Detail-Caster aus
@@ -33502,32 +33448,59 @@ function aczoP69OptimizeShadowCasters(){
 }
 window.setTimeout(aczoP69OptimizeShadowCasters,350);
 
-// P72 RUNTIME DIAGNOSE --------------------------------------------------
-// Beobachtet nur. Keine Schatten-, Wasser-, Kamera- oder Qualitätsparameter werden verändert.
+// P73 RUNTIME DIAGNOSE --------------------------------------------------
 let aczoP72ShadowRequests=0;
 (()=>{
- const box=document.getElementById('aczoP72Diag');
- if(!box)return;
- let frames=0,lastFpsStamp=performance.now(),fps=0;
- let lastShadowStamp=performance.now(),lastShadowCount=0,shadowHz=0;
- let startMem=null,peakMem=0;
- let lastPaint=0;
- const originalRAF=window.requestAnimationFrame.bind(window);
+ function initP73Diag(){
+   const panel=document.getElementById('aczoP73DiagPanel');
+   const body=document.getElementById('aczoP73DiagBody');
+   const day=document.getElementById('aczoP73DayBtn');
+   const night=document.getElementById('aczoP73NightBtn');
+   const real=document.getElementById('aczoP73RealBtn');
+   if(!panel||!body||!day||!night||!real)return;
 
- // Eigener leichter FPS-Ticker: zählt Browserframes, ohne den bestehenden Renderloop anzufassen.
- function tick(now){
-   frames++;
-   const dt=now-lastFpsStamp;
-   if(dt>=1000){
-     fps=frames*1000/dt; frames=0; lastFpsStamp=now;
+   const setMode=(hour)=>{
+     aczoP69ForcedHour=hour;
+     day.classList.toggle('active',hour===13);
+     night.classList.toggle('active',hour===1);
+     real.classList.toggle('active',hour==null);
+     try{updateAstronomy();}catch(err){}
+     try{
+       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
+         renderer.shadowMap.needsUpdate=true;
+       }
+     }catch(err){}
+   };
+
+   function bind(btn,hour){
+     const handler=(e)=>{
+       e.preventDefault(); e.stopPropagation();
+       if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+       setMode(hour);
+     };
+     btn.addEventListener('click',handler,{passive:false});
+     btn.addEventListener('pointerup',handler,{passive:false});
+     btn.addEventListener('touchend',handler,{passive:false});
    }
-   const sdt=now-lastShadowStamp;
-   if(sdt>=1000){
-     shadowHz=(aczoP72ShadowRequests-lastShadowCount)*1000/sdt;
-     lastShadowCount=aczoP72ShadowRequests;lastShadowStamp=now;
-   }
-   if(now-lastPaint>500){
-     lastPaint=now;
+   bind(day,13); bind(night,1); bind(real,null);
+   setMode(null);
+
+   let frames=0,lastFpsStamp=performance.now(),fps=0;
+   let lastShadowStamp=performance.now(),lastShadowCount=0,shadowHz=0;
+   let startMem=null;
+   const raf=window.requestAnimationFrame.bind(window);
+
+   function tick(now){
+     frames++;
+     const dt=now-lastFpsStamp;
+     if(dt>=1000){ fps=frames*1000/dt; frames=0; lastFpsStamp=now; }
+
+     const sdt=now-lastShadowStamp;
+     if(sdt>=1000){
+       shadowHz=(aczoP72ShadowRequests-lastShadowCount)*1000/sdt;
+       lastShadowCount=aczoP72ShadowRequests; lastShadowStamp=now;
+     }
+
      try{
        const info=renderer?.info;
        const r=info?.render||{};
@@ -33537,13 +33510,11 @@ let aczoP72ShadowRequests=0;
        if(performance.memory){
          const used=performance.memory.usedJSHeapSize/1048576;
          if(startMem==null)startMem=used;
-         peakMem=Math.max(peakMem,used);
          heap=used.toFixed(0)+' MB ('+(used-startMem>=0?'+':'')+(used-startMem).toFixed(0)+')';
        }
-       const mode=(typeof aczoP69ForcedHour!=='undefined'&&aczoP69ForcedHour===13)?'TAG':
-                  ((typeof aczoP69ForcedHour!=='undefined'&&aczoP69ForcedHour===1)?'NACHT':'ECHT');
-       box.textContent=
-         'P72 RUNTIME · '+mode+'\n'+
+       const mode=aczoP69ForcedHour===13?'TAG':(aczoP69ForcedHour===1?'NACHT':'ECHT');
+       body.textContent=
+         'P73 RUNTIME · '+mode+'\n'+
          'FPS          '+fps.toFixed(1)+'\n'+
          'Draw Calls   '+(r.calls??'n/a')+'\n'+
          'Dreiecke     '+(r.triangles??'n/a')+'\n'+
@@ -33553,10 +33524,14 @@ let aczoP72ShadowRequests=0;
          'Shadow Req/s '+shadowHz.toFixed(1)+'\n'+
          'JS Heap      '+heap;
      }catch(err){}
+     raf(tick);
    }
-   originalRAF(tick);
+   raf(tick);
  }
- originalRAF(tick);
+
+ if(document.readyState==='loading'){
+   document.addEventListener('DOMContentLoaded',initP73Diag,{once:true});
+ }else initP73Diag();
 })();
 </script>
 
@@ -33565,10 +33540,13 @@ let aczoP72ShadowRequests=0;
 
 <!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
 
-<div id="aczoP69TimeToggle" aria-label="Testzeit">
-  <button id="aczoP69DayBtn" type="button">☀ TAG</button>
-  <button id="aczoP69NightBtn" class="night" type="button">☾ NACHT</button>
+<div id="aczoP73DiagPanel">
+  <div id="aczoP73DiagHeader">
+    <button id="aczoP73DayBtn" type="button">☀ TAG</button>
+    <button id="aczoP73NightBtn" class="night" type="button">☾ NACHT</button>
+    <button id="aczoP73RealBtn" type="button">ECHT</button>
+  </div>
+  <div id="aczoP73DiagBody">Runtime-Diagnose startet …</div>
 </div>
-<div id="aczoP72Diag">Runtime-Diagnose startet …</div>
 </body>
 </html>
