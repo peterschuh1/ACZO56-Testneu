@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P5 · Saubere Performancebasis mit Waldblatt-LOD</title>
+<title>ACZO56 V2.3.37-P6 Labor-P5 · Saubere Performancebasis mit Waldblatt-LOD</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3863,6 +3863,19 @@ html,body{
 }
 
 </style>
+
+<style id="seasonWeatherLabStyles">
+#seasonWeatherLabBtn{grid-column:1/-1!important;min-height:30px!important;background:#173f32!important;color:#fff!important;border-color:#275f4c!important}
+#seasonWeatherLabBtn.active{background:#7a4e12!important;border-color:#d39b3a!important;color:#fff7d7!important}
+.season-weather-lab{display:none;position:absolute;z-index:540;left:10px;top:10px;width:min(430px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;-webkit-overflow-scrolling:touch;padding:11px;border-radius:15px;background:rgba(7,34,26,.94);border:1px solid rgba(230,255,240,.62);box-shadow:0 10px 38px rgba(0,0,0,.42);color:#effff4;backdrop-filter:blur(8px);font-family:Arial,Helvetica,sans-serif}
+.season-weather-lab.open{display:block}
+.swl-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.swl-head div{display:flex;flex-direction:column;gap:1px}.swl-head small{font-size:8px;font-weight:900;letter-spacing:.12em;color:#a9d8bd}.swl-head strong{font-size:15px}.swl-close{flex:0 0 31px!important;width:31px!important;height:31px!important;min-width:31px!important;min-height:31px!important;padding:0!important;border-radius:50%!important;background:#274b3e!important;color:#fff!important;font-size:20px!important;border:1px solid rgba(255,255,255,.35)!important}
+.swl-status{padding:6px 8px;margin-bottom:8px;border-radius:9px;background:rgba(255,255,255,.09);font-size:9px;font-weight:900;color:#ffe391;text-align:center}.swl-status.active{background:rgba(155,103,19,.38);color:#fff0ae}
+.swl-section{display:grid;gap:5px;margin-top:8px;padding:9px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}.swl-section>b{font-size:10px;color:#bde7c9;margin-bottom:1px}.swl-section label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:9px;font-weight:850;color:#e9f8ee}.swl-section label strong{color:#ffe493;font-size:9px}.swl-section input[type=range]{width:100%;accent-color:#d7a23a}.swl-select-label select{min-width:115px;padding:4px 6px;border-radius:7px;border:1px solid rgba(255,255,255,.24);background:#173f32;color:#fff;font:800 9px Arial}
+.swl-presets{display:grid;gap:4px}.swl-four{grid-template-columns:repeat(4,minmax(0,1fr))}.swl-three{grid-template-columns:repeat(3,minmax(0,1fr))}.swl-presets button{min-height:28px!important;padding:4px 5px!important;border-radius:8px!important;background:#174c38!important;border:1px solid rgba(255,255,255,.20)!important;color:#fff!important;font-size:8.5px!important;font-weight:900!important}.swl-presets button:hover{filter:brightness(1.08)}
+.swl-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.swl-actions button{min-height:34px!important;border-radius:9px!important;font-size:9px!important;font-weight:900!important}.swl-actions .primary{background:#a66d16!important;color:#fff!important;border-color:#dda641!important}.swl-note{margin-top:7px;font-size:8px;line-height:1.35;color:#b8ccbf;text-align:center}
+@media(max-width:650px){#seasonWeatherLabBtn{min-height:28px!important}.season-weather-lab{left:5px;top:5px;width:calc(100% - 10px);max-height:calc(100% - 10px);padding:8px;border-radius:12px}.swl-section{padding:7px}.swl-four{grid-template-columns:repeat(2,minmax(0,1fr))}.swl-presets button{min-height:27px!important;font-size:8px!important}.swl-actions{grid-template-columns:1fr}.swl-head strong{font-size:13px}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -3880,12 +3893,69 @@ html,body{
   <button id="measureBtn" aria-label="Entfernung messen">📏 Messen</button>
   <button id="locBtn" aria-label="Mein Standort">📍 Standort</button>
   <button id="overlayBtn" class="on" aria-label="Legenden und Kompass ein- oder ausblenden">👁️ Anzeigen</button>
+  <button id="seasonWeatherLabBtn" aria-label="Jahreszeiten- und Wetterlabor öffnen">🧪 Jahreszeiten- & Wetterlabor</button>
  </div>
  <div id="fishCollection" class="fish-collection" aria-label="Gefundene Fischarten">
    <div id="fishCollectionProgress" class="fish-collection-progress">0 von 16 Fischarten gefunden</div>
    <div id="fishCollectionItems" class="fish-collection-items"></div>
  </div>
  <div id="viewer">
+<div id="seasonWeatherLab" class="season-weather-lab" aria-hidden="true">
+  <div class="swl-head">
+    <div><small>ACZO56 TESTLABOR</small><strong>🧪 Jahreszeit & Wetter</strong></div>
+    <button id="swlClose" class="swl-close" aria-label="Labor schließen">×</button>
+  </div>
+  <div id="swlStatus" class="swl-status">LABOR INAKTIV · Echtzeit</div>
+
+  <div class="swl-section">
+    <b>Jahreszeit</b>
+    <div class="swl-presets swl-four">
+      <button data-season-day="15">❄️ Winter</button>
+      <button data-season-day="105">🌱 Frühling</button>
+      <button data-season-day="196">☀️ Sommer</button>
+      <button data-season-day="288">🍂 Herbst</button>
+    </div>
+    <label><span>Tag im Jahr</span><strong id="swlDayValue">–</strong></label>
+    <input id="swlDay" type="range" min="1" max="365" step="1">
+    <label><span>Uhrzeit</span><strong id="swlHourValue">–</strong></label>
+    <input id="swlHour" type="range" min="0" max="23.75" step="0.25">
+    <div class="swl-presets swl-four">
+      <button data-hour="6.5">Morgen</button><button data-hour="12">Mittag</button>
+      <button data-hour="19">Abend</button><button data-hour="23">Nacht</button>
+    </div>
+  </div>
+
+  <div class="swl-section">
+    <b>Wetter-Presets</b>
+    <div class="swl-presets swl-three">
+      <button data-weather="clear">☀️ Klar</button><button data-weather="cloudy">☁️ Bewölkt</button><button data-weather="rain">🌧️ Regen</button>
+      <button data-weather="storm">🌪️ Sturm</button><button data-weather="snow">🌨️ Schnee</button><button data-weather="fog">🌫️ Nebel</button>
+    </div>
+    <label><span>Bewölkung</span><strong id="swlCloudValue">0 %</strong></label>
+    <input id="swlCloud" type="range" min="0" max="100" step="1">
+    <label><span>Windgeschwindigkeit</span><strong id="swlWindValue">0 km/h</strong></label>
+    <input id="swlWind" type="range" min="0" max="80" step="1">
+    <label><span>Windrichtung</span><strong id="swlWindDirValue">0°</strong></label>
+    <input id="swlWindDir" type="range" min="0" max="359" step="1">
+    <label><span>Niederschlag</span><strong id="swlPrecipValue">0.0 mm/h</strong></label>
+    <input id="swlPrecip" type="range" min="0" max="8" step="0.1">
+    <label class="swl-select-label"><span>Art</span>
+      <select id="swlPrecipType"><option value="none">Keiner</option><option value="rain">Regen</option><option value="snow">Schnee</option></select>
+    </label>
+    <label><span>Nebel</span><strong id="swlFogValue">0 %</strong></label>
+    <input id="swlFog" type="range" min="0" max="100" step="1">
+    <label><span>Schneedecke</span><strong id="swlSnowCoverValue">0 %</strong></label>
+    <input id="swlSnowCover" type="range" min="0" max="100" step="1">
+    <label><span>Winter-Braunfärbung</span><strong id="swlWinterBrownValue">0 %</strong></label>
+    <input id="swlWinterBrown" type="range" min="0" max="100" step="1">
+  </div>
+
+  <div class="swl-actions">
+    <button id="swlApply" class="primary">🧪 Labor aktivieren</button>
+    <button id="swlRealtime">↻ Echtzeit wiederherstellen</button>
+  </div>
+  <div class="swl-note">Die Szene bleibt während des Einstellens sichtbar. Laborwerte beeinflussen nur diese Testdatei und werden nicht gespeichert.</div>
+</div>
 <div id="mapStartupLoader" aria-hidden="true">
   <div class="map-loader-water"></div>
   <div class="map-loader-card">
@@ -4501,7 +4571,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='V8.164 · V2.3.37-P5 · SAUBERE PERFORMANCEBASIS · WALDBLATT-LOD';
+const VIEWER_VERSION='V8.165 · V2.3.37-P6 · JAHRESZEITEN/WETTER-LABOR · P5 PERFORMANCEBASIS';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -4659,6 +4729,11 @@ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawi
 // Füllrate bei jedem Drehen und Zoomen. Markante 3D-Objekte bleiben geometrisch
 // unverändert; nur die interne Bildschirmauflösung wird vernünftig begrenzt.
 const ACZO_PIXEL_RATIO_CAP=window.matchMedia?.('(pointer:coarse)')?.matches?1.22:1.40;
+// P7 RELEASE PERFORMANCE: feste Geraeteklasse fuer Frame-Budget/LOD.
+// Die Renderaufloesung selbst bleibt bewusst unveraendert, damit Tiefenlinien
+// und Kartenbeschriftung nicht wieder unscharf werden.
+const ACZO_MOBILE_PERF=!!((window.matchMedia&&window.matchMedia('(pointer:coarse)').matches)
+  ||((Number(navigator.maxTouchPoints)||0)>0&&Math.min(window.innerWidth||9999,window.innerHeight||9999)<=1024));
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO_CAP));
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
@@ -6713,7 +6788,11 @@ function updateClubFlagPole(dt){
   }
 
   attr.needsUpdate=true;
-  flagPoleFlagMesh.geometry.computeVertexNormals();
+  const normalNow=performance.now();
+  if(!flagPoleFlagMesh.userData.lastNormalAt||normalNow-flagPoleFlagMesh.userData.lastNormalAt>83){
+    flagPoleFlagMesh.geometry.computeVertexNormals();
+    flagPoleFlagMesh.userData.lastNormalAt=normalNow;
+  }
 }
 
 createClubFlagPole();
@@ -7273,61 +7352,72 @@ function cloudRand(seed){
 
 function addCloudField(x,y,z,s,seed,layer=1){
   const g=new THREE.Group();
-  // Alle Felder hatten bereits identische Materialwerte. Drei gemeinsam
-  // verwendete Materialien vermeiden 78 unnoetige Materialobjekte und
-  // Shader-Zustandswechsel, ohne ein einziges Wolkenteil zusammenzulegen.
-  const coreMat=cloudCoreMat;
-  const edgeMat=cloudEdgeMat;
-  const highlightMat=cloudHighlightMat;
+  // P8: Die Form jedes Wolkenfeldes bleibt gleich, aber die bisher 11-15
+  // einzelnen transparenten Meshes pro Feld werden nach Material in maximal
+  // drei InstancedMesh-Zeichenaufrufe zusammengefasst. Die Feldgruppe selbst
+  // bewegt/wrappt weiterhin exakt wie zuvor; Wetter, Transparenz und Reflexion
+  // bleiben deshalb an derselben Quelle gekoppelt.
+  const coreItems=[],edgeItems=[],highlightItems=[];
 
-  // Breite, unregelmäßige Wolkenfelder. Mehr Teile, aber weich und halbtransparent.
   const partCount=9+Math.floor(cloudRand(seed+1)*5);
   for(let i=0;i<partCount;i++){
     const a=cloudRand(seed+i*3.11);
     const b=cloudRand(seed+i*4.73+2);
     const c=cloudRand(seed+i*5.29+4);
-
     const px=(a-.5)*s*3.8;
     const py=(b-.5)*s*1.55;
     const pz=(c-.5)*s*.38;
     const radius=s*(.42+cloudRand(seed+i*7.17+1)*.48);
-
+    const item={
+      p:new THREE.Vector3(px,py,pz),
+      scale:new THREE.Vector3(
+        radius*(1.15+cloudRand(seed+i*8.13)*.85),
+        radius*(.72+cloudRand(seed+i*9.07)*.58),
+        radius*(.22+cloudRand(seed+i*10.21)*.16)
+      )
+    };
     const radial=Math.min(1,Math.hypot(px/(s*2.0),py/(s*.9)));
-    const mat=radial>.68 ? edgeMat : coreMat;
-
-    const m=new THREE.Mesh(cloudPuffGeo,mat);
-    m.scale.set(
-      radius*(1.15+cloudRand(seed+i*8.13)*.85),
-      radius*(.72+cloudRand(seed+i*9.07)*.58),
-      radius*(.22+cloudRand(seed+i*10.21)*.16)
-    );
-    m.position.set(px,py,pz);
-    m.renderOrder=40;
-    g.add(m);
+    (radial>.68?edgeItems:coreItems).push(item);
   }
 
-  // Wenige diffuse Highlights, damit dünne Stellen Licht durchlassen,
-  // ohne dass die ganze Wolke nachts weiß leuchtet.
   for(let i=0;i<2;i++){
     const r=s*(.46+cloudRand(seed+30+i)*.28);
-    const h=new THREE.Mesh(cloudPuffGeo,highlightMat);
-    h.scale.set(r*1.5,r*.72,r*.20);
-    h.position.set(
-      s*(.15+i*.55),
-      s*(-.22+i*.16),
-      s*(.13+i*.05)
-    );
-    h.renderOrder=40;
-    g.add(h);
+    highlightItems.push({
+      p:new THREE.Vector3(s*(.15+i*.55),s*(-.22+i*.16),s*(.13+i*.05)),
+      scale:new THREE.Vector3(r*1.5,r*.72,r*.20)
+    });
   }
+
+  function addCloudInstances(items,material,label){
+    if(!items.length)return;
+    const mesh=new THREE.InstancedMesh(cloudPuffGeo,material,items.length);
+    const dummy=new THREE.Object3D();
+    items.forEach((item,i)=>{
+      dummy.position.copy(item.p);dummy.rotation.set(0,0,0);dummy.scale.copy(item.scale);
+      dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+    });
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    mesh.instanceMatrix.needsUpdate=true;
+    mesh.renderOrder=40;
+    // InstancedMesh in Three r128 besitzt keine verlässliche automatische
+    // Instanz-Bounds-Ermittlung. Das Wolkenfeld ist klein und wird ohnehin
+    // als Ganzes über g.visible geschaltet, daher hier bewusst kein falsches
+    // Frustum-Culling.
+    mesh.frustumCulled=false;
+    mesh.name='WOLKENFELD_'+seed+'_'+label;
+    g.add(mesh);
+  }
+  addCloudInstances(coreItems,cloudCoreMat,'KERN');
+  addCloudInstances(edgeItems,cloudEdgeMat,'RAND');
+  addCloudInstances(highlightItems,cloudHighlightMat,'LICHT');
 
   g.position.set(x,y,z);
   g.userData={
     seed,
     layer,
-    coreMat,
-    edgeMat,
-    highlightMat,
+    coreMat:cloudCoreMat,
+    edgeMat:cloudEdgeMat,
+    highlightMat:cloudHighlightMat,
     fieldScale:s,
     speedFactor:layer===0 ? .92 : (layer===2 ? 1.09 : 1.0)
   };
@@ -7854,7 +7944,7 @@ function loadLiveWeather(){
     const c=data.current||{};
 
     const fetchedWeather={temperature:Number(c.temperature_2m),humidity:Number(c.relative_humidity_2m),precipitation:Number(c.precipitation)||0,rain:Number(c.rain)||0,weatherCode:Number(c.weather_code)||0,cloud:Number(c.cloud_cover)||0,windSpeed:Number(c.wind_speed_10m)||0,windDirection:Number(c.wind_direction_10m)||0};
-    seasonRealWeather=fetchedWeather;liveWeather={...fetchedWeather};
+    seasonRealWeather=fetchedWeather;if(!window.__aczoSeasonWeatherLabActive)liveWeather={...fetchedWeather};
     updateWeatherText();
     updateAstronomy();
     // updateAstronomy wendet die Wetterszene bereits mit denselben Daten an.
@@ -7875,6 +7965,11 @@ function loadLiveWeather(){
 }
 
 function updateSimulationButton(){
+  if(window.__aczoSeasonWeatherLabActive){
+    simBtn.classList.add('on');
+    simBtn.textContent='🧪 Wetter: LABOR';
+    return;
+  }
   simBtn.classList.toggle('on',simulationEnabled);
   simBtn.textContent=simulationEnabled ? '🌦️ Wetter: LIVE' : '☀️ Wetter: NEUTRAL';
 }
@@ -12657,6 +12752,9 @@ function updatePersonalCampScene(dt){
     personalChair.rotation.z=personalAngler.rotation.z;
     if(movePersonalActorToward(personalSeatSpot,dt,1.75)){
       personalChair.position.copy(personalSeatSpot);
+      // Stuhlbeine auf reale Wiesen-/Fahrzeugroute setzen; personalSeatSpot.z
+      // ist die Fuss-/Animationshoehe des Anglers und nicht die Bodenhoehe.
+      personalChair.position.z=personalCamperRoute[0].z;
       const lookDx=personalFishingSpot.x-personalSeatSpot.x;
       const lookDy=personalFishingSpot.y-personalSeatSpot.y;
       const lookToMosel=Math.atan2(-lookDx,lookDy);
@@ -12721,6 +12819,7 @@ function updatePersonalCampScene(dt){
       const lookDy=personalFishingSpot.y-personalSeatSpot.y;
       const lookToMosel=Math.atan2(-lookDx,lookDy);
       personalAngler.position.copy(personalSeatSpot).add(new THREE.Vector3(0,.03,0));
+      personalChair.position.z=personalCamperRoute[0].z;
       personalAngler.rotation.z=personalChair.rotation.z=lookToMosel;
       setPersonalAnglerSeated(personalAngler,true);
       s.state='seated';s.timer=60;
@@ -16393,28 +16492,18 @@ realBirchGroup.userData.alwaysVisible=true;
 realBirchGroup.userData.replacesSatelliteOverhangs=true;
 scene.add(realBirchGroup);
 
-const realBirchBarkMat=new THREE.MeshStandardMaterial({
-  color:0x665f50,roughness:.97,metalness:0,side:THREE.DoubleSide
+// P7: Die zwei grossen Weiden behalten Geometrie/Farben, wechseln aber auf
+// den erheblich guenstigeren Lambert-Lichtpfad.
+const realBirchBarkMat=new THREE.MeshLambertMaterial({color:0x665f50,side:THREE.DoubleSide});
+const realBirchDarkBarkMat=new THREE.MeshLambertMaterial({color:0x302f28});
+const realBirchAlgaeMat=new THREE.MeshLambertMaterial({color:0x355d38});
+const realBirchLeafMat=new THREE.MeshLambertMaterial({color:0x607c47,side:THREE.DoubleSide});
+const realBirchUnderwaterLeafMat=new THREE.MeshLambertMaterial({
+  color:0x3d703d,side:THREE.DoubleSide,emissive:new THREE.Color(0x102817),emissiveIntensity:.16
 });
-const realBirchDarkBarkMat=new THREE.MeshStandardMaterial({
-  color:0x302f28,roughness:.99,metalness:0
-});
-const realBirchAlgaeMat=new THREE.MeshStandardMaterial({
-  color:0x355d38,roughness:.98,metalness:0
-});
-const realBirchLeafMat=new THREE.MeshStandardMaterial({
-  color:0x607c47,roughness:.91,metalness:0,side:THREE.DoubleSide
-});
-const realBirchUnderwaterLeafMat=new THREE.MeshStandardMaterial({
-  color:0x3d703d,roughness:.96,metalness:0,side:THREE.DoubleSide,
-  emissive:new THREE.Color(0x102817),emissiveIntensity:.16
-});
-const realBirchCanopyMat=new THREE.MeshStandardMaterial({
-  color:0x587240,roughness:.93,metalness:0,side:THREE.DoubleSide
-});
-const realBirchUnderwaterCanopyMat=new THREE.MeshStandardMaterial({
-  color:0x345f37,roughness:.98,metalness:0,side:THREE.DoubleSide,
-  emissive:new THREE.Color(0x0c2113),emissiveIntensity:.14
+const realBirchCanopyMat=new THREE.MeshLambertMaterial({color:0x587240,side:THREE.DoubleSide});
+const realBirchUnderwaterCanopyMat=new THREE.MeshLambertMaterial({
+  color:0x345f37,side:THREE.DoubleSide,emissive:new THREE.Color(0x0c2113),emissiveIntensity:.14
 });
 const realBirchBranchGeometry=new THREE.CylinderGeometry(1,1,1,8,1,false);
 // Ein einzelnes, schlankes Birkenblatt ersetzt die bisherigen meterbreiten
@@ -16442,6 +16531,7 @@ function aczoBirchMakeSprayGeometry(){
 }
 const realBirchSprayGeometry=aczoBirchMakeSprayGeometry();
 const realBirchLeafMeshes=[];
+const realBirchFineLeafMeshes=[];
 const realBirchUp=new THREE.Vector3(0,1,0);
 
 function aczoBirchRandom(seed){
@@ -16479,7 +16569,7 @@ function aczoBirchInstancedSegments(name,segments,material,parent,cast=true){
     dummy.scale.set(s.r,length,s.r);dummy.updateMatrix();
     mesh.setMatrixAt(i,dummy.matrix);
   }
-  mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
+  mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
   mesh.castShadow=cast;mesh.receiveShadow=true;mesh.frustumCulled=false;
   parent.add(mesh);return mesh;
 }
@@ -16787,11 +16877,13 @@ function aczoBuildRealBirch(cfg){
       dummy.position.copy(items[i].p);dummy.rotation.copy(items[i].rot);
       dummy.scale.copy(items[i].scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
     }
-    mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
     mesh.castShadow=castsShadow;mesh.receiveShadow=true;mesh.frustumCulled=false;
-    mesh.userData.maxCount=items.length;mesh.userData.underwater=underwater;
+    mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;mesh.userData.underwater=underwater;
     mesh.userData.aczoNoShadow=!castsShadow;
-    tree.add(mesh);realBirchLeafMeshes.push(mesh);return mesh;
+    tree.add(mesh);realBirchLeafMeshes.push(mesh);
+    if(name.includes('EINZELBLAETTER'))realBirchFineLeafMeshes.push(mesh);
+    return mesh;
   };
   addLeafInstances(leavesAbove,realBirchLeafGeometry,realBirchLeafMat,'BIRKE_'+cfg.id+'_EINZELBLAETTER',false,false);
   addLeafInstances(leavesBelow,realBirchLeafGeometry,realBirchUnderwaterLeafMat,'BIRKE_'+cfg.id+'_UNTERWASSERBLAETTER',false,true);
@@ -17009,7 +17101,8 @@ function updateRealBirchSeason(day){
   realBirchUnderwaterCanopyMat.needsUpdate=true;
   realBirchGroup.visible=!is2D;
   for(const mesh of realBirchLeafMeshes){
-    mesh.count=Math.round(mesh.userData.maxCount*density);
+    mesh.userData.seasonCount=Math.round(mesh.userData.maxCount*density);
+    mesh.count=mesh.userData.seasonCount;
     mesh.visible=!is2D&&mesh.count>0;
   }
   renderer.shadowMap.needsUpdate=true;
@@ -17038,16 +17131,20 @@ scene.add(aczoSurveyedNatureGroup);
 if(aczoOuterForestGroup.parent)aczoOuterForestGroup.parent.remove(aczoOuterForestGroup);
 aczoOuterForestGroup.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});
 
-const aczoSurveyWoodMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true,emissive:0x2b2117,emissiveIntensity:.10});
-const aczoSurveyDarkWoodMat=new THREE.MeshStandardMaterial({color:0x30251e,roughness:1,metalness:0});
-const aczoSurveyBirchMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,metalness:0,vertexColors:true,emissive:0xf0f0e9,emissiveIntensity:.44});
-const aczoSurveyBirchMarkMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,vertexColors:true});
-const aczoSurveyLeafMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveySprayMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true});
-const aczoSurveyNeedleMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x183c24,emissiveIntensity:.11});
-const aczoSurveyReedMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0,side:THREE.DoubleSide,vertexColors:true,emissive:0x78bd49,emissiveIntensity:.46});
-const aczoSurveyReedHeadMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.99,metalness:0,vertexColors:true});
-const aczoSurveyBranchGeo=new THREE.CylinderGeometry(1,1,1,8,1,false);
+// P7 RELEASE PERFORMANCE: Der Naturwald benoetigt keine physikalisch-basierte
+// PBR-Materialrechnung pro Ast-/Blattpixel. Lambert behaelt Licht, Farbe,
+// Emission und Schattenwirkung, ist auf mobilen GPUs aber deutlich guenstiger.
+const aczoSurveyWoodMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,emissive:0x2b2117,emissiveIntensity:.10});
+const aczoSurveyDarkWoodMat=new THREE.MeshLambertMaterial({color:0x30251e});
+const aczoSurveyBirchMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true,emissive:0xf0f0e9,emissiveIntensity:.44});
+const aczoSurveyBirchMarkMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
+const aczoSurveyLeafMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true});
+const aczoSurveySprayMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true});
+const aczoSurveyNeedleMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true,emissive:0x183c24,emissiveIntensity:.11});
+const aczoSurveyReedMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,vertexColors:true,emissive:0x78bd49,emissiveIntensity:.46});
+const aczoSurveyReedHeadMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
+// Dünne Aeste brauchen in der Kartenansicht keine achteckige Rundung.
+const aczoSurveyBranchGeo=new THREE.CylinderGeometry(1,1,1,6,1,false);
 const aczoSurveyUp=new THREE.Vector3(0,1,0);
 const aczoSurveySeasonMeshes=[];
 const aczoSurveyEvergreenMeshes=[];
@@ -17133,7 +17230,9 @@ function aczoSurveyBuildDeciduous(tree){
       aczoSurveyBirchMarks.push({a:mid.clone().addScaledVector(markAxis,-half),b:mid.clone().addScaledVector(markAxis,half),r:.006+rnd()*(birch?.013:.008),color:markColor});
     }
   }
-  const anchors=[],branchCount=tree.filler?12+Math.floor(rnd()*5):(birch?19:22)+Math.floor(rnd()*6);
+  // P7: Kronen-Sprays tragen die sichtbare Silhouette. Unsichtbare Feinast-
+  // Hierarchien werden reduziert, Hauptstruktur bleibt stehen.
+  const anchors=[],branchCount=tree.filler?8+Math.floor(rnd()*3):(birch?18:16)+Math.floor(rnd()*(birch?4:5));
   for(let b=0;b<branchCount;b++){
     const u=.39+rnd()*.51,ti=Math.min(5,Math.max(2,Math.floor(u*6))),root=trunk[ti].clone().lerp(trunk[ti+1],rnd());
     const angle=rnd()*Math.PI*2,up=birch?.25+rnd()*.52:(rnd()-.12)*.62;
@@ -17144,12 +17243,12 @@ function aczoSurveyBuildDeciduous(tree){
     const branchColor=aczoSurveyShadeColor(birch?(rnd()<.66?0xd9dad4:0xa5a8a1):(rnd()<.22?tree.species.barkAlt:tree.species.bark),rnd,birch?.075:.16);
     const branchTarget=birch?aczoSurveyBirchSegments:aczoSurveyWoodSegments;
     aczoSurveyPushSegment(branchTarget,root,mid,r,branchColor);aczoSurveyPushSegment(branchTarget,mid,end,r*.61,branchColor);anchors.push(mid,end);
-    const secondaryCount=tree.filler?2:5;
+    const secondaryCount=tree.filler?1:(birch?4:3);
     for(let s=0;s<secondaryCount;s++){
       const a=mid.clone().lerp(end,.22+rnd()*.68),sa=angle+(rnd()-.5)*1.75,span=tree.crownRadius*(.17+rnd()*.28);
       const tip=a.clone().add(new THREE.Vector3(Math.cos(sa)*span,Math.sin(sa)*span*depth,(rnd()-.30)*tree.height*.09));
       const sr=r*(.27+rnd()*.15),secondaryColor=birch?aczoSurveyShadeColor(0x989b95,rnd,.08):aczoSurveyShadeColor(branchColor,rnd,.12);aczoSurveyPushSegment(branchTarget,a,tip,sr,secondaryColor);anchors.push(tip);
-      const twigCount=tree.filler?1:4;
+      const twigCount=tree.filler?0:(birch?2:1);
       for(let t=0;t<twigCount;t++){
         const ta=a.clone().lerp(tip,.36+rnd()*.58),aa=sa+(rnd()-.5)*1.9,tl=tree.crownRadius*(.07+rnd()*.14);
         const te=tip.clone().add(new THREE.Vector3(Math.cos(aa)*tl,Math.sin(aa)*tl,(rnd()-.46)*tree.height*.045));
@@ -17160,13 +17259,13 @@ function aczoSurveyBuildDeciduous(tree){
   // Im Waldinneren tragen die dicht schließenden Blattfächer die Silhouette;
   // unsichtbare Einzelblätter werden dort reduziert. Sichtkante und Birken
   // behalten ihre volle Detailstufe.
-  const leafCount=tree.filler?68+Math.floor(rnd()*44):(birch?1450:780)+Math.floor(rnd()*(birch?460:320));
+  const leafCount=tree.filler?30+Math.floor(rnd()*28):(birch?1450:780)+Math.floor(rnd()*(birch?460:320));
   for(let i=0;i<leafCount;i++){
     const anchor=anchors[Math.floor(rnd()*anchors.length)]||trunk[6],spread=.035+rnd()*(tree.filler?.28:.42),phi=rnd()*Math.PI*2,cz=rnd()*2-1,sr=Math.sqrt(Math.max(0,1-cz*cz));
     const p=anchor.clone().add(new THREE.Vector3(Math.cos(phi)*sr*spread,Math.sin(phi)*sr*spread,cz*spread*.82));
     aczoSurveyLeafItems.push({p,scale:new THREE.Vector3(.018+rnd()*.021,.030+rnd()*.032,1),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,toneBand:tree.toneBand||0,variation:(rnd()-.5)*.42,hueShift:tree.hueShift||0,satShift:tree.satShift||0,lightShift:tree.lightShift||0});
   }
-  const sprayCount=tree.filler?40+Math.floor(rnd()*20):(birch?220:205)+Math.floor(rnd()*(birch?95:95));
+  const sprayCount=tree.filler?24+Math.floor(rnd()*14):(birch?220:205)+Math.floor(rnd()*(birch?95:95));
   for(let i=0;i<sprayCount;i++){
     let p;if(rnd()<.78&&anchors.length)p=anchors[Math.floor(rnd()*anchors.length)].clone().add(new THREE.Vector3((rnd()-.5)*.68,(rnd()-.5)*.68,(rnd()-.5)*.58));
     else{const a=rnd()*Math.PI*2,rad=Math.sqrt(rnd()),z=(rnd()*2-1);p=new THREE.Vector3(tree.x+Math.cos(a)*tree.crownRadius*rad,tree.y+Math.sin(a)*tree.crownDepth*rad,baseZ+tree.height*(birch?.79:.75)+z*tree.height*(birch?.115:.16));}
@@ -17202,7 +17301,7 @@ function aczoSurveyBuildBush(object,index){
   // Mehrere ineinanderlaufende Kronenlappen ergeben einen geschlossenen Strauch statt Pilzformen.
   const lobes=[],lobeCount=3+Math.floor(rnd()*3);for(let l=0;l<lobeCount;l++)lobes.push({x:object.x+(rnd()-.5)*radius*.75,y:object.y+(rnd()-.5)*radius*.75,z:baseZ+height*(.44+rnd()*.30),rx:radius*(.52+rnd()*.36),ry:radius*(.48+rnd()*.40),rz:height*(.27+rnd()*.22)});
   const leaves=170+Math.floor(rnd()*105);for(let i=0;i<leaves;i++){const l=lobes[i%lobes.length],a=rnd()*Math.PI*2,cz=rnd()*2-1,s=Math.cbrt(rnd()),sr=Math.sqrt(Math.max(0,1-cz*cz));const p=new THREE.Vector3(l.x+Math.cos(a)*sr*l.rx*s,l.y+Math.sin(a)*sr*l.ry*s,l.z+cz*l.rz*s);aczoSurveyLeafItems.push({p,scale:new THREE.Vector3(.019+rnd()*.020,.032+rnd()*.030,1),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species,toneBand,variation:(rnd()-.35)*.44,hueShift,satShift,lightShift});}
-  const sprays=52+Math.floor(rnd()*38);for(let i=0;i<sprays;i++){const l=lobes[i%lobes.length],a=rnd()*Math.PI*2,cz=rnd()*2-1,s=.45+rnd()*.55,sr=Math.sqrt(Math.max(0,1-cz*cz)),size=.10+rnd()*.15;const p=new THREE.Vector3(l.x+Math.cos(a)*sr*l.rx*s,l.y+Math.sin(a)*sr*l.ry*s,l.z+cz*l.rz*s);aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.85+rnd()*.25),size*(.88+rnd()*.28),size*(.75+rnd()*.30)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species,toneBand,variation:(rnd()-.35)*.42,hueShift,satShift,lightShift});}
+  const sprays=38+Math.floor(rnd()*24);for(let i=0;i<sprays;i++){const l=lobes[i%lobes.length],a=rnd()*Math.PI*2,cz=rnd()*2-1,s=.45+rnd()*.55,sr=Math.sqrt(Math.max(0,1-cz*cz)),size=.10+rnd()*.15;const p=new THREE.Vector3(l.x+Math.cos(a)*sr*l.rx*s,l.y+Math.sin(a)*sr*l.ry*s,l.z+cz*l.rz*s);aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.85+rnd()*.25),size*(.88+rnd()*.28),size*(.75+rnd()*.30)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species,toneBand,variation:(rnd()-.35)*.42,hueShift,satShift,lightShift});}
 }
 
 function aczoSurveyBuildReeds(object,index){
@@ -17221,10 +17320,63 @@ function aczoSurveyBuildReeds(object,index){
   }
 }
 
-function aczoSurveyBuildSegments(items,material,name,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(aczoSurveyBranchGeo,material,items.length),dummy=new THREE.Object3D();items.forEach((s,i)=>{const delta=s.b.clone().sub(s.a),length=delta.length();dummy.position.copy(s.a).add(s.b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(aczoSurveyUp,delta.normalize());dummy.scale.set(s.r,length,s.r);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);if(material.vertexColors)mesh.setColorAt(i,new THREE.Color(s.color??material.color??0xffffff));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;aczoSurveyedNatureGroup.add(mesh);return mesh;}
+// P8: Sehr große Ast-/Zweiglisten werden räumlich gechunkt. Das betrifft vor
+// allem den Naturwald. Kleine Landmarken-/Schilfgruppen bleiben ein einzelner
+// Batch. Jeder Chunk erhält eine echte BoundingSphere, sodass Three.js ihn für
+// Hauptkamera UND Schattenkamera korrekt gegen das jeweilige Frustum testen kann.
+const ACZO_SURVEY_SEGMENT_CHUNK_SIZE=42;
+const ACZO_SURVEY_SEGMENT_CHUNK_THRESHOLD=5000;
+function aczoSurveyBuildSegments(items,material,name,cast=true,receive=true){
+  if(!items.length)return null;
+  const chunked=items.length>=ACZO_SURVEY_SEGMENT_CHUNK_THRESHOLD;
+  const groups=new Map();
+  if(chunked){
+    for(const s of items){
+      const mx=(s.a.x+s.b.x)*.5,my=(s.a.y+s.b.y)*.5;
+      const key=Math.floor(mx/ACZO_SURVEY_SEGMENT_CHUNK_SIZE)+'|'+Math.floor(my/ACZO_SURVEY_SEGMENT_CHUNK_SIZE);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(s);
+    }
+  }else groups.set('all',items);
+
+  let firstMesh=null,chunkIndex=0;
+  for(const batch of groups.values()){
+    // Eigene kleine Branch-Geometrie pro Chunk erlaubt eine korrekte
+    // BoundingSphere trotz InstancedMesh-Weltmatrizen.
+    const geo=chunked?aczoSurveyBranchGeo.clone():aczoSurveyBranchGeo;
+    const mesh=new THREE.InstancedMesh(geo,material,batch.length),dummy=new THREE.Object3D();
+    let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
+    batch.forEach((s,i)=>{
+      const delta=s.b.clone().sub(s.a),length=delta.length();
+      dummy.position.copy(s.a).add(s.b).multiplyScalar(.5);
+      dummy.quaternion.setFromUnitVectors(aczoSurveyUp,delta.normalize());
+      dummy.scale.set(s.r,length,s.r);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+      if(material.vertexColors)mesh.setColorAt(i,new THREE.Color(s.color??material.color??0xffffff));
+      minX=Math.min(minX,s.a.x,s.b.x);minY=Math.min(minY,s.a.y,s.b.y);minZ=Math.min(minZ,s.a.z,s.b.z);
+      maxX=Math.max(maxX,s.a.x,s.b.x);maxY=Math.max(maxY,s.a.y,s.b.y);maxZ=Math.max(maxZ,s.a.z,s.b.z);
+    });
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+    mesh.name=chunked?name+'_CHUNK_'+(++chunkIndex):name;
+    mesh.castShadow=cast;mesh.receiveShadow=receive;
+    mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;
+    if(chunked){
+      const center=new THREE.Vector3((minX+maxX)*.5,(minY+maxY)*.5,(minZ+maxZ)*.5);
+      const radius=.5*Math.hypot(maxX-minX,maxY-minY,maxZ-minZ)+1.4;
+      geo.boundingSphere=new THREE.Sphere(center,radius);
+      mesh.frustumCulled=true;
+      mesh.userData.aczoForestChunk=true;
+      mesh.userData.aczoChunkCenter=center;
+      mesh.userData.aczoChunkRadius=radius;
+    }else mesh.frustumCulled=false;
+    aczoSurveyedNatureGroup.add(mesh);
+    if(!firstMesh)firstMesh=mesh;
+  }
+  return firstMesh;
+}
 function aczoSurveyShuffle(items,seed){const rnd=aczoSurveyRandom(seed);for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}}
 const aczoSurveyFineLodMeshes=[];
-function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
+function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor){mesh.instanceColor.setUsage(THREE.StaticDrawUsage);mesh.instanceColor.needsUpdate=true;}mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
 
 // Pro Art und Farbcharakter entsteht ein eigenes Kronenmaterial. Damit bleibt
 // die natürliche Mischung auch in der Luftansicht sichtbar; die frühere eine
@@ -17241,8 +17393,8 @@ function aczoSurveyBuildFoliageBatches(items,geometry,name,cast=false,receive=fa
   for(const [key,batch] of batches){
     const first=batch[0],dayColor=new THREE.Color(first.species.summer);
     dayColor.offsetHSL(first.hueShift||0,first.satShift||0,first.lightShift||0);
-    const material=new THREE.MeshStandardMaterial({
-      color:dayColor,roughness:.91,metalness:0,side:THREE.DoubleSide,
+    const material=new THREE.MeshLambertMaterial({
+      color:dayColor,side:THREE.DoubleSide,
       emissive:dayColor,emissiveIntensity:.075
     });
     material.userData.aczoDayColor=dayColor.clone();
@@ -17250,6 +17402,7 @@ function aczoSurveyBuildFoliageBatches(items,geometry,name,cast=false,receive=fa
     aczoSurveyFoliageMaterials.push(material);
     const mesh=new THREE.InstancedMesh(geometry,material,batch.length),dummy=new THREE.Object3D();
     batch.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
     mesh.instanceMatrix.needsUpdate=true;
     mesh.name=name+'_'+key;
     mesh.castShadow=cast;mesh.receiveShadow=receive;
@@ -17273,7 +17426,12 @@ aczoSurveyManualTreePoints.push([ACZO_SOUTH_LIFEBUOY_TREE.x,ACZO_SOUTH_LIFEBUOY_
 aczoSurveyManualTreeObjects.forEach((o,i)=>aczoSurveyBuildDeciduous(aczoSurveyTreeSpec(o,i,false)));
 aczoSurveyBuildDeciduous(ACZO_SOUTH_LIFEBUOY_TREE);
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='conifer').forEach((o,i)=>aczoSurveyBuildConifer(o,i,false));
-ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush').forEach(aczoSurveyBuildBush);
+// P9: Buesche innerhalb der beiden Mischwaldpolygone werden nicht mehr
+// aufgebaut. Vermessene Buesche an Ufer, Wegen und ausserhalb des Waldes
+// bleiben unveraendert erhalten.
+ACZO_SURVEY_DATA.objects
+  .filter(o=>o.type==='bush'&&!ACZO_SURVEY_DATA.areas.some(a=>a.type==='forest'&&aczoSurveyPointInPolygon(o.x,o.y,a.points)))
+  .forEach(aczoSurveyBuildBush);
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').forEach(aczoSurveyBuildReeds);
 
 // Dichte, unregelmaessige Innenfuellung nur innerhalb der gezeichneten
@@ -17281,11 +17439,58 @@ ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').forEach(aczoSurveyBuildReed
 // Luftbild-Mischung stimmt und zuvor zu freie Stellen geschlossen werden.
 const aczoSurveyForestAreas=ACZO_SURVEY_DATA.areas.filter(a=>a.type==='forest');
 const aczoSurveyClearAreas=ACZO_SURVEY_DATA.areas.filter(a=>a.type==='clear');
-let aczoSurveyFillerCount=0;
+
+// P9 WALDTIEFEN-LOD: Nur die automatisch erzeugte Innenfuellung wird mit
+// zunehmender Entfernung vom Weiher ausgeduennt. Die sichtbaren/vermessen
+// gesetzten Randbaeume bleiben vollstaendig unangetastet. Als Waldtiefe gilt
+// die kuerzeste 2D-Distanz zur echten Weiherkontur, nicht zum Kartenrand.
+function aczoSurveyPointSegmentDistance2D(px,py,a,b){
+  const vx=b[0]-a[0],vy=b[1]-a[1],wx=px-a[0],wy=py-a[1],vv=vx*vx+vy*vy;
+  const t=vv>1e-9?THREE.MathUtils.clamp((wx*vx+wy*vy)/vv,0,1):0;
+  return Math.hypot(px-(a[0]+vx*t),py-(a[1]+vy*t));
+}
+function aczoSurveyDistanceToPondEdge(x,y){
+  let best=Infinity;
+  for(let i=0;i<POND_RENDER_BOUNDARY.length;i++){
+    const a=POND_RENDER_BOUNDARY[i],b=POND_RENDER_BOUNDARY[(i+1)%POND_RENDER_BOUNDARY.length];
+    best=Math.min(best,aczoSurveyPointSegmentDistance2D(x,y,a,b));
+  }
+  return best;
+}
+function aczoSurveyForestDepthProfile(depth){
+  if(depth<=20)return {keep:1.00,crown:1.00,depthScale:1.00};
+  if(depth<=35)return {keep:.80,crown:1.05,depthScale:1.03};
+  if(depth<=50)return {keep:.60,crown:1.10,depthScale:1.06};
+  return {keep:.42,crown:1.14,depthScale:1.09};
+}
+
+let aczoSurveyFillerCount=0,aczoSurveyFillerCandidateCount=0,aczoSurveyFillerRejectedByDepth=0;
 for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
   const poly=aczoSurveyForestAreas[ai].points,xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),rnd=aczoSurveyRandom(23091+ai*817);
-  const step=5.0,areaCap=ai===0?410:90;let areaFillerCount=0;
-  for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys)&&areaFillerCount<areaCap;y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs)&&areaFillerCount<areaCap;x+=step){const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;if(aczoSurveyManualTreePoints.some(p=>Math.hypot(px-p[0],py-p[1])<3.6))continue;const fillerIndex=aczoSurveyFillerCount;if((fillerIndex+ai*7)%36===11)aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);else aczoSurveyBuildDeciduous(aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true));aczoSurveyFillerCount++;areaFillerCount++;}}
+  const step=5.0;
+  for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys);y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs);x+=step){
+    const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;
+    if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;
+    if(aczoSurveyManualTreePoints.some(p=>Math.hypot(px-p[0],py-p[1])<3.6))continue;
+    aczoSurveyFillerCandidateCount++;
+    const forestDepth=aczoSurveyDistanceToPondEdge(px,py),profile=aczoSurveyForestDepthProfile(forestDepth);
+    // Derselbe deterministische Generator wie bisher: keine flackernden oder
+    // von Sitzung zu Sitzung wechselnden Luecken.
+    if(rnd()>profile.keep){aczoSurveyFillerRejectedByDepth++;continue;}
+    const fillerIndex=aczoSurveyFillerCount;
+    if((fillerIndex+ai*7)%36===11){
+      aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);
+    }else{
+      const tree=aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true);
+      // Weniger echte Baeume, dafuer leicht breitere/geschlossenere Kronen.
+      // Ausschliesslich Filler: Rand- und Referenzbaeume bleiben 1:1 gleich.
+      tree.crownRadius*=profile.crown;
+      tree.crownDepth*=profile.depthScale;
+      tree.forestDepth=forestDepth;
+      aczoSurveyBuildDeciduous(tree);
+    }
+    aczoSurveyFillerCount++;
+  }}
 }
 
 aczoSurveyShuffle(aczoSurveyLeafItems,19561201);aczoSurveyShuffle(aczoSurveySprayItems,19561202);
@@ -17574,6 +17779,23 @@ function updateAczoSurveyForestLod(){
     mesh.visible=!is2D&&mesh.count>0;
   }
 }
+// P7: Die 28.300 schattenfreien Einzelblaetter der zwei grossen Weiden sind
+// in der Gesamtansicht kaum als Einzelobjekte lesbar. Die Kronen-Sprays bleiben
+// voll bestehen und tragen Silhouette/Schatten; Nahsicht bleibt 100 Prozent.
+let aczoRealBirchLodKey='';
+function updateAczoRealBirchFineLod(){
+  const dist=Math.max(0,camera.position.distanceTo(controls.target));
+  const farFactor=ACZO_MOBILE_PERF?.10:.18;
+  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,34,68));
+  const key=Math.round(factor*50)+'|'+(is2D?'2':'3')+'|'+(fishMode?'f':'m');
+  if(key===aczoRealBirchLodKey)return;aczoRealBirchLodKey=key;
+  for(const mesh of realBirchFineLeafMeshes){
+    const season=mesh.userData.seasonCount??mesh.userData.maxCount??0;
+    const localFactor=(mesh.userData.underwater&&fishMode&&ACZO_MOBILE_PERF)?Math.max(.55,factor):factor;
+    mesh.count=is2D?0:Math.max(0,Math.round(season*localFactor));
+    mesh.visible=!is2D&&mesh.count>0;
+  }
+}
 updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
 // Shadow-Flags werden beim Erzeugen gesetzt und im ersten Renderbild einmalig
 // zentral geprüft; keine zweite Volltraversierung des Waldes beim Start.
@@ -17583,6 +17805,9 @@ aczoSurveyedNatureGroup.userData.coniferCount=ACZO_SURVEY_DATA.objects.filter(o=
 aczoSurveyedNatureGroup.userData.bushCount=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush').length;
 aczoSurveyedNatureGroup.userData.reedGroupCount=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').length;
 aczoSurveyedNatureGroup.userData.fillerTreeCount=aczoSurveyFillerCount;
+aczoSurveyedNatureGroup.userData.fillerCandidateCount=aczoSurveyFillerCandidateCount;
+aczoSurveyedNatureGroup.userData.fillerRejectedByDepth=aczoSurveyFillerRejectedByDepth;
+aczoSurveyedNatureGroup.userData.forestBushesRemoved=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush'&&aczoSurveyForestAreas.some(a=>aczoSurveyPointInPolygon(o.x,o.y,a.points))).length;
 aczoSurveyedNatureGroup.userData.foliagePaletteBatches=aczoSurveyFoliageMaterials.length;
 aczoSurveyedNatureGroup.userData.leafInstanceCount=aczoSurveyLeafItems.length;
 aczoSurveyedNatureGroup.userData.crownSprayInstanceCount=aczoSurveySprayItems.length;
@@ -30025,6 +30250,16 @@ function projectAnglingQte(){
   anglingQte.style.top='50%';
 }
 
+// P8: Die kleinen Livefenster rendern teilweise die komplette 3D-Szene ein
+// zweites Mal. Auf Mobilgeräten reicht für diese Vorschau 10 Hz, am Desktop
+// 15 Hz. Das Hauptbild und die Spielsimulation behalten ihr eigenes Framebudget.
+let aczoLastAnglingFloatRenderAt=0;
+let aczoLastAnglingReelRenderAt=0;
+function aczoSecondaryCameraDue(lastAt,now){
+  const hz=ACZO_MOBILE_PERF?10:15;
+  return !lastAt||now-lastAt>=1000/hz;
+}
+
 function renderAnglingFloatCamera(){
   if(anglingState==='fast-retrieving'||anglingCinematicView==='reset-return'||anglingUi.classList.contains('is-returning')){
     anglingFloatZoom.style.display='none';
@@ -30040,6 +30275,9 @@ function renderAnglingFloatCamera(){
   const floatActive=!anglingUsesDeeper()&&!anglingUsesArtificialLure()&&anglingBobber.visible&&
     ['casting','waiting','approach','bite','bite-focus','strike','retrieving'].includes(anglingState);
   if(!anglingMode||!floatActive||!anglingUi.classList.contains('line-active'))return;
+  const aczoFloatNow=performance.now();
+  if(!aczoSecondaryCameraDue(aczoLastAnglingFloatRenderAt,aczoFloatNow))return;
+  aczoLastAnglingFloatRenderAt=aczoFloatNow;
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return;
   // V8.101: setScissor()/setViewport() erwarten logische Renderer-Pixel und
@@ -30085,6 +30323,9 @@ function renderAnglingReelCamera(){
   if(!anglingUsesArtificialLure())return;
   const reelStates=['casting','lure-waiting','lure-retrieving','lure-attack','lure-missed','strike'];
   if(!anglingMode||!reelStates.includes(anglingState)||!anglingUi.classList.contains('line-active'))return;
+  const aczoReelNow=performance.now();
+  if(!aczoSecondaryCameraDue(aczoLastAnglingReelRenderAt,aczoReelNow))return;
+  aczoLastAnglingReelRenderAt=aczoReelNow;
 
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingReelZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return;
@@ -31522,12 +31763,17 @@ let aczoLastRenderedFrameAt=0;
  // Wasser und Wolken. Interaktion, Spiel-/Tauchübergänge, Zeitraffer, Verkehr,
  // Besucher, Regen und Vögel schalten sofort wieder auf die volle Browser-
  // Bildrate. Dadurch arbeitet die GPU nicht länger permanent am Anschlag.
- const aczoFullRate=viewerInputBusy()||fishMode||skyLookMode||anglingMode
+ const aczoInteractive=viewerInputBusy()||fishMode||skyLookMode||anglingMode
    ||!!fishTransition||!!currentVisit||!!bmwX3Visit
    ||(Number(window.__aczoFlyingBirdCount)||0)>0
    ||rainSystem.visible||seasonSnowPoints.visible
    ||!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
- const aczoFrameGap=aczoFullRate?0:(1000/24);
+ // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
+ // Wald-/Wasser-Renderpasses pro Sekunde. Aufloesung bleibt unveraendert.
+ const aczoTargetFps=aczoInteractive
+   ?(ACZO_MOBILE_PERF?30:45)
+   :(ACZO_MOBILE_PERF?18:22);
+ const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
 
@@ -31555,6 +31801,7 @@ let aczoLastRenderedFrameAt=0;
   updateAczoSurveyForestLod();
   updateAczoWildBoars(visualDt);
   updateRealBirchSeason(seasonDayOfDate(viewerNow()));
+  updateAczoRealBirchFineLod();
   updateClubFlagPole(visualDt);
   if(typeof aczoShoreSealMat!=='undefined'&&aczoShoreSealMat.uniforms?.nightFactor){
     aczoShoreSealMat.uniforms.nightFactor.value=simulationEnabled?sceneNightFactor:0;
@@ -31791,5 +32038,102 @@ let aczoLastRenderedFrameAt=0;
 
 
 
-</body>
+\n<script id="seasonWeatherLabLogic">
+(function(){
+  const byId=id=>document.getElementById(id);
+  const panel=byId('seasonWeatherLab'),openBtn=byId('seasonWeatherLabBtn'),closeBtn=byId('swlClose');
+  if(!panel||!openBtn)return;
+
+  const c={
+    day:byId('swlDay'),hour:byId('swlHour'),cloud:byId('swlCloud'),wind:byId('swlWind'),windDir:byId('swlWindDir'),
+    precip:byId('swlPrecip'),precipType:byId('swlPrecipType'),fog:byId('swlFog'),snow:byId('swlSnowCover'),brown:byId('swlWinterBrown')
+  };
+  const v={
+    day:byId('swlDayValue'),hour:byId('swlHourValue'),cloud:byId('swlCloudValue'),wind:byId('swlWindValue'),windDir:byId('swlWindDirValue'),
+    precip:byId('swlPrecipValue'),fog:byId('swlFogValue'),snow:byId('swlSnowCoverValue'),brown:byId('swlWinterBrownValue')
+  };
+  const status=byId('swlStatus');
+  let applyFrame=0;
+
+  function dayDate(day){
+    const d=new Date();d.setMonth(0,1);d.setHours(12,0,0,0);d.setDate(Math.max(1,Math.min(365,Math.round(Number(day)||1))));return d;
+  }
+  function dayLabel(day){return dayDate(day).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}
+  function hourLabel(hour){
+    let h=Math.max(0,Math.min(23.75,Number(hour)||0));const hh=Math.floor(h),mm=Math.round((h-hh)*60);return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  }
+  function updateLabels(){
+    v.day.textContent=dayLabel(c.day.value)+' · Tag '+Math.round(c.day.value);v.hour.textContent=hourLabel(c.hour.value);
+    v.cloud.textContent=Math.round(c.cloud.value)+' %';v.wind.textContent=Math.round(c.wind.value)+' km/h';v.windDir.textContent=Math.round(c.windDir.value)+'°';
+    v.precip.textContent=Number(c.precip.value).toFixed(1)+' mm/h';v.fog.textContent=Math.round(c.fog.value)+' %';v.snow.textContent=Math.round(c.snow.value)+' %';v.brown.textContent=Math.round(c.brown.value)+' %';
+  }
+  function weatherCode(){
+    const type=c.precipType.value,prec=Number(c.precip.value)||0,fog=Number(c.fog.value)||0,cloud=Number(c.cloud.value)||0;
+    if(type==='snow'&&prec>0)return 71;if(type==='rain'&&prec>0)return 61;if(fog>45)return 45;if(cloud>80)return 3;if(cloud>35)return 2;if(cloud>10)return 1;return 0;
+  }
+  function applyLab(){
+    window.__aczoSeasonWeatherLabActive=true;
+    seasonTestMode=true;simulationEnabled=true;
+    seasonTestDay=Math.round(Number(c.day.value)||1);seasonTestHour=Number(c.hour.value)||0;
+    setSeasonTimeAnchor(seasonDateFromDayHour(seasonTestDay,seasonTestHour));
+    seasonTestFog=Number(c.fog.value)||0;seasonTestSnowCover=Number(c.snow.value)||0;seasonTestWinterBrown=Number(c.brown.value)||0;
+    const type=c.precipType.value,prec=Math.max(0,Number(c.precip.value)||0);
+    seasonTestPrecipType=type==='snow'?'snow':'rain';
+    liveWeather={...liveWeather,cloud:Number(c.cloud.value)||0,windSpeed:Number(c.wind.value)||0,windDirection:Number(c.windDir.value)||0,
+      precipitation:type==='none'?0:prec,rain:type==='rain'?prec:0,weatherCode:weatherCode()};
+    if(typeof updateSimulationButton==='function')updateSimulationButton();
+    if(typeof updateWeatherText==='function')updateWeatherText();
+    if(typeof updateAstronomy==='function')updateAstronomy();else if(typeof applyWeatherScene==='function')applyWeatherScene();
+    const d=seasonDayOfDate(viewerNow());
+    if(typeof updateAczoSurveyedNatureSeason==='function')updateAczoSurveyedNatureSeason(d);
+    if(typeof updateRealBirchSeason==='function')updateRealBirchSeason(d);
+    if(typeof updateSeasonTestVisuals==='function')updateSeasonTestVisuals(0);
+    if(typeof updateClubFlagPole==='function')updateClubFlagPole(0);
+    if(typeof renderer!=='undefined'&&renderer.shadowMap)renderer.shadowMap.needsUpdate=true;
+    openBtn.classList.add('active');
+    status.classList.add('active');status.textContent='LABOR AKTIV · '+dayLabel(seasonTestDay)+' · '+hourLabel(seasonTestHour)+' · '+Math.round(liveWeather.cloud)+' % Wolken';
+  }
+  function scheduleApply(){updateLabels();if(!window.__aczoSeasonWeatherLabActive)return;cancelAnimationFrame(applyFrame);applyFrame=requestAnimationFrame(applyLab);}
+
+  function populateFromCurrent(){
+    const now=viewerNow();c.day.value=seasonDayOfDate(now);c.hour.value=seasonHourOfDate(now);
+    c.cloud.value=Math.round(Number(liveWeather.cloud)||0);c.wind.value=Math.round(Number(liveWeather.windSpeed)||0);c.windDir.value=Math.round(Number(liveWeather.windDirection)||0);
+    const snowing=typeof seasonTestSnowing==='function'&&seasonTestSnowing();const rain=Math.max(Number(liveWeather.precipitation)||0,Number(liveWeather.rain)||0);
+    c.precip.value=Math.min(8,rain);c.precipType.value=rain<=.01?'none':(snowing?'snow':'rain');c.fog.value=Number(seasonTestFog)||0;c.snow.value=Number(seasonTestSnowCover)||0;c.brown.value=Number(seasonTestWinterBrown)||0;updateLabels();
+  }
+  function restoreRealtime(){
+    window.__aczoSeasonWeatherLabActive=false;
+    const now=new Date();seasonTestMode=true;seasonTestDay=seasonDayOfDate(now);seasonTestHour=seasonHourOfDate(now);setSeasonTimeAnchor(now);
+    seasonTestFog=0;seasonTestSnowCover=0;seasonTestPrecipType='rain';seasonTestWinterBrown=0;
+    if(seasonRealWeather)liveWeather={...seasonRealWeather};
+    simulationEnabled=true;
+    if(typeof updateSimulationButton==='function')updateSimulationButton();
+    if(typeof updateWeatherText==='function')updateWeatherText();
+    if(typeof updateAstronomy==='function')updateAstronomy();else if(typeof applyWeatherScene==='function')applyWeatherScene();
+    if(typeof updateAczoSurveyedNatureSeason==='function')updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
+    if(typeof updateRealBirchSeason==='function')updateRealBirchSeason(seasonDayOfDate(viewerNow()));
+    if(typeof updateSeasonTestVisuals==='function')updateSeasonTestVisuals(0);
+    if(typeof renderer!=='undefined'&&renderer.shadowMap)renderer.shadowMap.needsUpdate=true;
+    openBtn.classList.remove('active');status.classList.remove('active');status.textContent='LABOR INAKTIV · Echtzeit';populateFromCurrent();
+  }
+
+  const weatherPresets={
+    clear:{cloud:4,wind:4,dir:245,precip:0,type:'none',fog:0,snow:0},
+    cloudy:{cloud:86,wind:12,dir:250,precip:0,type:'none',fog:0,snow:0},
+    rain:{cloud:96,wind:18,dir:235,precip:3.2,type:'rain',fog:8,snow:0},
+    storm:{cloud:100,wind:52,dir:225,precip:6.5,type:'rain',fog:12,snow:0},
+    snow:{cloud:92,wind:16,dir:40,precip:2.8,type:'snow',fog:12,snow:75},
+    fog:{cloud:72,wind:2,dir:180,precip:0,type:'none',fog:88,snow:0}
+  };
+  panel.querySelectorAll('[data-season-day]').forEach(b=>b.addEventListener('click',()=>{c.day.value=b.dataset.seasonDay;updateLabels();applyLab();}));
+  panel.querySelectorAll('[data-hour]').forEach(b=>b.addEventListener('click',()=>{c.hour.value=b.dataset.hour;updateLabels();applyLab();}));
+  panel.querySelectorAll('[data-weather]').forEach(b=>b.addEventListener('click',()=>{const p=weatherPresets[b.dataset.weather];if(!p)return;c.cloud.value=p.cloud;c.wind.value=p.wind;c.windDir.value=p.dir;c.precip.value=p.precip;c.precipType.value=p.type;c.fog.value=p.fog;c.snow.value=p.snow;updateLabels();applyLab();}));
+  Object.values(c).forEach(el=>{if(!el)return;el.addEventListener('input',scheduleApply);el.addEventListener('change',scheduleApply);});
+  byId('swlApply').addEventListener('click',applyLab);byId('swlRealtime').addEventListener('click',restoreRealtime);
+  openBtn.addEventListener('click',()=>{populateFromCurrent();panel.classList.add('open');panel.setAttribute('aria-hidden','false');});
+  closeBtn.addEventListener('click',()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');});
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open')){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}});
+  populateFromCurrent();
+})();
+</script>\n</body>
 </html>
