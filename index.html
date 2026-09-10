@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P73 RUNTIME DIAG · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P74 FRAME PROFILER · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4602,7 +4602,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P73 RUNTIME DIAG';
+const VIEWER_VERSION='ACZO56 · P74 FRAME PROFILER';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33487,7 +33487,7 @@ let aczoP72ShadowRequests=0;
 
    let frames=0,lastFpsStamp=performance.now(),fps=0;
    let lastShadowStamp=performance.now(),lastShadowCount=0,shadowHz=0;
-   let startMem=null;
+   let startMem=null,profLastReset=performance.now();
    const raf=window.requestAnimationFrame.bind(window);
 
    function tick(now){
@@ -33513,8 +33513,16 @@ let aczoP72ShadowRequests=0;
          heap=used.toFixed(0)+' MB ('+(used-startMem>=0?'+':'')+(used-startMem).toFixed(0)+')';
        }
        const mode=aczoP69ForcedHour===13?'TAG':(aczoP69ForcedHour===1?'NACHT':'ECHT');
+       const profLines=[];
+       if(typeof aczoP74Prof!=='undefined'){
+         Object.entries(aczoP74Prof)
+           .filter(([,p])=>p.n>0)
+           .sort((a,b)=>(b[1].sum/b[1].n)-(a[1].sum/a[1].n))
+           .slice(0,8)
+           .forEach(([k,p])=>profLines.push(k.padEnd(10,' ')+' '+(p.sum/p.n).toFixed(2)+' / '+p.max.toFixed(1)+' ms'));
+       }
        body.textContent=
-         'P73 RUNTIME · '+mode+'\n'+
+         'P74 PROFILER · '+mode+'\n'+
          'FPS          '+fps.toFixed(1)+'\n'+
          'Draw Calls   '+(r.calls??'n/a')+'\n'+
          'Dreiecke     '+(r.triangles??'n/a')+'\n'+
@@ -33522,7 +33530,12 @@ let aczoP72ShadowRequests=0;
          'Texturen     '+(mem.textures??'n/a')+'\n'+
          'Programme    '+progs+'\n'+
          'Shadow Req/s '+shadowHz.toFixed(1)+'\n'+
-         'JS Heap      '+heap;
+         'JS Heap      '+heap+'\n'+
+         'AVG / MAX (5s)\n'+profLines.join('\n');
+       if(now-profLastReset>=5000&&typeof aczoP74Prof!=='undefined'){
+         Object.keys(aczoP74Prof).forEach(k=>delete aczoP74Prof[k]);
+         profLastReset=now;
+       }
      }catch(err){}
      raf(tick);
    }
@@ -33532,6 +33545,66 @@ let aczoP72ShadowRequests=0;
  if(document.readyState==='loading'){
    document.addEventListener('DOMContentLoaded',initP73Diag,{once:true});
  }else initP73Diag();
+})();
+
+// P74 FRAME PROFILER ----------------------------------------------------
+// Misst Laufzeit vorhandener Funktionen, ohne deren Verhalten zu verändern.
+const aczoP74Prof={};
+function aczoP74Wrap(name,label){
+  try{
+    const fn=window[name];
+    if(typeof fn!=='function'||fn.__aczoP74Wrapped)return;
+    const w=function(...args){
+      const t0=performance.now();
+      try{return fn.apply(this,args);}
+      finally{
+        const dt=performance.now()-t0;
+        const p=aczoP74Prof[label]||(aczoP74Prof[label]={sum:0,n:0,max:0});
+        p.sum+=dt;p.n++;if(dt>p.max)p.max=dt;
+      }
+    };
+    w.__aczoP74Wrapped=true;
+    window[name]=w;
+  }catch(e){}
+}
+function aczoP74Install(){
+  [
+    ['updateAstronomy','Astro'],
+    ['updateCelestialDepthLighting','DepthLight'],
+    ['updateDirectCelestialWaterReflections','WaterRef'],
+    ['updateClouds','Clouds'],
+    ['updateAczoRealBirchFineLod','BirchLOD'],
+    ['updateBirds','Birds'],
+    ['updateFishWorld','Fish'],
+    ['updateAnglingFishWorld','Fish'],
+    ['updateAnglingMode','Angling'],
+    ['updateWeather','Weather'],
+    ['updateLiveWeather','Weather'],
+    ['updateWater','Water'],
+    ['updateWaterSurface','Water']
+  ].forEach(x=>aczoP74Wrap(x[0],x[1]));
+}
+setTimeout(aczoP74Install,50);
+setTimeout(aczoP74Install,700);
+
+(()=>{
+ let installed=false;
+ function install(){
+   if(installed||typeof renderer==='undefined'||!renderer?.render)return;
+   const fn=renderer.render.bind(renderer);
+   renderer.render=function(...args){
+     const t0=performance.now();
+     try{return fn(...args);}
+     finally{
+       const dt=performance.now()-t0;
+       const p=aczoP74Prof.Render||(aczoP74Prof.Render={sum:0,n:0,max:0});
+       p.sum+=dt;p.n++;if(dt>p.max)p.max=dt;
+     }
+   };
+   installed=true;
+ }
+ setTimeout(install,100);
+ setTimeout(install,900);
 })();
 </script>
 
