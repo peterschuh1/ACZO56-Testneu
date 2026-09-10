@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P60 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P61 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4567,7 +4567,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P60';
+const VIEWER_VERSION='ACZO56 · P61';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -20270,6 +20270,7 @@ function updateFishActors(dt){
     const isFleeing=!isHunter&&!isLureHunter&&f.huntFleeUntil>fishWorldTime&&f.huntFleeTarget;
     const feedClusterActive=feedWorldActive;
     let feedSeeking=false;
+    if(!feedClusterActive)f.feedBottomUntil=0;
     if(feedClusterActive&&!isHunter&&!isFleeing){
       const rule=anglingFeedRuleForSpecies(species);
       const feedMaturity=anglingFeedMaturity();
@@ -20329,7 +20330,45 @@ function updateFishActors(dt){
       );
       if(dist<captureDistance){finishHuntEvent();continue;}
     }
-    const arrivalThreshold=feedSeeking?.09:.22;
+    // P61: Nur echte Grundfresser/Friedfische gehen am Futter mit dem Kopf nach unten.
+    // Räuber dürfen den Futterplatz weiterhin untersuchen, bleiben dabei aber waagerecht.
+    const feedBottomGrazer=feedSeeking&&!['pike','zander','perch','catfish'].includes(species);
+    const feedBottomLocked=feedBottomGrazer&&(f.feedBottomUntil||0)>fishWorldTime;
+    const arrivalThreshold=feedBottomGrazer?.28:(feedSeeking?.09:.22);
+
+    // Ein einmal grundelnder Fisch bleibt mehrere Sekunden in EINER ruhigen Pose,
+    // auch wenn sein intern berechneter Futterzielpunkt leicht weiterwandert.
+    if(feedBottomLocked){
+      const feedDepth=pondDepthAt(f.obj.position.x,f.obj.position.y);
+      if(feedDepth!=null){
+        const floor=-feedDepth*exaggeration;
+        const fishW=Math.abs(f.obj.userData.baseFishWidth||f.obj.scale.x||.18);
+        const centerClearance=Math.max(.11,fishW*.34);
+        f.obj.position.z=THREE.MathUtils.lerp(f.obj.position.z,floor+centerClearance,Math.min(1,step*1.8));
+
+        // Negatives Vorzeichen: Kopf zeigt zum Grund. P58 war optisch genau verkehrt herum.
+        f.visualPitch=-THREE.MathUtils.degToRad(45);
+        f.obj.quaternion.copy(camera.quaternion);
+        f.obj.rotateZ(f.screenSide<0 ? f.visualPitch : -f.visualPitch);
+        f.obj.scale.x=f.screenSide*f.obj.userData.baseFishWidth;
+        f.obj.scale.y=f.obj.userData.baseFishHeight;
+
+        if(!Number.isFinite(f.feedDustAt))f.feedDustAt=0;
+        if(fishVisualActive&&nearEnough&&fishWorldTime>=f.feedDustAt){
+          spawnAnglingBottomDust(
+            f.obj.position.x+(Math.random()-.5)*.08,
+            f.obj.position.y+(Math.random()-.5)*.08,
+            floor+.018,
+            .34
+          );
+          f.feedDustAt=fishWorldTime+4.8+Math.random()*3.2;
+        }
+      }
+      f.phase+=step*(.46+f.speed*.30);
+      if(f.obj.userData.tail) f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.045;
+      continue;
+    }
+
     if(dist<arrivalThreshold){
       if(isLureHunter){
         f.visualPitch=0;
@@ -20338,42 +20377,18 @@ function updateFishActors(dt){
       }
       if(isFleeing){f.huntFleeUntil=0;randomSpeciesPoint(species,f.target);continue;}
       if(feedSeeking){
-        // P58: Fressende Friedfische bleiben ruhig am Platz. Kein ständiges
-        // Hoch/Runter mehr. Sie stehen mit dem Kopf etwa 42° zum Grund und
-        // grundeln dort sichtbar.
-        const feedDepth=pondDepthAt(f.obj.position.x,f.obj.position.y);
-        if(feedDepth!=null){
-          const floor=-feedDepth*exaggeration;
-          const fishW=Math.abs(f.obj.userData.baseFishWidth||f.obj.scale.x||.18);
-          const feedPitch=THREE.MathUtils.degToRad(42);
-          const centerClearance=Math.max(.11,fishW*.34);
-          f.obj.position.z=THREE.MathUtils.lerp(
-            f.obj.position.z,
-            floor+centerClearance,
-            Math.min(1,step*3.2)
-          );
-          f.visualPitch=feedPitch;
-          f.obj.quaternion.copy(camera.quaternion);
-          f.obj.rotateZ(f.screenSide<0 ? f.visualPitch : -f.visualPitch);
-          f.obj.scale.x=f.screenSide*f.obj.userData.baseFishWidth;
-          f.obj.scale.y=f.obj.userData.baseFishHeight;
-
-          // Dezente Sedimentwolken wie beim auftreffenden Kunstköder.
-          // Pro Fisch stark gedrosselt, damit der Futterplatz nicht zum
-          // Unterwasser-Vulkan wird.
-          if(!Number.isFinite(f.feedDustAt))f.feedDustAt=0;
-          if(fishVisualActive&&nearEnough&&fishWorldTime>=f.feedDustAt){
-            spawnAnglingBottomDust(
-              f.obj.position.x+(Math.random()-.5)*.10,
-              f.obj.position.y+(Math.random()-.5)*.10,
-              floor+.018,
-              .42
-            );
-            f.feedDustAt=fishWorldTime+3.8+Math.random()*2.8;
-          }
+        if(feedBottomGrazer){
+          // 4–7 Sekunden ruhig grundeln statt pro Frame zwischen Schwimmen und
+          // 45°-Pose hin- und herzuschalten.
+          f.feedBottomUntil=fishWorldTime+4.0+Math.random()*3.0;
+          f.visualPitch=-THREE.MathUtils.degToRad(45);
+          f.pause=0;
+        }else{
+          // Hecht, Zander, Barsch und Wels bleiben am Futterplatz horizontal.
+          f.visualPitch=0;
+          f.phase+=step*(.75+f.speed*.45);
+          if(f.obj.userData.tail)f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.07;
         }
-        f.phase+=step*(.72+f.speed*.55);
-        if(f.obj.userData.tail) f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.08;
         continue;
       }
       f.pause=(species==='pike'||species==='catfish'?2.5:species==='grasscarp'?1.2:0)
