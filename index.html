@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P71 SHADOW OPT · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P72 RUNTIME DIAG · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3956,6 +3956,16 @@ html,body{
 }
 #aczoP69TimeToggle button.active{background:rgba(206,161,45,.84);color:#fff}
 #aczoP69TimeToggle button.night.active{background:rgba(54,77,126,.90)}
+
+/* P72: Laufzeitdiagnose. Rein beobachtend, keine Renderqualität geändert. */
+#aczoP72Diag{
+ position:fixed;left:8px;top:8px;z-index:100000;min-width:178px;
+ padding:7px 8px;border-radius:9px;background:rgba(0,0,0,.74);
+ border:1px solid rgba(255,255,255,.28);color:#fff;
+ font:700 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
+ white-space:pre;pointer-events:none;user-select:none;-webkit-user-select:none;
+ box-shadow:0 4px 14px rgba(0,0,0,.3)
+}
 </style>
 
 
@@ -4598,7 +4608,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P71 SHADOW OPT';
+const VIEWER_VERSION='ACZO56 · P72 RUNTIME DIAG';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -6961,6 +6971,8 @@ let aczoMoselStructureShadowMat=null;
 const ACZO_TREE_SHADOW_PROXY_LAYER=2;
 let aczoNextAnimatedShadowRefreshAt=0;
 function aczoRequestAnimatedShadowRefresh(){
+  if(typeof aczoP72ShadowRequests!=='undefined')aczoP72ShadowRequests++;
+
   const now=performance.now();
   if(now<aczoNextAnimatedShadowRefreshAt)return;
   aczoNextAnimatedShadowRefreshAt=now+(ACZO_MOBILE_PERF?170:110);
@@ -33489,6 +33501,63 @@ function aczoP69OptimizeShadowCasters(){
   renderer.shadowMap.needsUpdate=true;
 }
 window.setTimeout(aczoP69OptimizeShadowCasters,350);
+
+// P72 RUNTIME DIAGNOSE --------------------------------------------------
+// Beobachtet nur. Keine Schatten-, Wasser-, Kamera- oder Qualitätsparameter werden verändert.
+let aczoP72ShadowRequests=0;
+(()=>{
+ const box=document.getElementById('aczoP72Diag');
+ if(!box)return;
+ let frames=0,lastFpsStamp=performance.now(),fps=0;
+ let lastShadowStamp=performance.now(),lastShadowCount=0,shadowHz=0;
+ let startMem=null,peakMem=0;
+ let lastPaint=0;
+ const originalRAF=window.requestAnimationFrame.bind(window);
+
+ // Eigener leichter FPS-Ticker: zählt Browserframes, ohne den bestehenden Renderloop anzufassen.
+ function tick(now){
+   frames++;
+   const dt=now-lastFpsStamp;
+   if(dt>=1000){
+     fps=frames*1000/dt; frames=0; lastFpsStamp=now;
+   }
+   const sdt=now-lastShadowStamp;
+   if(sdt>=1000){
+     shadowHz=(aczoP72ShadowRequests-lastShadowCount)*1000/sdt;
+     lastShadowCount=aczoP72ShadowRequests;lastShadowStamp=now;
+   }
+   if(now-lastPaint>500){
+     lastPaint=now;
+     try{
+       const info=renderer?.info;
+       const r=info?.render||{};
+       const mem=info?.memory||{};
+       const progs=Array.isArray(info?.programs)?info.programs.length:0;
+       let heap='n/a';
+       if(performance.memory){
+         const used=performance.memory.usedJSHeapSize/1048576;
+         if(startMem==null)startMem=used;
+         peakMem=Math.max(peakMem,used);
+         heap=used.toFixed(0)+' MB ('+(used-startMem>=0?'+':'')+(used-startMem).toFixed(0)+')';
+       }
+       const mode=(typeof aczoP69ForcedHour!=='undefined'&&aczoP69ForcedHour===13)?'TAG':
+                  ((typeof aczoP69ForcedHour!=='undefined'&&aczoP69ForcedHour===1)?'NACHT':'ECHT');
+       box.textContent=
+         'P72 RUNTIME · '+mode+'\n'+
+         'FPS          '+fps.toFixed(1)+'\n'+
+         'Draw Calls   '+(r.calls??'n/a')+'\n'+
+         'Dreiecke     '+(r.triangles??'n/a')+'\n'+
+         'Geometrien   '+(mem.geometries??'n/a')+'\n'+
+         'Texturen     '+(mem.textures??'n/a')+'\n'+
+         'Programme    '+progs+'\n'+
+         'Shadow Req/s '+shadowHz.toFixed(1)+'\n'+
+         'JS Heap      '+heap;
+     }catch(err){}
+   }
+   originalRAF(tick);
+ }
+ originalRAF(tick);
+})();
 </script>
 
 
@@ -33500,5 +33569,6 @@ window.setTimeout(aczoP69OptimizeShadowCasters,350);
   <button id="aczoP69DayBtn" type="button">☀ TAG</button>
   <button id="aczoP69NightBtn" class="night" type="button">☾ NACHT</button>
 </div>
+<div id="aczoP72Diag">Runtime-Diagnose startet …</div>
 </body>
 </html>
