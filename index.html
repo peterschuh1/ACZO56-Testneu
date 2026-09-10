@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P14 · Schattenstabilitaet ohne Spray-LOD</title>
+<title>ACZO56 V2.3.37-P15 · Schattenstabilitaet ohne Spray-LOD</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -7008,18 +7008,11 @@ function updateUnderwaterObstacleShadows(submerged){
   const shifting=!!document.querySelector('.angling-ui.time-shifting');
   const phone=document.documentElement.classList.contains('aczo-phone-layout');
   const flyingBirds=(Number(window.__aczoFlyingBirdCount)||0)>0;
-  // P2 PERFORMANCE: Im statischen Kartenbild wird dieselbe Schattenkarte nicht
-  // mehr pauschal alle 600/700 ms neu erzeugt. Die optische Schattenlogik bleibt
-  // unveraendert. Ein neuer Pass erfolgt bei echter Licht-/Wetter-Aenderung;
-  // fliegende Voegel und Zeitraffer behalten ihre bisherige Update-Frequenz.
   const refreshGap=flyingBirds
     ?(phone?50:33)
-    :(shifting?(phone?120:80):Infinity);
+    :(shifting?(phone?120:80):(phone?700:600));
   const lightChanged=key!==aczoUnderwaterShadowKey;
-  if(!lightChanged){
-    if(!structureActive||!Number.isFinite(refreshGap))return;
-    if(shadowNow-aczoLastShadowRefreshAt<refreshGap)return;
-  }
+  if(!lightChanged&&(!structureActive||shadowNow-aczoLastShadowRefreshAt<refreshGap))return;
   if(lightChanged)aczoUnderwaterShadowKey=key;
   aczoLastShadowRefreshAt=shadowNow;
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
@@ -9213,14 +9206,7 @@ aczoLandShadowMaskTex.minFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.magFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.generateMipmaps=false;
 const aczoLandShadowMat=new THREE.ShadowMaterial({
-  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true,
-  // P12: Der Schattenfaenger liegt nahezu deckungsgleich auf dem Satellitenboden.
-  // Auf iOS blieb in grosser Draufsicht lokal an Gebaeude-/Waldschatten noch
-  // leichtes Z-Fighting sichtbar; nur die Tiefenpuffer-Trennung wird verstaerkt.
-  // Aus grosser Hoehe reichten 2,8 cm Abstand fuer den Tiefenpuffer nicht immer
-  // aus und Boden/Schatten konkurrierten sichtbar. PolygonOffset stabilisiert
-  // nur die Tiefenentscheidung; Richtung, Weichheit und Deckkraft bleiben gleich.
-  polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8
+  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true
 });
 aczoLandShadowMat.alphaMap=aczoLandShadowMaskTex;
 aczoLandShadowMat.alphaTest=.025;
@@ -32208,5 +32194,6 @@ let aczoLastRenderedFrameAt=0;
   window.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('open')){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}});
   populateFromCurrent();
 })();
-</script>\n</body>
+</script>\n<!-- P15: Shadow refresh + land shadow material restored exactly from V2.3.37 reference; P13 outer forest reduction retained. -->
+</body>
 </html>
