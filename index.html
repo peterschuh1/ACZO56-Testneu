@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P80 GPU BACKPRESSURE TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3940,34 +3940,6 @@ html,body{
     top:auto!important;
   }
 }
-
-
-/* P73: Laufzeitdiagnose mit eigenständigen, klickbaren Steuerelementen. */
-#aczoP73DiagPanel{
- position:fixed;left:8px;top:8px;z-index:100000;min-width:194px;
- padding:8px;border-radius:10px;background:rgba(0,0,0,.78);
- border:1px solid rgba(255,255,255,.30);color:#fff;
- font:700 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
- box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:auto;
- -webkit-user-select:none;user-select:none
-}
-#aczoP73DiagHeader{display:flex;gap:6px;align-items:center;margin-bottom:6px}
-#aczoP73DiagHeader button{
- height:28px;padding:0 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);
- background:rgba(255,255,255,.10);color:#fff;font:800 10px system-ui,-apple-system,sans-serif;
- pointer-events:auto;touch-action:manipulation
-}
-#aczoP73DiagHeader button.active{background:rgba(206,161,45,.86)}
-#aczoP73DiagHeader button.night.active{background:rgba(54,77,126,.92)}
-#aczoP73DiagBody{white-space:pre;pointer-events:none}
-
-#aczoP75TreeControls{display:flex;gap:5px;margin:0 0 6px 0}
-#aczoP75TreeControls button{
- height:28px;padding:0 7px;border-radius:7px;border:1px solid rgba(255,255,255,.3);
- background:rgba(255,255,255,.10);color:#fff;font:800 9px system-ui,-apple-system,sans-serif;
- pointer-events:auto;touch-action:manipulation
-}
-#aczoP75TreeControls button.off{background:rgba(155,48,48,.90)}
 </style>
 
 
@@ -4610,7 +4582,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P80 GPU BACKPRESSURE TEST';
+const VIEWER_VERSION='ACZO56 · P66';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -6973,8 +6945,6 @@ let aczoMoselStructureShadowMat=null;
 const ACZO_TREE_SHADOW_PROXY_LAYER=2;
 let aczoNextAnimatedShadowRefreshAt=0;
 function aczoRequestAnimatedShadowRefresh(){
-  if(typeof aczoP72ShadowRequests!=='undefined')aczoP72ShadowRequests++;
-
   const now=performance.now();
   if(now<aczoNextAnimatedShadowRefreshAt)return;
   aczoNextAnimatedShadowRefreshAt=now+(ACZO_MOBILE_PERF?170:110);
@@ -7725,16 +7695,7 @@ function setSeasonTimeAnchor(date){seasonTimeBaseDate=new Date(date);seasonTimeB
 function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYear(),0,0))/86400000));}
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
-// P70: einfacher Tag/Nacht-Schalter nur für die 3D-Karte.
-// null = echte Zeit; 13 = Test-Tag; 1 = Test-Nacht.
-let aczoP69ForcedHour=null;
-function viewerNow(){
-  const d=seasonTestMode?seasonTestDate():new Date();
-  if(aczoP69ForcedHour==null)return d;
-  const forced=new Date(d);
-  forced.setHours(aczoP69ForcedHour,0,0,0);
-  return forced;
-}
+function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
@@ -33109,26 +33070,32 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
-// P79: echte Zeitabstaende der nativen Safari-RAF-Callbacks und komplette
-// Laufzeit unseres Hauptframes getrennt erfassen.
-const aczoP79Timing={lastRaf:0,rafSum:0,rafN:0,rafMax:0,mainSum:0,mainN:0,mainMax:0,slow40:0,slow50:0};
-let aczoP79MainStart=0;
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
+// P66 iOS RESUME-FIX:
+// Nach Screenshot/App-Wechsel kann WebKit den naechsten RAF mit einem alten
+// Zeitstempel bzw. grosser Pause liefern. Wir verwerfen ausschliesslich diesen
+// Resume-Sprung und starten Clock/Framebudget sauber neu. Kein Renderer-Rebuild,
+// kein DPR-Wechsel und keine Aenderung an Wasser, Schatten oder Spielsystemen.
+let aczoResumeResetFrames=0;
+function aczoResetRenderTimingAfterResume(){
+  aczoLastRenderedFrameAt=0;
+  aczoMapGestureFrame=0;
+  activeViewerPointers.clear();
+  try{ clock.stop(); clock.start(); }catch(err){}
+  aczoResumeResetFrames=2;
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')aczoResetRenderTimingAfterResume();
+});
+window.addEventListener('pageshow',aczoResetRenderTimingAfterResume);
+window.addEventListener('focus',()=>{
+  if(document.visibilityState==='visible')aczoResetRenderTimingAfterResume();
+});
+
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
- // P79: frameNow stammt direkt aus requestAnimationFrame und misst daher
- // Safari/VSync selbst, nicht unseren Three.js-Renderer.
- aczoP79MainStart=performance.now();
- if(aczoP79Timing.lastRaf){
-   const gap=frameNow-aczoP79Timing.lastRaf;
-   aczoP79Timing.rafSum+=gap; aczoP79Timing.rafN++;
-   if(gap>aczoP79Timing.rafMax)aczoP79Timing.rafMax=gap;
-   if(gap>=40)aczoP79Timing.slow40++;
-   if(gap>=50)aczoP79Timing.slow50++;
- }
- aczoP79Timing.lastRaf=frameNow;
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33148,10 +33115,13 @@ let aczoMapGestureFrame=0;
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- // P79 DIAGNOSE: eigener FPS-Governor komplett deaktiviert.
- // Jeder native requestAnimationFrame von Safari wird verarbeitet. Damit testen
- // wir direkt, ob die 30/15-Spruenge vom bisherigen Frame-Pacing stammen.
+ const aczoTargetFps=aczoArtificialCastFlight
+   ?(ACZO_MOBILE_PERF?40:46)
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
+ const aczoFrameGap=1000/aczoTargetFps;
+ if(aczoResumeResetFrames<=0 && aczoLastRenderedFrameAt && frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
+ if(aczoResumeResetFrames>0)aczoResumeResetFrames--;
 
  const rawDt=clock.getDelta();
  // Nach App-Wechseln oder einzelnen Safari-Aussetzern darf kein riesiger
@@ -33428,342 +33398,6 @@ let aczoMapGestureFrame=0;
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
- // P79: komplette JS/Render-Arbeit dieses Hauptframes. Das ist absichtlich
- // mehr als renderer.render und zeigt, ob die fehlende Zeit in unserem Code
- // oder bereits zwischen zwei Safari-RAF-Callbacks verschwindet.
- const aczoP79MainMs=performance.now()-aczoP79MainStart;
- aczoP79Timing.mainSum+=aczoP79MainMs; aczoP79Timing.mainN++;
- if(aczoP79MainMs>aczoP79Timing.mainMax)aczoP79Timing.mainMax=aczoP79MainMs;
-})();
-
-// P73: alter P71-Schalter deaktiviert; Steuerung erfolgt über das Diagnosepanel.
-
-
-// P70 SHADOW OPT ---------------------------------------------------------
-// Ziel: sichtbare Geometrie unverändert lassen, aber teure Detail-Caster aus
-// der Sonnen-Shadowmap entfernen. Explizite Schatten-Proxies und wichtige
-// Ufer-/Gebäude-/Stegobjekte bleiben unangetastet.
-function aczoP69OptimizeShadowCasters(){
-  if(!scene)return;
-  scene.traverse(o=>{
-    if(!o?.isMesh||!o.castShadow)return;
-    const name=(o.name||'').toUpperCase();
-    const keep=
-      o.userData?.aczoShadowProxy ||
-      /STEG|PIER|BOOTSTEG|HAUS|GARAGE|SANITAER|GEB[AÄ]UDE|BUILDING|ZAUN|FENCE|MAST|FLAG|WEIDE|WILLOW/.test(name) ||
-      o.userData?.alwaysShadow ||
-      o.userData?.importantShoreTree;
-
-    if(keep)return;
-
-    // Blatt-/Feindetail großer Baumobjekte sind der teuerste unnötige Caster.
-    // Stamm/Krone können über ihre vorhandenen vereinfachten Proxy-Caster weiter
-    // Schatten liefern.
-    const looksLikeFineVegetation=
-      /LEAF|LEAVES|BLATT|FOLIAGE|SPRAY|NEEDLE|NADEL|TWIG|ZWEIG|BUSH_DETAIL|UNDERSTORY/.test(name);
-
-    // Instanzierte Fern-/Füllvegetation grundsätzlich nicht in Shadowmap.
-    const looksLikeFarFiller=
-      o.isInstancedMesh &&
-      (/FOREST|WALD|FILLER|MID|FAR|OUTER|UNDERSTORY|BUSH/.test(name));
-
-    if(looksLikeFineVegetation||looksLikeFarFiller){
-      o.castShadow=false;
-    }
-  });
-  renderer.shadowMap.needsUpdate=true;
-}
-window.setTimeout(aczoP69OptimizeShadowCasters,350);
-
-// P73 RUNTIME DIAGNOSE --------------------------------------------------
-let aczoP72ShadowRequests=0;
-(()=>{
- function initP73Diag(){
-   const panel=document.getElementById('aczoP73DiagPanel');
-   const body=document.getElementById('aczoP73DiagBody');
-   const day=document.getElementById('aczoP73DayBtn');
-   const night=document.getElementById('aczoP73NightBtn');
-   const real=document.getElementById('aczoP73RealBtn');
-   if(!panel||!body||!day||!night||!real)return;
-
-   const setMode=(hour)=>{
-     aczoP69ForcedHour=hour;
-     day.classList.toggle('active',hour===13);
-     night.classList.toggle('active',hour===1);
-     real.classList.toggle('active',hour==null);
-     try{updateAstronomy();}catch(err){}
-     try{
-       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
-         renderer.shadowMap.needsUpdate=true;
-       }
-     }catch(err){}
-   };
-
-   function bind(btn,hour){
-     const handler=(e)=>{
-       e.preventDefault(); e.stopPropagation();
-       if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-       setMode(hour);
-     };
-     btn.addEventListener('click',handler,{passive:false});
-     btn.addEventListener('pointerup',handler,{passive:false});
-     btn.addEventListener('touchend',handler,{passive:false});
-   }
-   bind(day,13); bind(night,1); bind(real,null);
-   setMode(null);
-
-   let frames=0,lastFpsStamp=performance.now(),fps=0;
-   let lastShadowStamp=performance.now(),lastShadowCount=0,shadowHz=0;
-   let startMem=null,profLastReset=performance.now();
-   const raf=window.requestAnimationFrame.bind(window);
-
-   function tick(now){
-     frames++;
-     const dt=now-lastFpsStamp;
-     if(dt>=1000){ fps=frames*1000/dt; frames=0; lastFpsStamp=now; }
-
-     const sdt=now-lastShadowStamp;
-     if(sdt>=1000){
-       shadowHz=(aczoP72ShadowRequests-lastShadowCount)*1000/sdt;
-       lastShadowCount=aczoP72ShadowRequests; lastShadowStamp=now;
-     }
-
-     try{
-       const info=renderer?.info;
-       const r=info?.render||{};
-       const mem=info?.memory||{};
-       const progs=Array.isArray(info?.programs)?info.programs.length:0;
-       let heap='n/a';
-       if(performance.memory){
-         const used=performance.memory.usedJSHeapSize/1048576;
-         if(startMem==null)startMem=used;
-         heap=used.toFixed(0)+' MB ('+(used-startMem>=0?'+':'')+(used-startMem).toFixed(0)+')';
-       }
-       const mode=aczoP69ForcedHour===13?'TAG':(aczoP69ForcedHour===1?'NACHT':'ECHT');
-       const profLines=[];
-       if(typeof aczoP74Prof!=='undefined'){
-         Object.entries(aczoP74Prof)
-           .filter(([,p])=>p.n>0)
-           .sort((a,b)=>(b[1].sum/b[1].n)-(a[1].sum/a[1].n))
-           .slice(0,8)
-           .forEach(([k,p])=>profLines.push(k.padEnd(10,' ')+' '+(p.sum/p.n).toFixed(2)+' / '+p.max.toFixed(1)+' ms'));
-       }
-       body.textContent=
-         'P80 GPU BACKPRESSURE TEST · '+mode+'\n'+
-         'FPS          '+fps.toFixed(1)+'\n'+
-         'Draw Calls   '+(r.calls??'n/a')+'\n'+
-         'Dreiecke     '+(r.triangles??'n/a')+'\n'+
-         'Geometrien   '+(mem.geometries??'n/a')+'\n'+
-         'Texturen     '+(mem.textures??'n/a')+'\n'+
-         'Programme    '+progs+'\n'+
-         'Shadow Req/s '+shadowHz.toFixed(1)+'\n'+
-         'JS Heap      '+heap+'\n'+
-         'RAF ms       '+(aczoP79Timing.rafN?(aczoP79Timing.rafSum/aczoP79Timing.rafN).toFixed(1):'--')+' / '+aczoP79Timing.rafMax.toFixed(1)+'\n'+
-         'MainJS ms    '+(aczoP79Timing.mainN?(aczoP79Timing.mainSum/aczoP79Timing.mainN).toFixed(1):'--')+' / '+aczoP79Timing.mainMax.toFixed(1)+'\n'+
-         'RAF Rest ms  '+((aczoP79Timing.rafN&&aczoP79Timing.mainN)?Math.max(0,(aczoP79Timing.rafSum/aczoP79Timing.rafN)-(aczoP79Timing.mainSum/aczoP79Timing.mainN)).toFixed(1):'--')+'\n'+
-         'RAF >=40/50  '+aczoP79Timing.slow40+' / '+aczoP79Timing.slow50+'\n'+
-         'GPU finish   '+((typeof aczoP80GpuProbe!=='undefined')?aczoP80GpuProbe.last.toFixed(1):'--')+
-           ' ms  max '+((typeof aczoP80GpuProbe!=='undefined')?aczoP80GpuProbe.max.toFixed(1):'--')+'\n'+
-         'AVG / MAX (5s)\n'+profLines.join('\n');
-       if(now-profLastReset>=5000&&typeof aczoP74Prof!=='undefined'){
-         Object.keys(aczoP74Prof).forEach(k=>delete aczoP74Prof[k]);
-         aczoP79Timing.rafSum=0;aczoP79Timing.rafN=0;aczoP79Timing.rafMax=0;
-         aczoP79Timing.mainSum=0;aczoP79Timing.mainN=0;aczoP79Timing.mainMax=0;
-         aczoP79Timing.slow40=0;aczoP79Timing.slow50=0;
-         profLastReset=now;
-       }
-     }catch(err){}
-     raf(tick);
-   }
-   raf(tick);
- }
-
- if(document.readyState==='loading'){
-   document.addEventListener('DOMContentLoaded',initP73Diag,{once:true});
- }else initP73Diag();
-})();
-
-// P74 FRAME PROFILER ----------------------------------------------------
-// Misst Laufzeit vorhandener Funktionen, ohne deren Verhalten zu verändern.
-const aczoP74Prof={};
-function aczoP74Wrap(name,label){
-  try{
-    const fn=window[name];
-    if(typeof fn!=='function'||fn.__aczoP74Wrapped)return;
-    const w=function(...args){
-      const t0=performance.now();
-      try{return fn.apply(this,args);}
-      finally{
-        const dt=performance.now()-t0;
-        const p=aczoP74Prof[label]||(aczoP74Prof[label]={sum:0,n:0,max:0});
-        p.sum+=dt;p.n++;if(dt>p.max)p.max=dt;
-      }
-    };
-    w.__aczoP74Wrapped=true;
-    window[name]=w;
-  }catch(e){}
-}
-function aczoP74Install(){
-  [
-    ['updateAstronomy','Astro'],
-    ['updateCelestialDepthLighting','DepthLight'],
-    ['updateDirectCelestialWaterReflections','WaterRef'],
-    ['updateClouds','Clouds'],
-    ['updateAczoRealBirchFineLod','BirchLOD'],
-    ['updateBirds','Birds'],
-    ['updateFishWorld','Fish'],
-    ['updateAnglingFishWorld','Fish'],
-    ['updateAnglingMode','Angling'],
-    ['updateWeather','Weather'],
-    ['updateLiveWeather','Weather'],
-    ['updateWater','Water'],
-    ['updateWaterSurface','Water']
-  ].forEach(x=>aczoP74Wrap(x[0],x[1]));
-}
-setTimeout(aczoP74Install,50);
-setTimeout(aczoP74Install,700);
-
-(()=>{
- let installed=false;
- function install(){
-   if(installed||typeof renderer==='undefined'||!renderer?.render)return;
-   const fn=renderer.render.bind(renderer);
-   renderer.render=function(...args){
-     const t0=performance.now();
-     try{return fn(...args);}
-     finally{
-       const dt=performance.now()-t0;
-       const p=aczoP74Prof.Render||(aczoP74Prof.Render={sum:0,n:0,max:0});
-       p.sum+=dt;p.n++;if(dt>p.max)p.max=dt;
-     }
-   };
-   installed=true;
- }
- setTimeout(install,100);
- setTimeout(install,900);
-})();
-
-// P76 BAUM/GPU A-B-TEST -------------------------------------------------
-// Fix: genau EIN Eingabe-Event pro Tipp. P75 hatte pointerup+click parallel,
-// wodurch ein Tipp zweimal umschalten konnte und direkt wieder im Ausgangszustand landete.
-(()=>{
- let started=false;
-
- function initP76TreeTest(){
-   if(started)return true;
-   const leavesBtn=document.getElementById('aczoP75LeavesBtn');
-   const shadowBtn=document.getElementById('aczoP75TreeShadowBtn');
-   if(!leavesBtn||!shadowBtn||typeof scene==='undefined'||!scene)return false;
-
-   const state={leavesOff:false,treeShadowsOff:false};
-   const leafRe=/LEAF|LEAVES|BLATT|FOLIAGE|SPRAY|NEEDLE|NADEL|TWIG|ZWEIG|CROWN|KRONE/i;
-   const treeRe=/TREE|BAUM|BIRCH|BIRKE|WILLOW|WEIDE|FOREST|WALD|CONIFER|FICHTE|TANNE|PINE|DECID|VEGET/i;
-   const trunkRe=/TRUNK|STAMM/i;
-
-   const items=[];
-   scene.traverse(o=>{
-     if(!o?.isMesh)return;
-     const n=o.name||'';
-     const matTransparent=Array.isArray(o.material)
-       ? o.material.some(m=>m?.transparent===true || (typeof m?.alphaTest==='number'&&m.alphaTest>0))
-       : (o.material?.transparent===true || (typeof o.material?.alphaTest==='number'&&o.material.alphaTest>0));
-     const isLeaf=leafRe.test(n) || (treeRe.test(n)&&!trunkRe.test(n)&&matTransparent);
-     const isTree=treeRe.test(n)||isLeaf;
-     if(isLeaf||isTree){
-       items.push({
-         o,isLeaf,isTree,
-         origVisible:o.visible,
-         origCast:o.castShadow
-       });
-     }
-   });
-
-   function apply(){
-     for(const x of items){
-       x.o.visible = (state.leavesOff&&x.isLeaf) ? false : x.origVisible;
-       x.o.castShadow = (state.treeShadowsOff&&x.isTree) ? false : x.origCast;
-     }
-     leavesBtn.textContent=state.leavesOff
-       ? `BLÄTTER: AUS (${items.filter(x=>x.isLeaf).length})`
-       : `BLÄTTER: NORMAL (${items.filter(x=>x.isLeaf).length})`;
-     shadowBtn.textContent=state.treeShadowsOff
-       ? `BAUMSCHATTEN: AUS (${items.filter(x=>x.isTree&&x.origCast).length})`
-       : `BAUMSCHATTEN: NORMAL (${items.filter(x=>x.isTree&&x.origCast).length})`;
-     leavesBtn.classList.toggle('off',state.leavesOff);
-     shadowBtn.classList.toggle('off',state.treeShadowsOff);
-     try{
-       if(typeof renderer!=='undefined'&&renderer?.shadowMap){
-         renderer.shadowMap.needsUpdate=true;
-       }
-     }catch(e){}
-   }
-
-   const evt = ('PointerEvent' in window) ? 'pointerup' : 'click';
-
-   leavesBtn.addEventListener(evt,e=>{
-     e.preventDefault();e.stopPropagation();
-     state.leavesOff=!state.leavesOff;
-     apply();
-   },{passive:false});
-
-   shadowBtn.addEventListener(evt,e=>{
-     e.preventDefault();e.stopPropagation();
-     state.treeShadowsOff=!state.treeShadowsOff;
-     apply();
-   },{passive:false});
-
-   apply();
-   started=true;
-   return true;
- }
-
- function boot(){
-   if(initP76TreeTest())return;
-   let tries=0;
-   const id=setInterval(()=>{
-     tries++;
-     if(initP76TreeTest()||tries>30)clearInterval(id);
-   },250);
- }
-
- if(document.readyState==='loading'){
-   document.addEventListener('DOMContentLoaded',boot,{once:true});
- }else boot();
-})();
-
-// P80 GPU-BACKPRESSURE-TEST ---------------------------------------------
-// Alle 2 Sekunden genau eine GPU-Synchronisationsprobe via gl.finish().
-// Das kann EINEN Frame kurz blockieren, verändert aber keine Szene/Qualität.
-// Ziel: festzustellen, ob beim 30->15-FPS-Abfall tatsächlich GPU-Arbeit
-// im Treiber aufgestaut ist oder Safari/WebKit den RAF-Takt unabhängig davon drosselt.
-const aczoP80GpuProbe={last:0,avg:0,max:0,count:0,lastSample:0};
-(()=>{
- let installed=false;
- function install(){
-   if(installed||typeof renderer==='undefined'||!renderer?.render)return;
-   let gl=null;
-   try{gl=renderer.getContext();}catch(e){}
-   if(!gl||typeof gl.finish!=='function')return;
-
-   const original=renderer.render.bind(renderer);
-   renderer.render=function(...args){
-     const out=original(...args);
-     const now=performance.now();
-     if(now-aczoP80GpuProbe.lastSample>=2000){
-       aczoP80GpuProbe.lastSample=now;
-       const t0=performance.now();
-       try{gl.finish();}catch(e){}
-       const dt=performance.now()-t0;
-       aczoP80GpuProbe.last=dt;
-       aczoP80GpuProbe.count++;
-       aczoP80GpuProbe.avg += (dt-aczoP80GpuProbe.avg)/aczoP80GpuProbe.count;
-       if(dt>aczoP80GpuProbe.max)aczoP80GpuProbe.max=dt;
-     }
-     return out;
-   };
-   installed=true;
- }
- setTimeout(install,1200);
 })();
 </script>
 
@@ -33771,18 +33405,5 @@ const aczoP80GpuProbe={last:0,avg:0,max:0,count:0,lastSample:0};
 
 
 <!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
-
-<div id="aczoP73DiagPanel">
-  <div id="aczoP73DiagHeader">
-    <button id="aczoP73DayBtn" type="button">☀ TAG</button>
-    <button id="aczoP73NightBtn" class="night" type="button">☾ NACHT</button>
-    <button id="aczoP73RealBtn" type="button">ECHT</button>
-  </div>
-  <div id="aczoP75TreeControls">
-    <button id="aczoP75LeavesBtn" type="button">BLÄTTER: NORMAL</button>
-    <button id="aczoP75TreeShadowBtn" type="button">BAUMSCHATTEN: NORMAL</button>
-  </div>
-  <div id="aczoP73DiagBody">Runtime-Diagnose startet …</div>
-</div>
 </body>
 </html>
