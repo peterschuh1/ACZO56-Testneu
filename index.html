@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P79 RAF TIMING TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P80 GPU BACKPRESSURE TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4610,7 +4610,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P79 RAF TIMING TEST';
+const VIEWER_VERSION='ACZO56 · P80 GPU BACKPRESSURE TEST';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33549,7 +33549,7 @@ let aczoP72ShadowRequests=0;
            .forEach(([k,p])=>profLines.push(k.padEnd(10,' ')+' '+(p.sum/p.n).toFixed(2)+' / '+p.max.toFixed(1)+' ms'));
        }
        body.textContent=
-         'P79 RAF TIMING TEST · '+mode+'\n'+
+         'P80 GPU BACKPRESSURE TEST · '+mode+'\n'+
          'FPS          '+fps.toFixed(1)+'\n'+
          'Draw Calls   '+(r.calls??'n/a')+'\n'+
          'Dreiecke     '+(r.triangles??'n/a')+'\n'+
@@ -33562,6 +33562,8 @@ let aczoP72ShadowRequests=0;
          'MainJS ms    '+(aczoP79Timing.mainN?(aczoP79Timing.mainSum/aczoP79Timing.mainN).toFixed(1):'--')+' / '+aczoP79Timing.mainMax.toFixed(1)+'\n'+
          'RAF Rest ms  '+((aczoP79Timing.rafN&&aczoP79Timing.mainN)?Math.max(0,(aczoP79Timing.rafSum/aczoP79Timing.rafN)-(aczoP79Timing.mainSum/aczoP79Timing.mainN)).toFixed(1):'--')+'\n'+
          'RAF >=40/50  '+aczoP79Timing.slow40+' / '+aczoP79Timing.slow50+'\n'+
+         'GPU finish   '+((typeof aczoP80GpuProbe!=='undefined')?aczoP80GpuProbe.last.toFixed(1):'--')+
+           ' ms  max '+((typeof aczoP80GpuProbe!=='undefined')?aczoP80GpuProbe.max.toFixed(1):'--')+'\n'+
          'AVG / MAX (5s)\n'+profLines.join('\n');
        if(now-profLastReset>=5000&&typeof aczoP74Prof!=='undefined'){
          Object.keys(aczoP74Prof).forEach(k=>delete aczoP74Prof[k]);
@@ -33727,6 +33729,41 @@ setTimeout(aczoP74Install,700);
  if(document.readyState==='loading'){
    document.addEventListener('DOMContentLoaded',boot,{once:true});
  }else boot();
+})();
+
+// P80 GPU-BACKPRESSURE-TEST ---------------------------------------------
+// Alle 2 Sekunden genau eine GPU-Synchronisationsprobe via gl.finish().
+// Das kann EINEN Frame kurz blockieren, verändert aber keine Szene/Qualität.
+// Ziel: festzustellen, ob beim 30->15-FPS-Abfall tatsächlich GPU-Arbeit
+// im Treiber aufgestaut ist oder Safari/WebKit den RAF-Takt unabhängig davon drosselt.
+const aczoP80GpuProbe={last:0,avg:0,max:0,count:0,lastSample:0};
+(()=>{
+ let installed=false;
+ function install(){
+   if(installed||typeof renderer==='undefined'||!renderer?.render)return;
+   let gl=null;
+   try{gl=renderer.getContext();}catch(e){}
+   if(!gl||typeof gl.finish!=='function')return;
+
+   const original=renderer.render.bind(renderer);
+   renderer.render=function(...args){
+     const out=original(...args);
+     const now=performance.now();
+     if(now-aczoP80GpuProbe.lastSample>=2000){
+       aczoP80GpuProbe.lastSample=now;
+       const t0=performance.now();
+       try{gl.finish();}catch(e){}
+       const dt=performance.now()-t0;
+       aczoP80GpuProbe.last=dt;
+       aczoP80GpuProbe.count++;
+       aczoP80GpuProbe.avg += (dt-aczoP80GpuProbe.avg)/aczoP80GpuProbe.count;
+       if(dt>aczoP80GpuProbe.max)aczoP80GpuProbe.max=dt;
+     }
+     return out;
+   };
+   installed=true;
+ }
+ setTimeout(install,1200);
 })();
 </script>
 
