@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P65 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4582,7 +4582,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P65';
+const VIEWER_VERSION='ACZO56 · P66';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -21628,13 +21628,16 @@ const anglingMarkerHaloMat=new THREE.ShaderMaterial({
     uniform float uOpacity;
     void main(){
       float d=distance(vUv,vec2(.5));
-      float core=1.0-smoothstep(.02,.42,d);
-      float edge=1.0-smoothstep(.28,.50,d);
-      float a=(core*.24+edge*.76)*uOpacity;
-      gl_FragColor=vec4(1.0,.91,.68,a);
+      // P66: Großer, natürlicher Lichtschein mit weichem Abfall.
+      // Das Zentrum bleibt absichtlich schwächer, damit der gelbe Marker
+      // nicht vom Licht überstrahlt wird.
+      float falloff=1.0-smoothstep(.04,.50,d);
+      float centerSoft=smoothstep(.00,.13,d);
+      float a=falloff*(.22+.78*centerSoft)*uOpacity;
+      gl_FragColor=vec4(1.0,.91,.69,a);
     }`
 });
-const anglingMarkerHalo=new THREE.Mesh(new THREE.CircleGeometry(7.2,64),anglingMarkerHaloMat);
+const anglingMarkerHalo=new THREE.Mesh(new THREE.CircleGeometry(10.8,72),anglingMarkerHaloMat);
 anglingMarkerHalo.name='ANGELPLATZ_NACHTLICHT_360';
 anglingMarkerHalo.renderOrder=1472;
 anglingMarkerHalo.visible=false;
@@ -21659,9 +21662,9 @@ function updateAnglingSelectionNightLight(){
   anglingMarkerHalo.position.set(p.x,p.y,baseZ+.035);
   anglingMarkerNightLight.position.set(p.x,p.y,baseZ+2.15);
 
-  anglingMarkerHaloMat.uniforms.uOpacity.value=.42+.42*night;
-  anglingMarkerNightLight.intensity=.55+1.45*night;
-  anglingMarkerNightLight.distance=12.5+3.0*night;
+  anglingMarkerHaloMat.uniforms.uOpacity.value=.22+.30*night;
+  anglingMarkerNightLight.intensity=.34+.90*night;
+  anglingMarkerNightLight.distance=15.5+4.5*night;
 }
 
 // V6.42: echtes 3D-Zielkreuz auf der Wasseroberfläche. Es hat eine feste
@@ -27346,7 +27349,6 @@ function selectAnglingShore(clientX,clientY,options={}){
       anglingSelectionMagnetKey=key;
       anglingSelectionMagnetSelection=pierSelection;
       anglingSelectionMagnetUntil=now+260;
-      if(navigator.vibrate)navigator.vibrate(12);
     }else if(dragging&&key){
       anglingSelectionMagnetSelection=pierSelection;
     }
@@ -32927,7 +32929,12 @@ renderer.domElement.addEventListener('pointerup',e=>{
     e.preventDefault();e.stopImmediatePropagation();return;
   }
   if(start&&anglingState==='selecting'){
-    selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:false});
+    // P66: Wenn während des Ziehens ein Steg magnetisch eingerastet ist,
+    // bleibt genau diese Auswahl beim Loslassen bestehen. Erst wenn kein
+    // Steg aktiv ist, wird die normale Punkt-Auswahl am Fingerende berechnet.
+    if(!anglingSelectionMagnetKey){
+      selectAnglingShore(e.clientX,e.clientY,{quiet:true,dragging:false});
+    }
     aczoP65ClearPierMagnet();
     try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch(err){}
   }else if(start&&anglingState==='ready'){
