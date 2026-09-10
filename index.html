@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P35 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P36 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P35';
+const VIEWER_VERSION='ACZO56 · P36';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -16797,7 +16797,7 @@ function aczoBirchRegisterObstacle(a,b,r){
 const ACZO_REAL_BIRCH_CONFIGS=[
   {
     // Exakter Flaechenschwerpunkt des frueheren Ost-Overlays: 43.163 / 7.748.
-    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:18500,sprayCount:1950,branchCount:27,
+    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:13900,sprayCount:1950,branchCount:27,
     crownWidth:13.7,crownDepth:10.9,crownBase:3.05,crownTop:12.5,submerge:1.08,
     // Vom Ufer bis durch die Overlay-Mitte fast schnurgerade und flach ueber
     // dem Wasser. Erst danach steigt der Hauptstamm in die hohe Krone auf.
@@ -16805,7 +16805,7 @@ const ACZO_REAL_BIRCH_CONFIGS=[
   },
   {
     // Exakter Flaechenschwerpunkt des frueheren West-Overlays.
-    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:9800,sprayCount:1080,branchCount:19,
+    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:7350,sprayCount:1080,branchCount:19,
     crownWidth:8.35,crownDepth:7.35,crownBase:2.82,crownTop:9.35,submerge:.68,
     // Natuerlicher, weitgehend gerader 45-Grad-Wuchs durch die Overlay-Mitte.
     trunk:[[0,-.48,.54],[.01,.72,1.22],[-.02,1.98,2.18],[.02,3.12,3.32],[-.01,4.20,4.55],[.03,4.92,5.65]]
@@ -17500,7 +17500,9 @@ function aczoSurveyBuildDeciduous(tree){
   // Im Waldinneren tragen die dicht schließenden Blattfächer die Silhouette;
   // unsichtbare Einzelblätter werden dort reduziert. Sichtkante und Birken
   // behalten ihre volle Detailstufe.
-  const leafCount=tree.filler?30+Math.floor(rnd()*28):(birch?1450:780)+Math.floor(rnd()*(birch?460:320));
+  // P36 PERFORMANCE: Nur feinste Einzelblaetter moderat reduziert.
+  // Kronen-Sprays, Aeste und Schatten-Proxies bleiben 100 % erhalten.
+  const leafCount=tree.filler?24+Math.floor(rnd()*22):(birch?1150:620)+Math.floor(rnd()*(birch?370:260));
   for(let i=0;i<leafCount;i++){
     const anchor=anchors[Math.floor(rnd()*anchors.length)]||trunk[6],spread=.035+rnd()*(tree.filler?.28:.42),phi=rnd()*Math.PI*2,cz=rnd()*2-1,sr=Math.sqrt(Math.max(0,1-cz*cz));
     const p=anchor.clone().add(new THREE.Vector3(Math.cos(phi)*sr*spread,Math.sin(phi)*sr*spread,cz*spread*.82));
@@ -30864,9 +30866,14 @@ function aczoSecondaryCameraDue(lastAt,now){
 // Ziel-/Posenansicht keine komplette Fernkulisse. Die teuren, weit entfernten
 // Dekogruppen werden nur fuer diesen einen Zusatzrender kurz ausgeblendet und
 // unmittelbar danach exakt auf ihren vorherigen Zustand gesetzt.
-function aczoRenderLightweightAnglingInset(cam){
-  const groups=[cloudGroup,cloudReflectionGroup,aczoOuterForestGroup,aczoSurveyedNatureGroup,
-    realBirchGroup,birdGroup,aczoWildBoarGroup,carTestGroup,personalSceneGroup,bmwX3VisitGroup];
+function aczoRenderLightweightAnglingInset(cam,keepShoreNature=false){
+  // P36: In der Stellenauswahl dienen Schilf, Straeucher und die echten
+  // Uferbaeume als wichtige Orientierungspunkte. Nur dort bleiben die
+  // vermessene Ufernatur und die markanten Weiden/Birken im Inset sichtbar.
+  // In den laufenden Livefenstern bleibt der bisherige leichte Renderpfad.
+  const groups=[cloudGroup,cloudReflectionGroup,aczoOuterForestGroup,
+    ...(keepShoreNature?[]:[aczoSurveyedNatureGroup,realBirchGroup]),
+    birdGroup,aczoWildBoarGroup,carTestGroup,personalSceneGroup,bmwX3VisitGroup];
   const states=groups.map(g=>g?g.visible:false);
   for(const g of groups)if(g)g.visible=false;
   try{renderer.render(scene,cam);}
@@ -30879,19 +30886,16 @@ function renderAnglingTargetAssistCamera(){
   // Schnur aktiv ist. Pose und Kunstkoeder benutzen damit dieselbe Zielhilfe.
   const selecting=!!(anglingMode&&anglingState==='selecting'&&anglingSelection);
   const aiming=!!(anglingMode&&anglingState==='ready'&&anglingSelection&&!anglingUi.classList.contains('line-active'));
-  // P28: Beim Kunstkoederflug bleibt dasselbe Fenster sichtbar und verfolgt
-  // den Koeder von oben. P26 hatte das Zweitrendering komplett abgeschaltet,
-  // wodurch das Fenster waehrend des Fluges leer blieb.
-  const lureFlight=!!(anglingMode&&anglingState==='casting'&&anglingSelection
-    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
-    &&anglingCinematicView==='flight'&&anglingLure.visible);
-  if(!selecting&&!aiming&&!lureFlight){
+  // P36: Waehrend des eigentlichen Auswurfs gibt es bewusst KEIN Minifenster.
+  // Die Ziel-Draufsicht endet mit dem Ausloesen des Wurfs. Beim Kunstkoeder
+  // erscheint erst nach dem Eintauchen wieder die normale Ruten-/Rollenansicht.
+  if(!selecting&&!aiming){
     anglingTargetAssistGroup.visible=false;
     anglingFloatZoom.classList.remove('target-assist');
     return false;
   }
 
-  const target=selecting?anglingSelection.shore:(lureFlight?anglingLure.position:anglingSelection.aim);
+  const target=selecting?anglingSelection.shore:anglingSelection.aim;
   if(!target)return false;
   const z=selecting?(Number(target.z)||0):anglingSurfaceZ(target.x,target.y);
 
@@ -30899,7 +30903,7 @@ function renderAnglingTargetAssistCamera(){
   anglingFloatZoom.classList.add('target-assist');
   anglingFloatZoom.style.display='block';
   anglingFloatZoom.setAttribute('aria-hidden','false');
-  anglingFloatCaption.textContent=selecting?'Angelplatz':(lureFlight?'Kunstköder · Flug':'Wurfziel');
+  anglingFloatCaption.textContent=selecting?'Angelplatz':'Wurfziel';
 
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return true;
@@ -30909,7 +30913,7 @@ function renderAnglingTargetAssistCamera(){
   const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
 
   anglingTargetAssistGroup.position.set(target.x,target.y,z+.055);
-  anglingTargetAssistGroup.scale.setScalar(selecting?1.15:(lureFlight?.92:1.0));
+  anglingTargetAssistGroup.scale.setScalar(selecting?1.15:1.0);
   anglingTargetAssistMat.color.setHex(aiming&&anglingAimLocked?0x69f28a:0xffe45f);
   anglingTargetAssistGroup.visible=true;
 
@@ -30919,7 +30923,7 @@ function renderAnglingTargetAssistCamera(){
   anglingFloatCamera.position.set(target.x,target.y,z+height);
   anglingFloatCamera.up.set(0,1,0);
   anglingFloatCameraTarget.set(target.x,target.y,z);
-  anglingFloatCamera.fov=lureFlight?46:(aiming?45:48);
+  anglingFloatCamera.fov=aiming?45:48;
   anglingFloatCamera.aspect=w/h;
   anglingFloatCamera.updateProjectionMatrix();
   anglingFloatCamera.lookAt(anglingFloatCameraTarget);
@@ -30929,7 +30933,7 @@ function renderAnglingTargetAssistCamera(){
   const savedAimMarker=anglingAim3DGroup.visible;
   anglingMarkerGroup.visible=false;
   anglingAim3DGroup.visible=false;
-  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);aczoRenderLightweightAnglingInset(anglingFloatCamera);
+  renderer.setScissorTest(true);renderer.setScissor(x,y,w,h);renderer.setViewport(x,y,w,h);aczoRenderLightweightAnglingInset(anglingFloatCamera,selecting);
   renderer.setScissorTest(false);renderer.setViewport(0,0,anglingFloatBufferSize.x,anglingFloatBufferSize.y);
   anglingMarkerGroup.visible=savedSelectionMarker;
   anglingAim3DGroup.visible=savedAimMarker;
@@ -30941,6 +30945,14 @@ function renderAnglingFloatCamera(){
   if(renderAnglingTargetAssistCamera())return;
   anglingTargetAssistGroup.visible=false;
   anglingFloatZoom.classList.remove('target-assist');
+  // P36: Beim eigentlichen Wurf bleibt die Hauptansicht frei. Das verhindert
+  // die bisherige Ueberlagerung zweier Inset-Fenster und spart einen zweiten
+  // Szenenrender genau waehrend der bewegungsintensivsten Flugphase.
+  if(anglingState==='casting'){
+    anglingFloatZoom.style.display='none';
+    anglingFloatZoom.setAttribute('aria-hidden','true');
+    return;
+  }
   if(anglingState==='fast-retrieving'||anglingCinematicView==='reset-return'||anglingUi.classList.contains('is-returning')){
     anglingFloatZoom.style.display='none';
     anglingFloatZoom.setAttribute('aria-hidden','true');
@@ -31002,11 +31014,10 @@ function renderAnglingReelCamera(){
     anglingReelZoom.setAttribute('aria-hidden','true');
     return;
   }
-  // P26 PERFORMANCE: Beim Kunstkoeder-Auswurf rendert die Hauptkamera bereits
-  // die schnelle Flugverfolgung. Das Rollenfenster wuerde dieselbe grosse Szene
-  // parallel ein zweites Mal zeichnen. Fuer diese 1,18 Sekunden bleibt es daher
-  // aus und wird unmittelbar nach dem Auftreffen wieder normal aktiviert.
-  const aczoReelCastFlight=anglingState==='casting'&&anglingCinematicView==='flight';
+  // P36 PERFORMANCE/UI: Beim gesamten Auswurf bleibt das Rollenfenster aus.
+  // Erst nach dem Eintauchen des Kunstkoeders wird die normale Ruten-/Rollen-
+  // Liveansicht wieder eingeblendet. Gilt identisch fuer Mobil und Desktop.
+  const aczoReelCastFlight=anglingState==='casting';
   if(aczoReelCastFlight){
     anglingReelZoom.style.display='none';
     anglingReelZoom.setAttribute('aria-hidden','true');
