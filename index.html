@@ -9214,11 +9214,13 @@ aczoLandShadowMaskTex.magFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.generateMipmaps=false;
 const aczoLandShadowMat=new THREE.ShadowMaterial({
   color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true,
-  // P10: Der Schattenfaenger liegt nahezu deckungsgleich auf dem Satellitenboden.
+  // P12: Der Schattenfaenger liegt nahezu deckungsgleich auf dem Satellitenboden.
+  // Auf iOS blieb in grosser Draufsicht lokal an Gebaeude-/Waldschatten noch
+  // leichtes Z-Fighting sichtbar; nur die Tiefenpuffer-Trennung wird verstaerkt.
   // Aus grosser Hoehe reichten 2,8 cm Abstand fuer den Tiefenpuffer nicht immer
   // aus und Boden/Schatten konkurrierten sichtbar. PolygonOffset stabilisiert
   // nur die Tiefenentscheidung; Richtung, Weichheit und Deckkraft bleiben gleich.
-  polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
+  polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8
 });
 aczoLandShadowMat.alphaMap=aczoLandShadowMaskTex;
 aczoLandShadowMat.alphaTest=.025;
@@ -27835,7 +27837,7 @@ function anglingSelectionOverviewHeight(){
   // Höhe basierte auf der gesamten Satellitenszene und zog die Kamera deshalb
   // unnötig weit hoch. Nur die tatsächliche Weiherausdehnung ist hier relevant.
   const pondSpan=Math.max(D.pondW,D.pondH);
-  return pondSpan*(anglingPhoneLayoutActive()?1.20:1.28);
+  return pondSpan*(anglingPhoneLayoutActive()?1.26:1.31);
 }
 
 function startAnglingMode(){
