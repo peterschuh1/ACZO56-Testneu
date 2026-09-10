@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P78 NATIVE RAF TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P79 RAF TIMING TEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4610,7 +4610,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P78 NATIVE RAF TEST';
+const VIEWER_VERSION='ACZO56 · P79 RAF TIMING TEST';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -33109,11 +33109,26 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
+// P79: echte Zeitabstaende der nativen Safari-RAF-Callbacks und komplette
+// Laufzeit unseres Hauptframes getrennt erfassen.
+const aczoP79Timing={lastRaf:0,rafSum:0,rafN:0,rafMax:0,mainSum:0,mainN:0,mainMax:0,slow40:0,slow50:0};
+let aczoP79MainStart=0;
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
+ // P79: frameNow stammt direkt aus requestAnimationFrame und misst daher
+ // Safari/VSync selbst, nicht unseren Three.js-Renderer.
+ aczoP79MainStart=performance.now();
+ if(aczoP79Timing.lastRaf){
+   const gap=frameNow-aczoP79Timing.lastRaf;
+   aczoP79Timing.rafSum+=gap; aczoP79Timing.rafN++;
+   if(gap>aczoP79Timing.rafMax)aczoP79Timing.rafMax=gap;
+   if(gap>=40)aczoP79Timing.slow40++;
+   if(gap>=50)aczoP79Timing.slow50++;
+ }
+ aczoP79Timing.lastRaf=frameNow;
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33133,7 +33148,7 @@ let aczoMapGestureFrame=0;
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- // P78 DIAGNOSE: eigener FPS-Governor komplett deaktiviert.
+ // P79 DIAGNOSE: eigener FPS-Governor komplett deaktiviert.
  // Jeder native requestAnimationFrame von Safari wird verarbeitet. Damit testen
  // wir direkt, ob die 30/15-Spruenge vom bisherigen Frame-Pacing stammen.
  aczoLastRenderedFrameAt=frameNow;
@@ -33413,6 +33428,12 @@ let aczoMapGestureFrame=0;
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
+ // P79: komplette JS/Render-Arbeit dieses Hauptframes. Das ist absichtlich
+ // mehr als renderer.render und zeigt, ob die fehlende Zeit in unserem Code
+ // oder bereits zwischen zwei Safari-RAF-Callbacks verschwindet.
+ const aczoP79MainMs=performance.now()-aczoP79MainStart;
+ aczoP79Timing.mainSum+=aczoP79MainMs; aczoP79Timing.mainN++;
+ if(aczoP79MainMs>aczoP79Timing.mainMax)aczoP79Timing.mainMax=aczoP79MainMs;
 })();
 
 // P73: alter P71-Schalter deaktiviert; Steuerung erfolgt über das Diagnosepanel.
@@ -33528,7 +33549,7 @@ let aczoP72ShadowRequests=0;
            .forEach(([k,p])=>profLines.push(k.padEnd(10,' ')+' '+(p.sum/p.n).toFixed(2)+' / '+p.max.toFixed(1)+' ms'));
        }
        body.textContent=
-         'P78 NATIVE RAF TEST · '+mode+'\n'+
+         'P79 RAF TIMING TEST · '+mode+'\n'+
          'FPS          '+fps.toFixed(1)+'\n'+
          'Draw Calls   '+(r.calls??'n/a')+'\n'+
          'Dreiecke     '+(r.triangles??'n/a')+'\n'+
@@ -33537,9 +33558,16 @@ let aczoP72ShadowRequests=0;
          'Programme    '+progs+'\n'+
          'Shadow Req/s '+shadowHz.toFixed(1)+'\n'+
          'JS Heap      '+heap+'\n'+
+         'RAF ms       '+(aczoP79Timing.rafN?(aczoP79Timing.rafSum/aczoP79Timing.rafN).toFixed(1):'--')+' / '+aczoP79Timing.rafMax.toFixed(1)+'\n'+
+         'MainJS ms    '+(aczoP79Timing.mainN?(aczoP79Timing.mainSum/aczoP79Timing.mainN).toFixed(1):'--')+' / '+aczoP79Timing.mainMax.toFixed(1)+'\n'+
+         'RAF Rest ms  '+((aczoP79Timing.rafN&&aczoP79Timing.mainN)?Math.max(0,(aczoP79Timing.rafSum/aczoP79Timing.rafN)-(aczoP79Timing.mainSum/aczoP79Timing.mainN)).toFixed(1):'--')+'\n'+
+         'RAF >=40/50  '+aczoP79Timing.slow40+' / '+aczoP79Timing.slow50+'\n'+
          'AVG / MAX (5s)\n'+profLines.join('\n');
        if(now-profLastReset>=5000&&typeof aczoP74Prof!=='undefined'){
          Object.keys(aczoP74Prof).forEach(k=>delete aczoP74Prof[k]);
+         aczoP79Timing.rafSum=0;aczoP79Timing.rafN=0;aczoP79Timing.rafMax=0;
+         aczoP79Timing.mainSum=0;aczoP79Timing.mainN=0;aczoP79Timing.mainMax=0;
+         aczoP79Timing.slow40=0;aczoP79Timing.slow50=0;
          profLastReset=now;
        }
      }catch(err){}
