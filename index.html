@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P68 PERFTEST · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3940,26 +3940,6 @@ html,body{
     top:auto!important;
   }
 }
-
-/* P67 PERFTEST: temporary diagnostic panel, no permanent quality change. */
-#aczoDayPerfTest{
- position:fixed;right:8px;bottom:8px;z-index:2147483000;
- width:min(286px,calc(100vw - 16px));padding:9px;border-radius:12px;
- background:rgba(4,12,16,.91);border:1px solid rgba(255,255,255,.42);
- color:#fff;font:700 11px/1.25 system-ui,-apple-system,sans-serif;
- box-shadow:0 8px 28px rgba(0,0,0,.4);backdrop-filter:blur(6px)
-}
-#aczoDayPerfTest .p67-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
-#aczoDayPerfTest .p67-title{font-size:12px}
-#aczoDayPerfTest .p67-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-#aczoDayPerfTest button{
- min-height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.38);
- background:rgba(255,255,255,.10);color:#fff;font:700 10px system-ui;
- touch-action:manipulation
-}
-#aczoDayPerfTest button.p67-off{background:rgba(160,38,38,.78)}
-#aczoDayPerfTest .p67-stat{margin-top:7px;font-weight:600;opacity:.9}
-#aczoDayPerfTest .p67-close{width:26px;min-height:24px;padding:0}
 </style>
 
 
@@ -4602,7 +4582,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P68 PERFTEST';
+const VIEWER_VERSION='ACZO56 · P66';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -7715,15 +7695,7 @@ function setSeasonTimeAnchor(date){seasonTimeBaseDate=new Date(date);seasonTimeB
 function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYear(),0,0))/86400000));}
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
-// P68 PERFTEST: nur für den A/B-Test. null = echte/sonstige bestehende Zeitlogik.
-let aczoP68ForcedPerfHour=null;
-function viewerNow(){
-  const d=seasonTestMode?seasonTestDate():new Date();
-  if(aczoP68ForcedPerfHour==null)return d;
-  const forced=new Date(d);
-  forced.setHours(aczoP68ForcedPerfHour,0,0,0);
-  return forced;
-}
+function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
@@ -33405,112 +33377,11 @@ let aczoMapGestureFrame=0;
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
 })();
-
-/* P67 PERFTEST ----------------------------------------------------------
-   Temporary A/B diagnostics. Defaults are all NORMAL, so P66 rendering is
-   unchanged until a test button is pressed. */
-(()=>{
- const state={shadow:false,depth:false,sat:false,water:false};
- const panel=document.getElementById('aczoDayPerfTest');
- const stat=document.getElementById('p67PerfStat');
- const buttons={
-  shadow:document.getElementById('p67ShadowBtn'),
-  depth:document.getElementById('p67DepthBtn'),
-  sat:document.getElementById('p67SatBtn'),
-  water:document.getElementById('p67WaterBtn')
- };
- const labels={shadow:'Schatten',depth:'Depth-Light',sat:'Sat-Licht',water:'Sonnenreflex'};
- function paint(k){
-  const b=buttons[k]; if(!b)return;
-  b.textContent=labels[k]+': '+(state[k]?'AUS':'NORMAL');
-  b.classList.toggle('p67-off',state[k]);
- }
- Object.keys(buttons).forEach(k=>buttons[k]?.addEventListener('click',e=>{
-  e.preventDefault();e.stopPropagation();state[k]=!state[k];paint(k);
-  if(k==='shadow'&&!state.shadow&&typeof renderer!=='undefined'){
-    renderer.shadowMap.enabled=true;renderer.shadowMap.needsUpdate=true;
-  }
- }));
-
- const dayBtn=document.getElementById('p68DayBtn');
- const nightBtn=document.getElementById('p68NightBtn');
- function setForcedHour(hour){
-   aczoP68ForcedPerfHour=hour;
-   dayBtn?.classList.toggle('p67-off',hour===13);
-   nightBtn?.classList.toggle('p67-off',hour===1);
-   if(typeof renderer!=='undefined')renderer.shadowMap.needsUpdate=true;
-   // Astronomie sofort aktualisieren, damit kein Warten auf den normalen Takt nötig ist.
-   try{updateAstronomy();}catch(err){}
- }
- dayBtn?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setForcedHour(13);});
- nightBtn?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setForcedHour(1);});
-
- document.getElementById('p67PerfClose')?.addEventListener('click',()=>panel?.remove());
-
- // FPS display is deliberately lightweight, 1 update/s.
- let frames=0,last=performance.now(),fps=0;
- function diagnosticFrame(){
-  frames++;
-  const now=performance.now();
-  if(now-last>=1000){
-    fps=frames*1000/(now-last);frames=0;last=now;
-    if(stat){
-      const mode=aczoP68ForcedPerfHour===13?'TAG 13:00':(aczoP68ForcedPerfHour===1?'NACHT 01:00':'ECHTZEIT');
-      stat.textContent='FPS '+fps.toFixed(1)+' · '+mode+' · einzeln testen';
-    }
-  }
-
-  // Shadow test: skip the shadow-map render entirely.
-  if(typeof renderer!=='undefined'){
-    renderer.shadowMap.enabled=!state.shadow;
-  }
-
-  // Candidate-specific shader suppression. We do not replace shaders or
-  // architecture; only zero already existing intensity uniforms when present.
-  const zeroUniform=(obj,names)=>{
-    if(!obj)return;
-    for(const n of names){
-      const u=obj[n];
-      if(u&&u.value!==undefined){
-        if(u.value&&u.value.isColor)u.value.setRGB(0,0,0);
-        else if(typeof u.value==='number')u.value=0;
-      }
-    }
-  };
-
-  if(state.depth){
-    if(typeof celestialDepthUniforms!=='undefined')zeroUniform(celestialDepthUniforms,['intensity','uIntensity','opacity','uOpacity','strength','uStrength']);
-    if(typeof waterCelestialUniforms!=='undefined')zeroUniform(waterCelestialUniforms,['intensity','uIntensity','opacity','uOpacity','strength','uStrength']);
-  }
-  if(state.sat&&typeof satUniforms!=='undefined'){
-    zeroUniform(satUniforms,['celestialIntensity','uCelestialIntensity','sunIntensity','uSunIntensity','lightIntensity','uLightIntensity']);
-  }
-  if(state.water){
-    if(typeof waterUniforms!=='undefined')zeroUniform(waterUniforms,['sunReflectionStrength','uSunReflectionStrength','sunIntensity','uSunIntensity','glareStrength','uGlareStrength']);
-    if(typeof pondWaterUniforms!=='undefined')zeroUniform(pondWaterUniforms,['sunReflectionStrength','uSunReflectionStrength','sunIntensity','uSunIntensity','glareStrength','uGlareStrength']);
-  }
-  requestAnimationFrame(diagnosticFrame);
- }
- requestAnimationFrame(diagnosticFrame);
-})();
 </script>
 
 
 
 
 <!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
-
-<div id="aczoDayPerfTest">
- <div class="p67-head"><span class="p67-title">P67 · Tages-Performance-Test</span><button class="p67-close" id="p67PerfClose">×</button></div>
- <div class="p67-grid">
-  <button id="p67ShadowBtn">Schatten: NORMAL</button>
-  <button id="p67DepthBtn">Depth-Light: NORMAL</button>
-  <button id="p67SatBtn">Sat-Licht: NORMAL</button>
-  <button id="p67WaterBtn">Sonnenreflex: NORMAL</button>
-  <button id="p68DayBtn">☀ TEST TAG</button>
-  <button id="p68NightBtn">☾ TEST NACHT</button>
- </div>
- <div class="p67-stat" id="p67PerfStat">FPS wird gemessen …</div>
-</div>
 </body>
 </html>
