@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 V2.3.37-P17 · iPhone-, Schatten- und Performancefix</title>
+<title>ACZO56 V2.3.37-P21 · PolyPlus-Wald dichter und stabil</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -11034,7 +11034,9 @@ function createBike(){
 
   function wheel(y){
     const w=new THREE.Mesh(new THREE.TorusGeometry(.34,.045,8,20),dark);
-    w.rotation.x=Math.PI/2;
+    // P25: Fahrrad zeigt lokal nach +Y. Die Radachse muss deshalb quer dazu
+    // entlang X verlaufen, also liegt das Rad in der YZ-Ebene.
+    w.rotation.y=Math.PI/2;
     w.position.set(0,y,.38);
     return w;
   }
@@ -16760,7 +16762,7 @@ function aczoAddConiferShadowProxy(x,y,baseZ,height,radius,seed){
   aczoEvergreenTreeShadowProxyItems.push({
     p:new THREE.Vector3(x,y,baseZ+height*.53),
     scale:new THREE.Vector3(radius*(.88+rnd()*.08),height*.82,radius*(.88+rnd()*.08)),
-    rot:new THREE.Euler(0,0,rnd()*Math.PI*2)
+    rot:new THREE.Euler(Math.PI/2,0,0)
   });
 }
 function aczoShuffleShadowProxyItems(items,seed){
@@ -16786,8 +16788,8 @@ function aczoBuildTreeShadowProxyMesh(items,geometry,name,seasonal){
 }
 function aczoBuildTreeShadowProxies(){
   aczoBuildTreeShadowProxyMesh(aczoSeasonalTreeShadowProxyItems,new THREE.IcosahedronGeometry(1,0),'NATURWALD_STABILE_KRONENSCHATTEN_PROXIES',true);
-  // ConeGeometry liegt entlang Y und passt damit direkt zu den gespeicherten
-  // Instanzskalierungen der Nadelbaeume.
+  // P21: ConeGeometry liegt lokal entlang Y, die Welt benutzt aber Z als Hoehe.
+  // Deshalb werden auch die Schatten-Proxies exakt um X=90 Grad aufgerichtet.
   aczoBuildTreeShadowProxyMesh(aczoEvergreenTreeShadowProxyItems,new THREE.ConeGeometry(1,1,8,3,false),'NATURWALD_STABILE_NADELBAUMSCHATTEN_PROXIES',false);
 }
 function aczoBirchWorldPoint(frame,local){
@@ -17430,6 +17432,19 @@ function aczoSurveyPushSegment(target,a,b,r,color){if(a.distanceToSquared(b)>.00
 
 const aczoSurveyWoodSegments=[],aczoSurveyBirchSegments=[],aczoSurveyBirchMarks=[],aczoSurveyConiferSegments=[];
 const aczoSurveyLeafItems=[],aczoSurveySprayItems=[],aczoSurveyNeedleItems=[];
+// P18: feste, beim Laden gewaehlte Detailstufen fuer die automatische Wald-Innenfuellung.
+// Diese Arrays enthalten nur vereinfachte Kronen der mittleren/hinteren Fuellbaeume.
+// Es gibt bewusst KEIN kameraabhaengiges Umschalten, damit Zoom/Drehung nichts poppen laesst.
+const aczoSurveyMidCanopyItems=[],aczoSurveyFarCanopyItems=[],aczoSurveyFarConiferItems=[];
+// P24 PERFORMANCE: Staemme der mittleren/hinteren Polywaelder bleiben sichtbar,
+// laufen aber in eigenen schattenfreien Batches. Nur die detaillierte erste
+// Weiherreihe und markante Vegetation belasten die Shadowmap.
+const aczoSurveyLowPolyWoodSegments=[],aczoSurveyLowPolyConiferSegments=[];
+// P19: sehr billige geschlossene Strauchkronen ausserhalb der direkten Weiherkante.
+const aczoSurveyLowPolyBushItems=[];
+// P22: sehr billiger Wald-Unterwuchs schliesst aus flacher Anglerperspektive
+// die hellen Durchblicke zwischen Staemmen. Keine Schatten, keine Kamera-LOD.
+const aczoSurveyForestUnderstoryItems=[];
 const aczoSurveyReedSegments=[],aczoSurveyReedHeads=[],aczoSurveyReedBladeItems=[];
 function aczoSurveyShadeColor(base,rnd,spread=.08){const c=new THREE.Color(base);c.offsetHSL((rnd()-.5)*spread*.18,(rnd()-.5)*spread*.25,(rnd()-.5)*spread);return c.getHex();}
 
@@ -17729,14 +17744,25 @@ const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter((o,i)=>(o.type
 const ACZO_SOUTH_LIFEBUOY_TREE={x:17.762,y:-55.189,type:'deciduous',height:17.2,crownRadius:3.75,crownDepth:3.48,trunkRadius:.34,seed:aczoSurveySeed(17.762,-55.189,1956),species:aczoSurveySpecies[4],filler:false,toneBand:1,hueShift:.018,satShift:-.015,lightShift:.135};
 const aczoSurveyManualTreePoints=aczoSurveyManualTreeObjects.map(o=>[o.x,o.y]);
 aczoSurveyManualTreePoints.push([ACZO_SOUTH_LIFEBUOY_TREE.x,ACZO_SOUTH_LIFEBUOY_TREE.y]);
-aczoSurveyManualTreeObjects.forEach((o,i)=>aczoSurveyBuildDeciduous(aczoSurveyTreeSpec(o,i,false)));
+// P20: Nur die erste Laubbaumreihe direkt am Weiher bleibt voll detailliert.
+// Birken bleiben komplett erhalten. Gewoehnliche vermessene Laubbaeume dahinter
+// werden als hochwertige Mid-Poly-Kronen gebaut, auch im markierten Ostbereich.
+aczoSurveyManualTreeObjects.forEach((o,i)=>{
+  const tree=aczoSurveyTreeSpec(o,i,false);
+  if(o.type==='birch'||aczoSurveyDistanceToPondEdge(o.x,o.y)<=12)aczoSurveyBuildDeciduous(tree);
+  else aczoSurveyBuildLowPolyDeciduous(tree,'mid');
+});
 aczoSurveyBuildDeciduous(ACZO_SOUTH_LIFEBUOY_TREE);
+// Markante Tannen bleiben bewusst in ihrer detaillierten Originaldarstellung.
 ACZO_SURVEY_DATA.objects.filter((o,i)=>o.type==='conifer'&&aczoP13RemoteTreeKeep(o.x,o.y,2000+i)).forEach((o,i)=>aczoSurveyBuildConifer(o,i,false));
 // P9: Buesche innerhalb der beiden Mischwaldpolygone werden nicht mehr
 // aufgebaut. Vermessene Buesche an Ufer, Wegen und ausserhalb des Waldes
 // bleiben unveraendert erhalten.
+// P19: Nur Sträucher unmittelbar am Weiher bleiben voll detailliert. Alle anderen
+// werden spaeter als geschlossene LowPoly-Kronen gebaut. Dadurch duerfen auch
+// die zuvor entfernten Mischwald-Buesche wieder sichtbar werden.
 ACZO_SURVEY_DATA.objects
-  .filter(o=>o.type==='bush'&&!ACZO_SURVEY_DATA.areas.some(a=>a.type==='forest'&&aczoSurveyPointInPolygon(o.x,o.y,a.points)))
+  .filter(o=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)<=10)
   .forEach(aczoSurveyBuildBush);
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').forEach(aczoSurveyBuildReeds);
 
@@ -17764,16 +17790,158 @@ function aczoSurveyDistanceToPondEdge(x,y){
   return best;
 }
 function aczoSurveyForestDepthProfile(depth){
-  if(depth<=20)return {keep:1.00,crown:1.00,depthScale:1.00};
-  if(depth<=35)return {keep:.80,crown:1.05,depthScale:1.03};
-  if(depth<=50)return {keep:.60,crown:1.10,depthScale:1.06};
-  return {keep:.42,crown:1.14,depthScale:1.09};
+  // P20: Die Dichte darf steigen, weil fast alles hinter der ersten Reihe bereits
+  // als billige Poly-Geometrie entsteht. Keine Kamera-LOD, also kein Poppen.
+  if(depth<=12)return {keep:1.00,crown:1.00,depthScale:1.00};
+  if(depth<=28)return {keep:1.00,crown:1.07,depthScale:1.05};
+  if(depth<=48)return {keep:.96,crown:1.12,depthScale:1.09};
+  return {keep:.82,crown:1.17,depthScale:1.13};
 }
+// P20: Feste Dichteanhebung in den vom Nutzer markierten Waldteilen.
+// Norden und Nordwesten bekommen mehr Fuellbaeume, ohne irgendeine
+// kameraabhaengige Aenderung waehrend des Spiels.
+function aczoP20FillerRemoteKeep(x,y,salt=0){
+  if(aczoP13TreeProtected(x,y))return true;
+  let target=.22;
+  if(y>=62&&x>=-28&&x<=62)target=.62;       // P22 Norden deutlich dichter
+  else if(x<=-48&&y>=18)target=.56;          // P22 Nord-West deutlich dichter
+  else if(x>=68&&y>=-42&&y<=48)target=.46;   // P22 Ost-Kulisse dichter
+  let h=(Math.imul(Math.round((x+180)*100),73856093)^Math.imul(Math.round((y+180)*100),19349663)^Math.imul((salt|0)+1,83492791))>>>0;
+  h^=h>>>16;h=Math.imul(h,0x7feb352d)>>>0;h^=h>>>15;
+  return (h>>>0)/4294967296<target;
+}
+
+// =========================================================
+// P18 – statischer LowPoly-Fernwald
+// Bis 35 m bleibt die P17-Fuellbaum-Geometrie unveraendert. Zwischen 35 und
+// 50 m ersetzen wenige geschlossene LowPoly-Kronen Einzelblaetter, Sprays und
+// Asthierarchien. Hinter 50 m bleibt nur eine noch einfachere 3D-Silhouette.
+// Die Stufe wird EINMAL beim Aufbau aus der festen Weiherdistanz bestimmt.
+// =========================================================
+const aczoSurveyMidCanopyGeo=new THREE.IcosahedronGeometry(1,1); // 80 Dreiecke
+const aczoSurveyFarCanopyGeo=new THREE.IcosahedronGeometry(1,0); // 20 Dreiecke
+const aczoSurveyFarConiferGeo=new THREE.ConeGeometry(1,1,7,1,false);
+const aczoSurveyLowPolyBushGeo=new THREE.IcosahedronGeometry(1,0); // 20 Dreiecke
+
+function aczoSurveyBuildLowPolyDeciduous(tree,tier='far'){
+  const rnd=aczoSurveyRandom(tree.seed^0x51f2a),baseZ=ACZO_SATELLITE_GROUND_Z;
+  const bendAngle=rnd()*Math.PI*2,bend=.10+rnd()*.28;
+  const crownCenter=new THREE.Vector3(
+    tree.x+Math.cos(bendAngle)*bend*.55,
+    tree.y+Math.sin(bendAngle)*bend*.55,
+    baseZ+tree.height*.75
+  );
+  // P24: mittlere und hintere Poly-Laubbaeume sind reine Kulisse und werfen
+  // bewusst keinen Schatten. Die direkte Weiherreihe nutzt weiterhin die
+  // stabilen P16-Schatten-Proxies.
+
+  // Nur der sichtbare Stamm bleibt echte Astgeometrie. Mittlere Stufe = zwei
+  // Segmente, Fernstufe = ein Segment. Keine Neben-/Feinaeste.
+  const trunkTop=new THREE.Vector3(
+    tree.x+Math.cos(bendAngle)*bend*.42,
+    tree.y+Math.sin(bendAngle)*bend*.42,
+    baseZ+tree.height*.64
+  );
+  const bark=aczoSurveyShadeColor(tree.species.bark,rnd,.12);
+  if(tier==='mid'){
+    const mid=new THREE.Vector3(tree.x+Math.cos(bendAngle)*bend*.15,tree.y+Math.sin(bendAngle)*bend*.15,baseZ+tree.height*.34);
+    aczoSurveyPushSegment(aczoSurveyLowPolyWoodSegments,new THREE.Vector3(tree.x,tree.y,baseZ),mid,tree.trunkRadius,bark);
+    aczoSurveyPushSegment(aczoSurveyLowPolyWoodSegments,mid,trunkTop,tree.trunkRadius*.68,bark);
+  }else{
+    aczoSurveyPushSegment(aczoSurveyLowPolyWoodSegments,new THREE.Vector3(tree.x,tree.y,baseZ),trunkTop,tree.trunkRadius*.90,bark);
+  }
+
+  const target=tier==='mid'?aczoSurveyMidCanopyItems:aczoSurveyFarCanopyItems;
+  const lobeCount=tier==='mid'?3:2;
+  for(let i=0;i<lobeCount;i++){
+    const a=bendAngle+i*Math.PI*2/lobeCount+(rnd()-.5)*.72;
+    const radial=(i===0?.10:.30+rnd()*.16)*tree.crownRadius;
+    const size=(tier==='mid'?.76:.86)*(i===0?1.05:.90+rnd()*.16);
+    target.push({
+      p:new THREE.Vector3(
+        crownCenter.x+Math.cos(a)*radial,
+        crownCenter.y+Math.sin(a)*radial,
+        crownCenter.z+(rnd()-.5)*tree.height*.075
+      ),
+      scale:new THREE.Vector3(tree.crownRadius*size,tree.crownDepth*size,tree.height*(tier==='mid'?.145:.155)*(.88+rnd()*.18)),
+      rot:new THREE.Euler(rnd()*.35,rnd()*.35,rnd()*Math.PI),
+      species:tree.species,toneBand:tree.toneBand||0,
+      hueShift:tree.hueShift||0,satShift:tree.satShift||0,lightShift:tree.lightShift||0
+    });
+  }
+}
+
+function aczoSurveyBuildLowPolyConifer(object,index,forestDepth){
+  const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+5500)),baseZ=ACZO_SATELLITE_GROUND_Z;
+  const height=13.5+rnd()*6.5,radius=height*(.145+rnd()*.038);
+  // P24: Poly-Nadelbaeume im Misch-/Fernwald werfen keinen Schatten.
+  // P21: LowPoly-Nadelbaeume stehen exakt senkrecht. Keine zusaetzliche
+  // Euler-Z-Rotation mehr, da der Konus rotationssymmetrisch ist und diese die
+  // lokale Hoehenachse in Three.js unnoetig verkippen konnte.
+  const trunkTopZ=baseZ+height*.86;
+  aczoSurveyPushSegment(aczoSurveyLowPolyConiferSegments,new THREE.Vector3(object.x,object.y,baseZ),new THREE.Vector3(object.x,object.y,trunkTopZ),.24+height*.0045,0x403129);
+  const tones=[0x3f744a,0x4d8554,0x5e925e,0x477d50,0x699b68];
+  const crownHeight=height*.84;
+  aczoSurveyFarConiferItems.push({
+    p:new THREE.Vector3(object.x,object.y,baseZ+crownHeight*.50),
+    rot:new THREE.Euler(Math.PI/2,0,0),
+    scale:new THREE.Vector3(radius*(forestDepth>48?1.08:1.04),crownHeight,radius*(forestDepth>48?1.08:1.04)),
+    color:tones[index%tones.length]
+  });
+}
+
+
+// P19: Strauchdarstellung fuer alles ausserhalb der unmittelbaren Weiherkante.
+// Keine Aeste, keine Einzelblaetter, keine Sprays und bewusst kein eigener
+// Schatten-Caster. Zwei LowPoly-Lappen reichen fuer eine volle 3D-Silhouette.
+function aczoSurveyBuildLowPolyBush(object,index){
+  const rnd=aczoSurveyRandom(aczoSurveySeed(object.x,object.y,index+18800)),baseZ=ACZO_SATELLITE_GROUND_Z;
+  const height=.55+rnd()*2.65,radius=.48+rnd()*1.34;
+  const species=aczoSurveySpecies[Math.floor(rnd()*aczoSurveySpecies.length)];
+  const toneBand=Math.floor(rnd()*aczoSurveyToneProfiles.length),tone=aczoSurveyToneProfiles[toneBand];
+  for(let i=0;i<2;i++){
+    const a=rnd()*Math.PI*2,rad=i===0?0:radius*(.22+rnd()*.18),size=i===0?1:(.68+rnd()*.16);
+    aczoSurveyLowPolyBushItems.push({
+      p:new THREE.Vector3(object.x+Math.cos(a)*rad,object.y+Math.sin(a)*rad,baseZ+height*(.52+(i?rnd()*.10:0))),
+      scale:new THREE.Vector3(radius*size,radius*(.78+rnd()*.22)*size,height*(.36+rnd()*.09)*size),
+      rot:new THREE.Euler(rnd()*.25,rnd()*.25,rnd()*Math.PI),
+      species,toneBand,variation:(rnd()-.5)*.34,
+      hueShift:tone.h,satShift:tone.s,lightShift:tone.l
+    });
+  }
+}
+
+
+// P22: Unterwuchs fuer dichte Mischwaelder. Ein einzelner 20-Tri-Poly-Lappen
+// pro Position reicht, um aus Augenhoehe die sonst weissen Luecken zwischen
+// den Staemmen zu schliessen. Bewusst schattenfrei und statisch instanziert.
+function aczoSurveyBuildForestUnderstory(x,y,index,forestDepth){
+  if(forestDepth<8)return; // erste Uferreihe optisch unveraendert lassen
+  const rnd=aczoSurveyRandom(aczoSurveySeed(x,y,index+22900)),baseZ=ACZO_SATELLITE_GROUND_Z;
+  const species=aczoSurveySpecies[Math.floor(rnd()*aczoSurveySpecies.length)];
+  const toneBand=Math.floor(rnd()*aczoSurveyToneProfiles.length),tone=aczoSurveyToneProfiles[toneBand];
+  const height=1.8+rnd()*2.7;
+  const radius=1.15+rnd()*1.25;
+  aczoSurveyForestUnderstoryItems.push({
+    p:new THREE.Vector3(x,y,baseZ+height*.43),
+    scale:new THREE.Vector3(radius*(.90+rnd()*.24),radius*(.82+rnd()*.24),height*.43),
+    rot:new THREE.Euler(rnd()*.16,rnd()*.16,rnd()*Math.PI),
+    species,toneBand,variation:(rnd()-.5)*.28,
+    hueShift:tone.h,satShift:tone.s,lightShift:(tone.l||0)-.035
+  });
+}
+
+// Die im P9/P13 aus den Mischwaeldern entfernten Buesche duerfen als billige
+// P19-Silhouetten wieder zurueck. Die direkten Weiher-Buesche wurden oben bereits
+// mit ihrer vollen Geometrie gebaut und werden hier ausgespart.
+ACZO_SURVEY_DATA.objects
+  .filter(o=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)>10)
+  .forEach(aczoSurveyBuildLowPolyBush);
 
 let aczoSurveyFillerCount=0,aczoSurveyFillerCandidateCount=0,aczoSurveyFillerRejectedByDepth=0;
 for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
   const poly=aczoSurveyForestAreas[ai].points,xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),rnd=aczoSurveyRandom(23091+ai*817);
-  const step=5.0;
+  const step=3.72; // P22: dichteres Poly-Raster; Mehrbestand bleibt billige LowPoly-Geometrie
   for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys);y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs);x+=step){
     const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;
     if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;
@@ -17781,14 +17949,20 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
     aczoSurveyFillerCandidateCount++;
     // P13: entfernte 3D-Fuellbaeume ausserhalb des Grundstuecks in N/W/O
     // bereits vor ihrer teuren Geometrieerzeugung auf 22 % reduzieren.
-    if(!aczoP13RemoteTreeKeep(px,py,3000+aczoSurveyFillerCandidateCount)){aczoSurveyFillerRejectedByDepth++;continue;}
+    if(!aczoP20FillerRemoteKeep(px,py,3000+aczoSurveyFillerCandidateCount)){aczoSurveyFillerRejectedByDepth++;continue;}
     const forestDepth=aczoSurveyDistanceToPondEdge(px,py),profile=aczoSurveyForestDepthProfile(forestDepth);
+    // P22: Unterwuchs darf dichter sein als der eigentliche Baumbestand. Er ist
+    // extrem billig und schliesst aus flacher Sicht die Luecken zwischen Staemmen.
+    if(forestDepth>8 && ((aczoSurveyFillerCandidateCount+ai*5)%3!==0))
+      aczoSurveyBuildForestUnderstory(px,py,9000+aczoSurveyFillerCandidateCount,forestDepth);
     // Derselbe deterministische Generator wie bisher: keine flackernden oder
     // von Sitzung zu Sitzung wechselnden Luecken.
     if(rnd()>profile.keep){aczoSurveyFillerRejectedByDepth++;continue;}
     const fillerIndex=aczoSurveyFillerCount;
     if((fillerIndex+ai*7)%36===11){
-      aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);
+      // P18: nur Nadel-Fuellbaeume hinter 35 m werden als feste LowPoly-Silhouette gebaut.
+      if(forestDepth>12)aczoSurveyBuildLowPolyConifer({x:px,y:py},6000+fillerIndex,forestDepth);
+      else aczoSurveyBuildConifer({x:px,y:py},6000+fillerIndex,true);
     }else{
       const tree=aczoSurveyTreeSpec({type:'deciduous',x:px,y:py},3000+fillerIndex,true);
       // Weniger echte Baeume, dafuer leicht breitere/geschlossenere Kronen.
@@ -17796,7 +17970,9 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
       tree.crownRadius*=profile.crown;
       tree.crownDepth*=profile.depthScale;
       tree.forestDepth=forestDepth;
-      aczoSurveyBuildDeciduous(tree);
+      if(forestDepth<=12)aczoSurveyBuildDeciduous(tree);             // P20: nur unmittelbare erste Weiherreihe detailliert
+      else if(forestDepth<=48)aczoSurveyBuildLowPolyDeciduous(tree,'mid'); // bessere 80-Tri-Polys fuer den sichtbaren Wald
+      else aczoSurveyBuildLowPolyDeciduous(tree,'far');
     }
     aczoSurveyFillerCount++;
   }}
@@ -17804,6 +17980,9 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
 
 aczoSurveyShuffle(aczoSurveyLeafItems,19561201);aczoSurveyShuffle(aczoSurveySprayItems,19561202);
 aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE');
+// P24: sichtbare Polywald-Staemme ohne Shadowmap-Kosten.
+aczoSurveyBuildSegments(aczoSurveyLowPolyWoodSegments,aczoSurveyWoodMat,'NATURWALD_P24_POLY_STAEMME_SCHATTENFREI',false,true);
+aczoSurveyBuildSegments(aczoSurveyLowPolyConiferSegments,aczoSurveyDarkWoodMat,'NATURWALD_P24_POLY_TANNENSTAEMME_SCHATTENFREI',false,true);
 aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME',true,false);
 aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER',true,false);
 aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE');
@@ -17811,7 +17990,15 @@ aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EI
 aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',true);
 aczoSurveyBuildFoliageBatches(aczoSurveyLeafItems,realBirchLeafGeometry,'NATURWALD_EINZELBLAETTER',false,false,true);
 aczoSurveyBuildFoliageBatches(aczoSurveySprayItems,realBirchSprayGeometry,'NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN',false,false,false);
+// P18: vereinfachte mittlere und hintere Laubkronen. Geschlossene Geometrie,
+// deshalb nur wenige Dreiecke statt Blatt-/Spray-Wolken. Jahreszeitenlogik
+// laeuft weiter ueber denselben Arten-/Ton-Batchmechanismus.
+aczoSurveyBuildFoliageBatches(aczoSurveyMidCanopyItems,aczoSurveyMidCanopyGeo,'NATURWALD_P20_POLYPLUS_KRONEN',false,false,false);
+aczoSurveyBuildFoliageBatches(aczoSurveyFarCanopyItems,aczoSurveyFarCanopyGeo,'NATURWALD_P20_FERNPOLY_KRONEN',false,false,false);
+aczoSurveyBuildFoliageBatches(aczoSurveyLowPolyBushItems,aczoSurveyLowPolyBushGeo,'NATURWALD_P19_LOWPOLY_BUESCHE',false,false,false);
+aczoSurveyBuildFoliageBatches(aczoSurveyForestUnderstoryItems,aczoSurveyLowPolyBushGeo,'NATURWALD_P22_DICHTER_UNTERWUCHS',false,false,false);
 aczoSurveyBuildColored(aczoSurveyNeedleItems,realBirchSprayGeometry,aczoSurveyNeedleMat,'MARKANTE_TANNEN_FEINE_NADELPOLSTER',false,true,false);
+aczoSurveyBuildColored(aczoSurveyFarConiferItems,aczoSurveyFarConiferGeo,aczoSurveyNeedleMat,'NATURWALD_P20_NADELBAEUME_LOWPOLY_SENKRECHT',false,false,false);
 aczoSurveyBuildColored(aczoSurveyReedBladeItems,realBirchLeafGeometry,aczoSurveyReedMat,'UFER_SCHILF_SCHMALE_BLAETTER',false,true);
 aczoBuildTreeShadowProxies();
 
@@ -17822,6 +18009,12 @@ aczoBuildTreeShadowProxies();
 const aczoSurveyInstanceStats=Object.freeze({
   leaves:aczoSurveyLeafItems.length,
   sprays:aczoSurveySprayItems.length,
+  p18MidCanopies:aczoSurveyMidCanopyItems.length,
+  p18FarCanopies:aczoSurveyFarCanopyItems.length,
+  p18FarConifers:aczoSurveyFarConiferItems.length,
+  p19LowPolyBushes:aczoSurveyLowPolyBushItems.length,
+  p24NoShadowPolyTrunks:aczoSurveyLowPolyWoodSegments.length+aczoSurveyLowPolyConiferSegments.length,
+  p22ForestUnderstory:aczoSurveyForestUnderstoryItems.length,
   seasonalShadowProxies:aczoSeasonalTreeShadowProxyItems.length,
   evergreenShadowProxies:aczoEvergreenTreeShadowProxyItems.length
 });
@@ -17829,7 +18022,8 @@ const aczoSurveyInstanceStats=Object.freeze({
   aczoSurveyWoodSegments,aczoSurveyBirchSegments,aczoSurveyBirchMarks,
   aczoSurveyConiferSegments,aczoSurveyReedSegments,aczoSurveyReedHeads,
   aczoSurveyLeafItems,aczoSurveySprayItems,aczoSurveyNeedleItems,
-  aczoSurveyReedBladeItems,aczoSeasonalTreeShadowProxyItems,
+  aczoSurveyMidCanopyItems,aczoSurveyFarCanopyItems,aczoSurveyFarConiferItems,
+  aczoSurveyLowPolyBushItems,aczoSurveyForestUnderstoryItems,aczoSurveyReedBladeItems,aczoSeasonalTreeShadowProxyItems,
   aczoEvergreenTreeShadowProxyItems
 ].forEach(items=>{items.length=0;});
 
@@ -18150,6 +18344,7 @@ aczoSurveyedNatureGroup.userData.reedGroupCount=ACZO_SURVEY_DATA.objects.filter(
 aczoSurveyedNatureGroup.userData.fillerTreeCount=aczoSurveyFillerCount;
 aczoSurveyedNatureGroup.userData.fillerCandidateCount=aczoSurveyFillerCandidateCount;
 aczoSurveyedNatureGroup.userData.fillerRejectedByDepth=aczoSurveyFillerRejectedByDepth;
+aczoSurveyedNatureGroup.userData.p18StaticFarForest=true;
 aczoSurveyedNatureGroup.userData.forestBushesRemoved=ACZO_SURVEY_DATA.objects.filter(o=>o.type==='bush'&&aczoSurveyForestAreas.some(a=>aczoSurveyPointInPolygon(o.x,o.y,a.points))).length;
 aczoSurveyedNatureGroup.userData.foliagePaletteBatches=aczoSurveyFoliageMaterials.length;
 aczoSurveyedNatureGroup.userData.leafInstanceCount=aczoSurveyInstanceStats.leaves;
@@ -28157,11 +28352,12 @@ function updateAnglingRodAnchor(){
 }
 
 function anglingSelectionOverviewHeight(){
-  // P11: Die Stellenauswahl soll den Weiher groß im Bild zeigen. Die alte
-  // Höhe basierte auf der gesamten Satellitenszene und zog die Kamera deshalb
-  // unnötig weit hoch. Nur die tatsächliche Weiherausdehnung ist hier relevant.
+  // P23: Zusaetzlicher Sicherheitsrand fuer die Stellenauswahl. Der komplette
+  // Weiher liegt nun unterhalb des oberen Auswahlfensters, damit insbesondere
+  // die Nordspitze frei sichtbar und anklickbar bleibt. Die Hoehe bleibt statisch
+  // und erzeugt keinerlei kameraabhaengiges LOD-/Render-Poppen.
   const pondSpan=Math.max(D.pondW,D.pondH);
-  return pondSpan*(anglingPhoneLayoutActive()?1.26:1.31);
+  return pondSpan*(anglingPhoneLayoutActive()?2.04:2.12);
 }
 
 function startAnglingMode(){
@@ -30609,8 +30805,11 @@ function projectAnglingQte(){
 let aczoLastAnglingFloatRenderAt=0;
 let aczoLastAnglingReelRenderAt=0;
 function aczoSecondaryCameraDue(lastAt,now){
-  const hz=ACZO_MOBILE_PERF?10:15;
-  return !lastAt||now-lastAt>=1000/hz;
+  // P21 LIVEFENSTER-FLICKERFIX: Die Scissor-Livebilder teilen sich denselben
+  // WebGL-Framebuffer mit der Hauptszene. Bei preserveDrawingBuffer=false
+  // muessen sie nach JEDEM gerenderten Hauptframe erneut gezeichnet werden.
+  // Das globale Framebudget begrenzt die Last bereits ausreichend.
+  return true;
 }
 
 function renderAnglingFloatCamera(){
