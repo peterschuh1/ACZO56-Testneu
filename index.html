@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P57 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P58 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4530,7 +4530,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P57';
+const VIEWER_VERSION='ACZO56 · P58';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -20298,9 +20298,42 @@ function updateFishActors(dt){
       }
       if(isFleeing){f.huntFleeUntil=0;randomSpeciesPoint(species,f.target);continue;}
       if(feedSeeking){
-        f.phase+=step*(2.0+f.speed*1.8);
-        if(f.obj.userData.tail) f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.22;
-        keepFishAboveFloor(f);
+        // P58: Fressende Friedfische bleiben ruhig am Platz. Kein ständiges
+        // Hoch/Runter mehr. Sie stehen mit dem Kopf etwa 42° zum Grund und
+        // grundeln dort sichtbar.
+        const feedDepth=pondDepthAt(f.obj.position.x,f.obj.position.y);
+        if(feedDepth!=null){
+          const floor=-feedDepth*exaggeration;
+          const fishW=Math.abs(f.obj.userData.baseFishWidth||f.obj.scale.x||.18);
+          const feedPitch=THREE.MathUtils.degToRad(42);
+          const centerClearance=Math.max(.11,fishW*.34);
+          f.obj.position.z=THREE.MathUtils.lerp(
+            f.obj.position.z,
+            floor+centerClearance,
+            Math.min(1,step*3.2)
+          );
+          f.visualPitch=feedPitch;
+          f.obj.quaternion.copy(camera.quaternion);
+          f.obj.rotateZ(f.screenSide<0 ? f.visualPitch : -f.visualPitch);
+          f.obj.scale.x=f.screenSide*f.obj.userData.baseFishWidth;
+          f.obj.scale.y=f.obj.userData.baseFishHeight;
+
+          // Dezente Sedimentwolken wie beim auftreffenden Kunstköder.
+          // Pro Fisch stark gedrosselt, damit der Futterplatz nicht zum
+          // Unterwasser-Vulkan wird.
+          if(!Number.isFinite(f.feedDustAt))f.feedDustAt=0;
+          if(fishVisualActive&&nearEnough&&fishWorldTime>=f.feedDustAt){
+            spawnAnglingBottomDust(
+              f.obj.position.x+(Math.random()-.5)*.10,
+              f.obj.position.y+(Math.random()-.5)*.10,
+              floor+.018,
+              .42
+            );
+            f.feedDustAt=fishWorldTime+3.8+Math.random()*2.8;
+          }
+        }
+        f.phase+=step*(.72+f.speed*.55);
+        if(f.obj.userData.tail) f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.08;
         continue;
       }
       f.pause=(species==='pike'||species==='catfish'?2.5:species==='grasscarp'?1.2:0)
@@ -20328,10 +20361,17 @@ function updateFishActors(dt){
     f.shadowYaw=Math.atan2(-fishMoveDelta.x,fishMoveDelta.y);
     if(f.obj.userData.fishBillboard){
       const screenX=fishMoveDelta.dot(fishCameraRight);
-      // Kopf nach links/rechts ausrichten, aber niemals rollen oder senkrecht stellen.
-      // Bei fast frontaler Bewegung bleibt die zuletzt erkennbare Seite erhalten.
-      if(screenX>.012) f.screenSide=-1;
-      else if(screenX<-.012) f.screenSide=1;
+      // P58: Richtungswechsel brauchen Hysterese und eine kurze Sperrzeit.
+      // Winzige Schwankungen um die Kameramitte dürfen den Fisch nicht mehr
+      // links/rechts/links/rechts spiegeln lassen.
+      if(!Number.isFinite(f.sideFlipCooldownUntil))f.sideFlipCooldownUntil=0;
+      if(fishWorldTime>=f.sideFlipCooldownUntil){
+        if(screenX>.055&&f.screenSide!==-1){
+          f.screenSide=-1;f.sideFlipCooldownUntil=fishWorldTime+.42;
+        }else if(screenX<-.055&&f.screenSide!==1){
+          f.screenSide=1;f.sideFlipCooldownUntil=fishWorldTime+.42;
+        }
+      }
       f.obj.scale.x=f.screenSide*f.obj.userData.baseFishWidth;
       f.obj.scale.y=f.obj.userData.baseFishHeight;
       const horizontalSpeed=Math.hypot(fishMoveDelta.x,fishMoveDelta.y);
@@ -20345,14 +20385,14 @@ function updateFishActors(dt){
       // aber nicht mehr jeden winzigen Richtungswechsel sofort sichtbar mitmachen.
       // Gerade bei Jagd und Bodenkorrekturen wechselte das Vorzeichen der Z-Richtung
       // zuvor frameweise und ließ den Kopf unnatürlich hoch/runter zittern.
-      const pitchDeadband=THREE.MathUtils.degToRad(1.15);
+      const pitchDeadband=THREE.MathUtils.degToRad(strictBottomFish.has(species)?3.2:1.8);
       if(Math.abs(targetPitch)<pitchDeadband)targetPitch=0;
       if(!Number.isFinite(f.visualPitch))f.visualPitch=0;
 
-      const pitchLambda=(isHunter||isLureHunter)?5.2:(isFleeing?4.5:3.7);
+      const pitchLambda=(isHunter||isLureHunter)?4.8:(isFleeing?4.0:2.2);
       const pitchBlend=1-Math.exp(-pitchLambda*Math.max(.001,step));
       const blendedPitch=THREE.MathUtils.lerp(f.visualPitch,targetPitch,pitchBlend);
-      const maxPitchRate=(isHunter||isLureHunter)?.72:(isFleeing?.62:.48); // rad/s, nur sichtbare Neigung
+      const maxPitchRate=(isHunter||isLureHunter)?.66:(isFleeing?.56:.28); // P58: ruhiger, kein Kopf-Pumpen
       const maxPitchStep=maxPitchRate*Math.max(.001,step);
       f.visualPitch+=THREE.MathUtils.clamp(
         blendedPitch-f.visualPitch,
@@ -29841,7 +29881,10 @@ function beginAnglingStrikeQte(){
   anglingQteRotationDuration=THREE.MathUtils.lerp(1.66,1.22,(strength-.12)/1.03);
   anglingQteDuration=anglingQteRotationDuration*2;
   anglingQteFirstAttemptUsed=false;anglingQteLap=1;anglingQteLapTime=0;
-  anglingQteLastAttemptAt=0;anglingQteInputLockUntil=performance.now()+90;
+  // P58: Das QTE darf direkt reagieren, wenn der grüne Bereich sichtbar ist.
+  // Der alte 90-ms-Lock konnte besonders bei abrupten sichtbaren Räuberattacken
+  // einen korrekt getimten frühen Klick einfach verschlucken.
+  anglingQteLastAttemptAt=0;anglingQteInputLockUntil=performance.now()+28;
   anglingStrikeQuality='normal';
   anglingUi.classList.remove('bite-alert','bite-focus');
   anglingQte.classList.remove('second-lap');anglingQte.classList.add('show');
@@ -30329,7 +30372,11 @@ function attemptAnglingStrike(){
   // der TATSAECHLICH sichtbaren Ringposition berechnet, nicht aus dem rohen
   // Rotations-Phasenwert. So kann ein grauer Bereich nie mehr als Treffer gelten.
   const visiblePhase=(phase+.25)%1;
-  const hit=visiblePhase>=.22&&visiblePhase<=.78;
+  // P58: Maßgeblich ist auch der Zustand, den der Spieler tatsächlich sieht.
+  // Zwischen zwei Renderframes kann die rechnerische Phase bereits minimal
+  // weiter sein, obwohl der Ring noch grün dargestellt wird.
+  const visuallyGreen=anglingQte.classList.contains('now');
+  const hit=visuallyGreen||(visiblePhase>=.22&&visiblePhase<=.78);
   if(hit){
     anglingStrikeQuality=visiblePhase>=.46&&visiblePhase<=.54?'perfect':'normal';
     if(anglingStrikeQuality==='perfect'){
