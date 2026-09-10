@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P32 · Uferwald Detailaufteilung Nord West Ost Süd</title>
+<title>ACZO56 P33 · Markierte Fernbaeume reduziert · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P32';
+const VIEWER_VERSION='ACZO56 · P33';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -17668,7 +17668,29 @@ function aczoP13RemoteTreeKeep(x,y,salt=0){
   h^=h>>>16;h=Math.imul(h,0x7feb352d)>>>0;h^=h>>>15;
   return (h>>>0)/4294967296<.22;
 }
-const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter((o,i)=>(o.type==='deciduous'||o.type==='birch')&&aczoP13RemoteTreeKeep(o.x,o.y,1000+i));
+// P33: Zwei vom Nutzer markierte Fernbereiche werden zusaetzlich beruhigt.
+// Die direkte Uferkulisse bleibt erhalten; Sued/Mosel (y<=-42) bleibt komplett
+// nach P32 als hochwertige Vegetation inklusive Schatten bestehen.
+function aczoP33MarkedVegetationKeep(o,index=0){
+  const x=Number(o?.x),y=Number(o?.y);
+  if(!Number.isFinite(x)||!Number.isFinite(y))return true;
+  // Aeusserer Ost-/Nordoststreifen: komplett aus der 3D-Vegetation nehmen.
+  // Diese Objekte liegen weit ausserhalb der Weiherkante und sind im Luftbild
+  // bereits vorhanden, erzeugen aber als 3D-Kronen unnoetige GPU-/CPU-Last.
+  if(x>=80&&y>=20)return false;
+  // West-/Suedwest-Markierung: direkte Uferreihe schuetzen, dahinter stark
+  // ausduennen. Kein Eingriff in die Sued-/Moselzone.
+  if(x<=-50&&y>-42&&y<=25){
+    const d=aczoP13DistanceToPond(x,y);
+    if(d<=7.5)return true;
+    let h=(Math.imul(Math.round((x+180)*100),73856093)^Math.imul(Math.round((y+180)*100),19349663)^Math.imul((index|0)+771,83492791))>>>0;
+    h^=h>>>16;h=Math.imul(h,0x7feb352d)>>>0;h^=h>>>15;
+    const r=(h>>>0)/4294967296;
+    return r<(d<=12?0.34:0.12);
+  }
+  return true;
+}
+const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter((o,i)=>(o.type==='deciduous'||o.type==='birch')&&aczoP13RemoteTreeKeep(o.x,o.y,1000+i)&&aczoP33MarkedVegetationKeep(o,1000+i));
 // Markanter Laubbaum aus dem Uferfoto: zwischen der dritten und vierten
 // Süduferbirke, dabei rund einen Meter zum Weiher vorgezogen. Er wird vor dem
 // Wald-Batching erzeugt und bleibt dadurch ebenso performant wie alle Kronen.
@@ -17693,7 +17715,7 @@ ACZO_SURVEY_DATA.objects.filter((o,i)=>o.type==='conifer'&&aczoP13RemoteTreeKeep
 // werden spaeter als geschlossene LowPoly-Kronen gebaut. Dadurch duerfen auch
 // die zuvor entfernten Mischwald-Buesche wieder sichtbar werden.
 ACZO_SURVEY_DATA.objects
-  .filter(o=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)<=10)
+  .filter((o,i)=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)<=10&&aczoP33MarkedVegetationKeep(o,18000+i))
   .forEach(aczoSurveyBuildBush);
 ACZO_SURVEY_DATA.objects.filter(o=>o.type==='reeds').forEach(aczoSurveyBuildReeds);
 
@@ -24812,7 +24834,7 @@ async function loadAnglingPlayerCloud(){
         recoveryCode:anglingRecoveryCode||''
       }),
       cache:'no-store'
-    },7000);
+    },15000);
     let data=await res.json().catch(()=>null);
     // Übergangsweg für die kurze Zeit, in der das neue HTML bereits online ist,
     // aber noch die vorherige Backend-Version läuft. Nach V12 wird ausschließlich
@@ -24899,7 +24921,7 @@ async function syncAnglingPlayerCloud(){
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify(requestPayload)
-    },7000);
+    },15000);
 
     if(!res.ok)return false;
 
@@ -25214,7 +25236,10 @@ function updateAnglingMainMenuUi(){
     ?'☁️ Cloud-Speicherung ist aktiviert.'
     :'📱 Cloud-Speicherung ist deaktiviert. Fortschritt bleibt auf diesem Gerät.';
   updateAnglingCloudStatus();
-  loadAnglingCommunity();
+  // P33 CLOUD: Beim ersten Einrichten bzw. vor vorhandener Recovery-ID keine
+  // zwei Community-GETs im Hintergrund starten. Das verhindert Konkurrenz mit
+  // getPlayer/recoverPlayer auf einem kalten Google-Apps-Script-Backend.
+  if(anglingSetupComplete&&anglingCloudEnabled&&anglingRecoveryCode)loadAnglingCommunity();
   syncAnglingHallOfFameMenuAvailability();
   updateAnglingDailyQuestMenuButton();
 }
@@ -32016,10 +32041,11 @@ anglingDailyQuestClose.addEventListener('click',returnToAnglingMainMenu);
 anglingLeaderboardRefresh?.addEventListener('click',loadAnglingLeaderboard);
 anglingLeaderboardSpecies.addEventListener('change',loadAnglingLeaderboard);
 anglingLeaderboardSaveProfile.addEventListener('click',saveAnglingLeaderboardProfile);
-// V8.105: Die öffentliche Rangliste wird unabhängig von Mobil/Desktop schon
-// kurz nach dem Kartenstart vorgeladen. Beim späteren Öffnen steht der letzte
-// erfolgreiche Stand sofort bereit und wird im Hintergrund erneut abgeglichen.
-window.setTimeout(()=>{initAnglingLeaderboardSpecies();loadAnglingLeaderboard();},700);
+// P33 CLOUD: Artenliste lokal vorbereiten, aber KEINE Google-Bestenliste beim
+// Kartenstart abfragen. Der Cloud-Spielstand startet bereits nach 650 ms; die
+// fruehere zweite Anfrage nach 700 ms konnte auf Mobilgeraeten mit dem ersten
+// Login/Recovery konkurrieren. Die Bestenliste laedt weiterhin beim Oeffnen.
+window.setTimeout(()=>{initAnglingLeaderboardSpecies();},700);
 anglingHallOfFameCredit?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAnglingCreatorEasterEgg();});
 anglingHallOfFameBack?.addEventListener('click',closeAnglingHallOfFame);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&anglingHallOfFameActive){e.preventDefault();closeAnglingHallOfFame();}});
