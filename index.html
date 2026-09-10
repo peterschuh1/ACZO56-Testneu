@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P36 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P38 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P36';
+const VIEWER_VERSION='ACZO56 · P38';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -11327,236 +11327,128 @@ const birdGroup=new THREE.Group();
 birdGroup.visible=!is2D;
 scene.add(birdGroup);
 
+// P38: Extrem leichte, wiederverwendete Vogelsilhouetten.
+// Keine Fluegelanimation, keine Schatten, keine Mesh-/Material-Neuerzeugung
+// beim Spawn. Mobil und Desktop verwenden denselben billigen Gleitpfad.
 const birdActors=[];
-// Die Schattenroutine liest nur diese kleine Zahl und muss weder die
-// Vogelgruppe durchsuchen noch von deren später deklarierter Variable abhängen.
 window.__aczoFlyingBirdCount=0;
 let nextBirdSpawn=6+Math.random()*10;
-const aczoBirdLightVector=new THREE.Vector3();
 
-function makeBird(){
-  const g=new THREE.Group();
+const aczoBirdSilhouetteGeo=new THREE.BufferGeometry();
+aczoBirdSilhouetteGeo.setAttribute('position',new THREE.Float32BufferAttribute([
+   0.00, 0.52,0,
+  -0.20, 0.12,0,
+  -1.05,-0.18,0,
+  -0.32,-0.04,0,
+   0.00,-0.48,0,
+   0.32,-0.04,0,
+   1.05,-0.18,0,
+   0.20, 0.12,0
+],3));
+aczoBirdSilhouetteGeo.setIndex([
+  0,1,7, 1,2,3, 1,3,4,
+  1,4,7, 7,4,5, 7,5,6
+]);
+aczoBirdSilhouetteGeo.computeVertexNormals();
+aczoBirdSilhouetteGeo.computeBoundingSphere();
 
-  // V61: leichte optische Variation statt identischer Klon-Vögel.
-  const birdPalette=[0x252b2f,0x39434a,0x4b4640,0x596067];
-  const birdColor=birdPalette[Math.floor(Math.random()*birdPalette.length)];
-  const bodyMat=new THREE.MeshPhongMaterial({
-    color:birdColor,
-    shininess:8+Math.random()*12,
-    side:THREE.DoubleSide
+const aczoBirdSilhouetteMat=new THREE.MeshBasicMaterial({
+  color:0x20272b,
+  side:THREE.DoubleSide,
+  transparent:true,
+  opacity:.82,
+  depthWrite:false,
+  toneMapped:false
+});
+
+const ACZO_BIRD_POOL_SIZE=4;
+const aczoBirdPool=[];
+for(let i=0;i<ACZO_BIRD_POOL_SIZE;i++){
+  const mesh=new THREE.Mesh(aczoBirdSilhouetteGeo,aczoBirdSilhouetteMat);
+  mesh.visible=false;
+  mesh.frustumCulled=true;
+  mesh.renderOrder=3;
+  mesh.userData.aczoNoShadow=true;
+  mesh.userData.aczoNoReceiveShadow=true;
+  birdGroup.add(mesh);
+  aczoBirdPool.push({
+    obj:mesh,active:false,speed:0,vx:0,vy:0,life:0,baseZ:0,
+    driftPhase:i*1.731
   });
-
-  // schlanker Körper
-  const body=new THREE.Mesh(
-    new THREE.CylinderGeometry(.16,.22,1.25,8),
-    bodyMat
-  );
-  // V2.2.2: CylinderGeometry liegt bereits entlang der lokalen Y-Achse.
-  // Der Vogel fliegt ebenfalls entlang +Y (Kopf vorne, Schwanz hinten).
-  // Die frühere 90°-Drehung stellte den Körper deshalb fälschlich senkrecht.
-  body.rotation.set(0,0,0);
-  body.scale.z=.78;
-  body.position.set(0,.05,.02);
-  g.add(body);
-
-  // Kopf / Schnabel
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.20,10,8),bodyMat);
-  head.position.set(0,.68,.04);
-  g.add(head);
-
-  const beak=new THREE.Mesh(
-    new THREE.ConeGeometry(.08,.28,8),
-    new THREE.MeshPhongMaterial({color:0x6f6251})
-  );
-  // ConeGeometry zeigt ebenfalls entlang der Y-Achse. Nicht mehr nach Z kippen.
-  beak.rotation.set(0,0,0);
-  beak.position.set(0,.90,.03);
-  g.add(beak);
-
-  // Flügel als einzelne Meshes, damit sie schlagen können.
-  const wingGeo=new THREE.BufferGeometry();
-  wingGeo.setAttribute('position',new THREE.Float32BufferAttribute([
-     0,0,0,  -1.15,-.12,0,  -0.25,.32,0,
-  ],3));
-  wingGeo.setIndex([0,1,2]);
-  wingGeo.computeVertexNormals();
-
-  const left=new THREE.Mesh(wingGeo,bodyMat);
-  left.position.set(-.06,.05,.10);
-  g.add(left);
-
-  const wingGeoR=wingGeo.clone();
-  const pos=wingGeoR.attributes.position;
-  for(let i=0;i<pos.count;i++) pos.setX(i,-pos.getX(i));
-  pos.needsUpdate=true;
-  wingGeoR.computeVertexNormals();
-
-  const right=new THREE.Mesh(wingGeoR,bodyMat);
-  right.position.set(.06,.05,.10);
-  g.add(right);
-
-  // einfacher Schwanz
-  const tailGeo=new THREE.BufferGeometry();
-  tailGeo.setAttribute('position',new THREE.Float32BufferAttribute([
-    -.22,-.58,0, .22,-.58,0, 0,-1.02,.02
-  ],3));
-  tailGeo.setIndex([0,1,2]);
-  tailGeo.computeVertexNormals();
-  const tail=new THREE.Mesh(tailGeo,bodyMat);
-  g.add(tail);
-
-  // P16: Die Fluegelschlaege invalidieren nicht mehr die Schattenkarte der
-  // kompletten 200-m-Szene. Der Vogel bleibt geometrisch unveraendert; nur sein
-  // Schatten wird als weiche, entlang der realen Lichtrichtung projizierte
-  // Kontaktellipse gezeichnet.
-  g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.aczoNoShadow=true;o.userData.aczoNoReceiveShadow=true;}});
-  const shadow=aczoCreateSoftContactShadow(2.35,1.05,.24,ACZO_SATELLITE_GROUND_Z+.018);
-
-  return {
-    obj:g,
-    leftWing:left,
-    rightWing:right,
-    shadow,
-    speed:0,
-    vx:0,
-    vy:0,
-    life:0,
-    flap:Math.random()*Math.PI*2,
-    baseZ:0,
-    glideBias:Math.random(),
-    bobSpeed:.65+Math.random()*.55
-  };
 }
 
 function birdsAllowedNow(){
-  if(is2D) return false;
-  // Keine Vögel nachts. Maßgeblich ist die echte astronomische Sonne,
-  // nicht nur eine künstlich helle Kartenansicht.
-  if(typeof simulationEnabled!=='undefined' && simulationEnabled){
-    if(typeof sun==='undefined' || !sun.visible || sun.intensity<0.16) return false;
+  if(is2D)return false;
+  if(typeof simulationEnabled!=='undefined'&&simulationEnabled){
+    if(typeof sun==='undefined'||!sun.visible||sun.intensity<0.16)return false;
   }
   return true;
 }
 
 function spawnBird(){
-  // V61: nur in 3D und nur bei ausreichendem Tageslicht.
-  if(!birdsAllowedNow()) return;
-
-  const b=makeBird();
+  if(!birdsAllowedNow())return;
+  const b=aczoBirdPool.find(v=>!v.active);
+  if(!b)return;
   const span=Math.max(D.sceneW,D.sceneH);
-
-  // Startpunkt zufällig an einer der vier Außenseiten.
   const side=Math.floor(Math.random()*4);
   let x=0,y=0;
-  if(side===0){ x=-span*.72; y=(Math.random()-.5)*span*.95; }
-  if(side===1){ x= span*.72; y=(Math.random()-.5)*span*.95; }
-  if(side===2){ y=-span*.72; x=(Math.random()-.5)*span*.95; }
-  if(side===3){ y= span*.72; x=(Math.random()-.5)*span*.95; }
-
-  // Ziel grob gegenüber, aber nicht perfekt gerade.
+  if(side===0){x=-span*.72;y=(Math.random()-.5)*span*.95;}
+  if(side===1){x= span*.72;y=(Math.random()-.5)*span*.95;}
+  if(side===2){y=-span*.72;x=(Math.random()-.5)*span*.95;}
+  if(side===3){y= span*.72;x=(Math.random()-.5)*span*.95;}
   const tx=-x+(Math.random()-.5)*span*.28;
   const ty=-y+(Math.random()-.5)*span*.28;
-  const dx=tx-x, dy=ty-y;
-  const len=Math.hypot(dx,dy)||1;
-
-  b.speed=7.0+Math.random()*5.0;
+  const dx=tx-x,dy=ty-y,len=Math.hypot(dx,dy)||1;
+  b.speed=6.5+Math.random()*4.0;
   b.vx=dx/len*b.speed;
   b.vy=dy/len*b.speed;
-  b.baseZ=26+Math.random()*22;
+  b.baseZ=27+Math.random()*19;
   b.obj.position.set(x,y,b.baseZ);
-  b.obj.rotation.z=Math.atan2(-b.vx,b.vy);
-  b.life=0;
-
-  // Unterschiedliche Vogelgröße: kleine und gelegentlich deutlich größere Exemplare.
-  const scale=.62+Math.random()*.88;
+  b.obj.rotation.set(0,0,Math.atan2(-b.vx,b.vy));
+  const scale=.72+Math.random()*.72;
   b.obj.scale.setScalar(scale);
-
-  birdGroup.add(b.obj);
-  if(b.shadow)scene.add(b.shadow);
-  birdActors.push(b);
+  b.life=0;
+  b.active=true;
+  b.obj.visible=true;
+  if(!birdActors.includes(b))birdActors.push(b);
   window.__aczoFlyingBirdCount=birdActors.length;
 }
 
 function removeBird(index){
   const b=birdActors[index];
-  if(!b) return;
-  birdGroup.remove(b.obj);
-  if(b.shadow)scene.remove(b.shadow);
-
-  b.obj.traverse(o=>{
-    if(o.geometry) o.geometry.dispose();
-    if(o.material && o.material.map) o.material.map.dispose?.();
-    if(o.material) o.material.dispose?.();
-  });
-  if(b.shadow&&b.shadow.material){
-    if(b.shadow.material.map) b.shadow.material.map.dispose?.();
-    b.shadow.material.dispose?.();
-  }
+  if(!b)return;
+  b.active=false;
+  b.obj.visible=false;
   birdActors.splice(index,1);
   window.__aczoFlyingBirdCount=birdActors.length;
 }
 
 function updateBirds(dt){
   birdGroup.visible=!is2D;
-
-  nextBirdSpawn-=dt;
-  if(nextBirdSpawn<=0){
-    // V61: tagsüber meist Einzelvogel, gelegentlich ein kleines Paar.
-    if(birdsAllowedNow() && birdActors.length<2){
-      spawnBird();
-      if(Math.random()<0.22 && birdActors.length<2) spawnBird();
-    }
-    nextBirdSpawn=24+Math.random()*46;
+  if(!birdsAllowedNow()){
+    for(let i=birdActors.length-1;i>=0;i--)removeBird(i);
+    return;
   }
 
-  // Sobald Nacht einsetzt, vorhandene Vögel sauber entfernen.
-  if(!birdsAllowedNow() && birdActors.length){
-    for(let i=birdActors.length-1;i>=0;i--) removeBird(i);
+  nextBirdSpawn-=dt;
+  if(nextBirdSpawn<=0&&birdActors.length<2){
+    spawnBird();
+    // P38: Weniger gleichzeitig sichtbare Dekoration, aber regelmaessige
+    // ruhige Ueberfluege. Keine Spawn-Kosten, da der Pool bereits existiert.
+    nextBirdSpawn=12+Math.random()*18;
   }
 
   const span=Math.max(D.sceneW,D.sceneH);
-
   for(let i=birdActors.length-1;i>=0;i--){
     const b=birdActors[i];
     b.life+=dt;
-
     b.obj.position.x+=b.vx*dt;
     b.obj.position.y+=b.vy*dt;
-
-    // V61: unterschiedliche Flugstile. Manche gleiten ruhiger, andere schlagen aktiver.
-    b.obj.position.z=b.baseZ+Math.sin(b.life*b.bobSpeed+b.flap)*(.55+b.glideBias*.95);
-
-    b.flap+=dt*(3.6+(1.0-b.glideBias)*4.8+Math.min(2.2,b.speed*.12));
-    const flap=Math.sin(b.flap)*(.38+(1.0-b.glideBias)*.48);
-    b.leftWing.rotation.y=flap;
-    b.rightWing.rotation.y=-flap;
-
-    if(b.shadow){
-      const light=(typeof aczoStructureShadowLight!=='undefined'&&aczoStructureShadowLight.visible)
-        ?aczoStructureShadowLight:sun;
-      aczoBirdLightVector.copy(light.position).sub(light.target.position).normalize();
-      const baseGroundZ=ACZO_SATELLITE_GROUND_Z+.018;
-      const height=Math.max(1,b.obj.position.z-baseGroundZ);
-      const travel=Math.min(58,height/Math.max(.16,aczoBirdLightVector.z));
-      const sx=b.obj.position.x-aczoBirdLightVector.x*travel;
-      const sy=b.obj.position.y-aczoBirdLightVector.y*travel;
-      const overPond=typeof pondDepthAt==='function'&&Number.isFinite(pondDepthAt(sx,sy));
-      const overMosel=!overPond&&typeof aczoSurveyPointInPolygon==='function'
-        &&typeof moselWorldPolygon!=='undefined'&&aczoSurveyPointInPolygon(sx,sy,moselWorldPolygon);
-      const surfaceZ=overPond?WATER_OVERLAY_Z+.012:(overMosel ? .254 : baseGroundZ);
-      b.shadow.position.set(sx,sy,surfaceZ);
-      b.shadow.rotation.z=b.obj.rotation.z;
-      const blurScale=(1+height*.006)*b.obj.scale.x;
-      b.shadow.scale.set(blurScale,blurScale,1);
-      b.shadow.material.opacity=(overPond||overMosel ? .17 : .22)*THREE.MathUtils.clamp(1-sceneNightFactor,.42,1);
-      b.shadow.visible=!is2D&&!!light.visible&&light.intensity>.01
-        &&Math.abs(sx)<span*.78&&Math.abs(sy)<span*.78;
-    }
-
-    // Außerhalb des sichtbaren Kartenbereichs wieder entfernen.
-    if(Math.abs(b.obj.position.x)>span*.92 ||
-       Math.abs(b.obj.position.y)>span*.92 ||
-       b.life>45){
+    // Nur ein sehr langsames, billiges Hoehendriften. Keine Fluegelanimation.
+    b.obj.position.z=b.baseZ+Math.sin(b.life*.32+b.driftPhase)*.35;
+    if(Math.abs(b.obj.position.x)>span*.92||
+       Math.abs(b.obj.position.y)>span*.92||
+       b.life>75){
       removeBird(i);
     }
   }
@@ -16797,7 +16689,7 @@ function aczoBirchRegisterObstacle(a,b,r){
 const ACZO_REAL_BIRCH_CONFIGS=[
   {
     // Exakter Flaechenschwerpunkt des frueheren Ost-Overlays: 43.163 / 7.748.
-    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:13900,sprayCount:1950,branchCount:27,
+    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:11800,sprayCount:1950,branchCount:27,
     crownWidth:13.7,crownDepth:10.9,crownBase:3.05,crownTop:12.5,submerge:1.08,
     // Vom Ufer bis durch die Overlay-Mitte fast schnurgerade und flach ueber
     // dem Wasser. Erst danach steigt der Hauptstamm in die hohe Krone auf.
@@ -16805,7 +16697,7 @@ const ACZO_REAL_BIRCH_CONFIGS=[
   },
   {
     // Exakter Flaechenschwerpunkt des frueheren West-Overlays.
-    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:7350,sprayCount:1080,branchCount:19,
+    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:6250,sprayCount:1080,branchCount:19,
     crownWidth:8.35,crownDepth:7.35,crownBase:2.82,crownTop:9.35,submerge:.68,
     // Natuerlicher, weitgehend gerader 45-Grad-Wuchs durch die Overlay-Mitte.
     trunk:[[0,-.48,.54],[.01,.72,1.22],[-.02,1.98,2.18],[.02,3.12,3.32],[-.01,4.20,4.55],[.03,4.92,5.65]]
@@ -17500,9 +17392,9 @@ function aczoSurveyBuildDeciduous(tree){
   // Im Waldinneren tragen die dicht schließenden Blattfächer die Silhouette;
   // unsichtbare Einzelblätter werden dort reduziert. Sichtkante und Birken
   // behalten ihre volle Detailstufe.
-  // P36 PERFORMANCE: Nur feinste Einzelblaetter moderat reduziert.
+  // P37 PERFORMANCE: Feinste Einzelblaetter nochmals moderat reduziert.
   // Kronen-Sprays, Aeste und Schatten-Proxies bleiben 100 % erhalten.
-  const leafCount=tree.filler?24+Math.floor(rnd()*22):(birch?1150:620)+Math.floor(rnd()*(birch?370:260));
+  const leafCount=tree.filler?20+Math.floor(rnd()*19):(birch?980:525)+Math.floor(rnd()*(birch?315:220));
   for(let i=0;i<leafCount;i++){
     const anchor=anchors[Math.floor(rnd()*anchors.length)]||trunk[6],spread=.035+rnd()*(tree.filler?.28:.42),phi=rnd()*Math.PI*2,cz=rnd()*2-1,sr=Math.sqrt(Math.max(0,1-cz*cz));
     const p=anchor.clone().add(new THREE.Vector3(Math.cos(phi)*sr*spread,Math.sin(phi)*sr*spread,cz*spread*.82));
@@ -30945,13 +30837,18 @@ function renderAnglingFloatCamera(){
   if(renderAnglingTargetAssistCamera())return;
   anglingTargetAssistGroup.visible=false;
   anglingFloatZoom.classList.remove('target-assist');
-  // P36: Beim eigentlichen Wurf bleibt die Hauptansicht frei. Das verhindert
-  // die bisherige Ueberlagerung zweier Inset-Fenster und spart einen zweiten
-  // Szenenrender genau waehrend der bewegungsintensivsten Flugphase.
-  if(anglingState==='casting'){
-    anglingFloatZoom.style.display='none';
+  // P37: Kunstkoeder/Deeper bleiben waehrend des Luftwurfs ohne Minifenster.
+  // Beim normalen Posenwurf soll dieses Fenster dagegen den Flug der Pose
+  // verfolgen. Wegen aelterer CSS-!important-Regeln muss das Ausblenden hier
+  // ebenfalls mit !important gesetzt werden, sonst bleibt nur ein leerer Rahmen.
+  if(anglingState==='casting'&&(anglingUsesArtificialLure()||anglingUsesDeeper())){
+    anglingFloatZoom.style.setProperty('display','none','important');
     anglingFloatZoom.setAttribute('aria-hidden','true');
     return;
+  }
+  if(anglingState==='casting'){
+    anglingFloatZoom.style.removeProperty('display');
+    anglingFloatZoom.setAttribute('aria-hidden','false');
   }
   if(anglingState==='fast-retrieving'||anglingCinematicView==='reset-return'||anglingUi.classList.contains('is-returning')){
     anglingFloatZoom.style.display='none';
@@ -30967,6 +30864,9 @@ function renderAnglingFloatCamera(){
   const floatActive=!anglingUsesDeeper()&&!anglingUsesArtificialLure()&&anglingBobber.visible&&
     ['casting','waiting','approach','bite','bite-focus','strike','retrieving'].includes(anglingState);
   if(!anglingMode||!floatActive||!anglingUi.classList.contains('line-active'))return;
+  // Eventuell vom Kunstkoederwurf gesetztes inline-!important sicher loesen.
+  anglingFloatZoom.style.removeProperty('display');
+  anglingFloatZoom.setAttribute('aria-hidden','false');
   const aczoFloatNow=performance.now();
   if(!aczoSecondaryCameraDue(aczoLastAnglingFloatRenderAt,aczoFloatNow))return;
   aczoLastAnglingFloatRenderAt=aczoFloatNow;
@@ -30982,12 +30882,24 @@ function renderAnglingFloatCamera(){
   const w=Math.max(1,Math.round((zoomRect.width-4)*sx)),h=Math.max(1,Math.round((zoomRect.height-4)*sy));
   const dir=anglingCurrentDirection(anglingTmpA),side=anglingTmpB.copy(dir).applyAxisAngle(anglingUp,Math.PI/2);
   const zoomSurface=anglingSurfaceZ(anglingBobber.position.x,anglingBobber.position.y);
-  anglingFloatCamera.position.set(anglingBobber.position.x,anglingBobber.position.y,zoomSurface+.78)
-    .addScaledVector(dir,-1.85).addScaledVector(side,.26);
-  anglingFloatCameraTarget.set(anglingBobber.position.x,anglingBobber.position.y,zoomSurface+.14);
+  if(anglingState==='casting'){
+    // P37: Flugkamera sitzt relativ zur tatsaechlichen Pose und nicht relativ
+    // zur Wasseroberflaeche. Dadurch bleibt der Schwimmer auf seiner gesamten
+    // ballistischen Flugkurve im Livefenster.
+    anglingFloatCamera.position.copy(anglingBobber.position)
+      .addScaledVector(dir,-1.95).addScaledVector(side,.28);
+    anglingFloatCamera.position.z+=.72;
+    anglingFloatCameraTarget.copy(anglingBobber.position);
+  }else{
+    anglingFloatCamera.position.set(anglingBobber.position.x,anglingBobber.position.y,zoomSurface+.78)
+      .addScaledVector(dir,-1.85).addScaledVector(side,.26);
+    anglingFloatCameraTarget.set(anglingBobber.position.x,anglingBobber.position.y,zoomSurface+.14);
+  }
   anglingFloatCamera.fov=31;anglingFloatCamera.aspect=w/h;anglingFloatCamera.updateProjectionMatrix();anglingFloatCamera.lookAt(anglingFloatCameraTarget);
   const feedFeedbackActive=anglingFeedCastFeedback&&performance.now()<anglingFeedCastFeedbackUntil;
-  anglingFloatCaption.textContent=feedFeedbackActive?anglingFeedCastFeedback:'Tiefe '+anglingRigDepth.toFixed(1).replace('.',',')+' m';
+  anglingFloatCaption.textContent=anglingState==='casting'
+    ?'Pose · Flug'
+    :(feedFeedbackActive?anglingFeedCastFeedback:'Tiefe '+anglingRigDepth.toFixed(1).replace('.',',')+' m');
   // Im Schwimmer-Livebild soll die gelbe Futterfläche klar erkennbar sein,
   // damit man ohne Meterwerte sieht, ob die Pose innerhalb des Platzes liegt.
   const feedSpotVisibleState=anglingFeedSpotMeshes.map(mesh=>mesh.visible);
@@ -31019,7 +30931,10 @@ function renderAnglingReelCamera(){
   // Liveansicht wieder eingeblendet. Gilt identisch fuer Mobil und Desktop.
   const aczoReelCastFlight=anglingState==='casting';
   if(aczoReelCastFlight){
-    anglingReelZoom.style.display='none';
+    // P37: CSS besitzt fuer artificial-lure.line-active ein display:block!important.
+    // Deshalb musste P36 trotz JS-hide einen leeren Rahmen zeigen. Inline
+    // !important gewinnt nun eindeutig und entfernt den kompletten Rahmen.
+    anglingReelZoom.style.setProperty('display','none','important');
     anglingReelZoom.setAttribute('aria-hidden','true');
     return;
   }
@@ -31031,7 +30946,8 @@ function renderAnglingReelCamera(){
   if(!anglingUsesArtificialLure())return;
   const reelStates=['casting','lure-waiting','lure-retrieving','lure-attack','lure-missed','strike'];
   if(!anglingMode||!reelStates.includes(anglingState)||!anglingUi.classList.contains('line-active'))return;
-  anglingReelZoom.style.display='';
+  // Nach dem Eintauchen den nur fuer die Flugphase gesetzten Inline-Wert loesen.
+  anglingReelZoom.style.removeProperty('display');
   anglingReelZoom.setAttribute('aria-hidden','false');
   const aczoReelNow=performance.now();
   if(!aczoSecondaryCameraDue(aczoLastAnglingReelRenderAt,aczoReelNow))return;
