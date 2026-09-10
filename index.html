@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P69 SHADOW OPT · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3940,6 +3940,23 @@ html,body{
     top:auto!important;
   }
 }
+
+/* P69: kompakter Testschalter für die 3D-Karte. */
+#aczoP69TimeToggle{
+ position:absolute;right:10px;bottom:10px;z-index:120;
+ display:none;gap:5px;padding:5px;border-radius:10px;
+ background:rgba(5,20,24,.72);border:1px solid rgba(255,255,255,.30);
+ box-shadow:0 5px 18px rgba(0,0,0,.28);pointer-events:auto
+}
+#aczoP69TimeToggle button{
+ min-width:58px;height:30px;padding:0 9px;border-radius:8px;
+ border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.10);
+ color:#fff;font:800 10px system-ui,-apple-system,sans-serif;
+ touch-action:manipulation
+}
+#aczoP69TimeToggle button.active{background:rgba(206,161,45,.84);color:#fff}
+#aczoP69TimeToggle button.night.active{background:rgba(54,77,126,.90)}
+.wrap:not(.angling-mode) #aczoP69TimeToggle{display:flex}
 </style>
 
 
@@ -4582,7 +4599,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P66';
+const VIEWER_VERSION='ACZO56 · P69 SHADOW OPT';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -7695,7 +7712,16 @@ function setSeasonTimeAnchor(date){seasonTimeBaseDate=new Date(date);seasonTimeB
 function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYear(),0,0))/86400000));}
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
-function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
+// P69: einfacher Tag/Nacht-Schalter nur für die 3D-Karte.
+// null = echte Zeit; 13 = Test-Tag; 1 = Test-Nacht.
+let aczoP69ForcedHour=null;
+function viewerNow(){
+  const d=seasonTestMode?seasonTestDate():new Date();
+  if(aczoP69ForcedHour==null)return d;
+  const forced=new Date(d);
+  forced.setHours(aczoP69ForcedHour,0,0,0);
+  return forced;
+}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
@@ -33377,11 +33403,67 @@ let aczoMapGestureFrame=0;
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
 })();
+
+// P69: einfacher Tag/Nacht-Schalter. Nur Testzeit, keine Wetter-/Saisonlogik verändert.
+(()=>{
+ const day=document.getElementById('aczoP69DayBtn');
+ const night=document.getElementById('aczoP69NightBtn');
+ const setMode=(hour)=>{
+   aczoP69ForcedHour=hour;
+   day?.classList.toggle('active',hour===13);
+   night?.classList.toggle('active',hour===1);
+   try{updateAstronomy();}catch(err){}
+   try{renderer.shadowMap.needsUpdate=true;}catch(err){}
+ };
+ day?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setMode(aczoP69ForcedHour===13?null:13);});
+ night?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setMode(aczoP69ForcedHour===1?null:1);});
+})();
+
+// P69 SHADOW OPT ---------------------------------------------------------
+// Ziel: sichtbare Geometrie unverändert lassen, aber teure Detail-Caster aus
+// der Sonnen-Shadowmap entfernen. Explizite Schatten-Proxies und wichtige
+// Ufer-/Gebäude-/Stegobjekte bleiben unangetastet.
+function aczoP69OptimizeShadowCasters(){
+  if(!scene)return;
+  scene.traverse(o=>{
+    if(!o?.isMesh||!o.castShadow)return;
+    const name=(o.name||'').toUpperCase();
+    const keep=
+      o.userData?.aczoShadowProxy ||
+      /STEG|PIER|BOOTSTEG|HAUS|GARAGE|SANITAER|GEB[AÄ]UDE|BUILDING|ZAUN|FENCE|MAST|FLAG|WEIDE|WILLOW/.test(name) ||
+      o.userData?.alwaysShadow ||
+      o.userData?.importantShoreTree;
+
+    if(keep)return;
+
+    // Blatt-/Feindetail großer Baumobjekte sind der teuerste unnötige Caster.
+    // Stamm/Krone können über ihre vorhandenen vereinfachten Proxy-Caster weiter
+    // Schatten liefern.
+    const looksLikeFineVegetation=
+      /LEAF|LEAVES|BLATT|FOLIAGE|SPRAY|NEEDLE|NADEL|TWIG|ZWEIG|BUSH_DETAIL|UNDERSTORY/.test(name);
+
+    // Instanzierte Fern-/Füllvegetation grundsätzlich nicht in Shadowmap.
+    const looksLikeFarFiller=
+      o.isInstancedMesh &&
+      (/FOREST|WALD|FILLER|MID|FAR|OUTER|UNDERSTORY|BUSH/.test(name));
+
+    if(looksLikeFineVegetation||looksLikeFarFiller){
+      o.castShadow=false;
+    }
+  });
+  renderer.shadowMap.needsUpdate=true;
+}
+window.setTimeout(aczoP69OptimizeShadowCasters,350);
 </script>
 
 
 
 
 <!-- P17: iOS gesture guard, visible directional small-object shadows and adaptive map workload. -->
+
+<div id="aczoP69TimeToggle" aria-label="Testzeit">
+  <button id="aczoP69DayBtn" type="button">☀ TAG</button>
+  <button id="aczoP69NightBtn" class="night" type="button">☾ NACHT</button>
+</div>
 </body>
 </html>
