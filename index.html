@@ -2591,7 +2591,7 @@ html,body{
    Angelspiel. Die Karten-Werkzeugleiste wird deshalb hinter dem Dialog
    vollständig ausgeblendet; das gut sichtbare X führt jederzeit zurück. */
 .wrap.angling-profile-menu-open > .controls{display:none!important}
-.aczo-phone-layout .angling-main-close{width:38px;height:38px;font-size:21px;position:sticky;top:0}
+.aczo-phone-layout .angling-main-close{width:38px;height:38px;min-width:38px;min-height:38px;flex:0 0 38px;aspect-ratio:1/1;padding:0;box-sizing:border-box;border-radius:50%;font-size:22px;line-height:1;position:relative;top:auto;font-family:Arial,sans-serif}
 
 
 /* V7.73 Navigation audit fixes */
@@ -9213,7 +9213,12 @@ aczoLandShadowMaskTex.minFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.magFilter=THREE.LinearFilter;
 aczoLandShadowMaskTex.generateMipmaps=false;
 const aczoLandShadowMat=new THREE.ShadowMaterial({
-  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true
+  color:0x07110b,opacity:.52,transparent:true,depthWrite:false,depthTest:true,
+  // P10: Der Schattenfaenger liegt nahezu deckungsgleich auf dem Satellitenboden.
+  // Aus grosser Hoehe reichten 2,8 cm Abstand fuer den Tiefenpuffer nicht immer
+  // aus und Boden/Schatten konkurrierten sichtbar. PolygonOffset stabilisiert
+  // nur die Tiefenentscheidung; Richtung, Weichheit und Deckkraft bleiben gleich.
+  polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
 });
 aczoLandShadowMat.alphaMap=aczoLandShadowMaskTex;
 aczoLandShadowMat.alphaTest=.025;
@@ -17375,7 +17380,7 @@ function aczoSurveyBuildSegments(items,material,name,cast=true,receive=true){
   return firstMesh;
 }
 function aczoSurveyShuffle(items,seed){const rnd=aczoSurveyRandom(seed);for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}}
-const aczoSurveyFineLodMeshes=[];
+const aczoSurveyFineLodMeshes=[],aczoSurveySprayLodMeshes=[];
 function aczoSurveyBuildColored(items,geometry,material,name,seasonal,cast=true,receive=true){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();items.forEach((item,i)=>{dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,new THREE.Color(item.color??item.species?.summer??0x65a94c));});mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor){mesh.instanceColor.setUsage(THREE.StaticDrawUsage);mesh.instanceColor.needsUpdate=true;}mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=receive;mesh.userData.aczoNoShadow=!cast;mesh.userData.aczoNoReceiveShadow=!receive;mesh.frustumCulled=false;mesh.userData.items=items;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;aczoSurveyedNatureGroup.add(mesh);(seasonal?aczoSurveySeasonMeshes:aczoSurveyEvergreenMeshes).push(mesh);if(name.includes('EINZELBLAETTER'))aczoSurveyFineLodMeshes.push(mesh);return mesh;}
 
 // Pro Art und Farbcharakter entsteht ein eigenes Kronenmaterial. Damit bleibt
@@ -17413,6 +17418,7 @@ function aczoSurveyBuildFoliageBatches(items,geometry,name,cast=false,receive=fa
     mesh.userData.satShift=first.satShift||0;mesh.userData.lightShift=first.lightShift||0;
     aczoSurveyedNatureGroup.add(mesh);aczoSurveySeasonMeshes.push(mesh);
     if(fineLod)aczoSurveyFineLodMeshes.push(mesh);
+    if(name.includes('NATURWALD_FEINE_BLATTFAECHER_UND_SCHATTEN'))aczoSurveySprayLodMeshes.push(mesh);
   }
 }
 
@@ -17759,23 +17765,36 @@ let aczoSurveyLastLodAt=0,aczoSurveyLastLodKey='';
 function updateAczoSurveyForestLod(){
   const now=performance.now();if(now<aczoSurveyLastLodAt)return;aczoSurveyLastLodAt=now+180;
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
-  // P5: Die P4-Diagnose zeigte, dass die Naturwald-Einzelblaetter in der
-  // normalen Gesamtansicht optisch praktisch keinen Unterschied machen,
-  // aber messbar GPU-Last verursachen. Deshalb verschwinden ausschließlich
-  // diese feinsten Blätter in der Ferne. Kronen-Sprays, Aeste, Farben und
-  // Schatten bleiben unveraendert. Beim Heranzoomen kehrt die volle
-  // Blattdetailstufe weich und ausschließlich entfernungsabhaengig zurück.
-  // Kein Qualitätswechsel mehr nur wegen einer Kameradrehung.
-  let factor=1;
+  // P5 unveraendert: Die feinsten Einzelblaetter verschwinden in der Ferne.
+  let leafFactor=1;
   if(dist>42){
     const t=THREE.MathUtils.smoothstep(dist,42,60);
-    factor=1-t;
+    leafFactor=1-t;
   }
-  if(dist>=60)factor=0;
-  const key=Math.round(factor*20)+'|'+(is2D?'2':'3');if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
+  if(dist>=60)leafFactor=0;
+
+  // P10: Kronen-Sprays bleiben in Nahsicht/Angelansicht voll erhalten. Erst in
+  // grosser Kartenentfernung wird die zufaellig gemischte Instanzmenge reduziert.
+  // Dadurch bleibt die geschlossene Kronensilhouette sichtbar, waehrend sowohl
+  // Hauptpass als auch Schattenpass deutlich weniger kleine Flaechen rasterisieren.
+  let sprayFactor=1;
+  if(ACZO_MOBILE_PERF){
+    if(dist>34) sprayFactor=THREE.MathUtils.lerp(1,.55,THREE.MathUtils.smoothstep(dist,34,78));
+    if(dist>105) sprayFactor=.48;
+  }else{
+    if(dist>42) sprayFactor=THREE.MathUtils.lerp(1,.68,THREE.MathUtils.smoothstep(dist,42,88));
+    if(dist>120) sprayFactor=.60;
+  }
+  const key=Math.round(leafFactor*20)+'|s'+Math.round(sprayFactor*20)+'|'+(is2D?'2':'3');
+  if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
   for(const mesh of aczoSurveyFineLodMeshes){
     const max=mesh.userData.seasonCount||mesh.userData.maxCount||0;
-    mesh.count=is2D?0:Math.max(0,Math.round(max*factor));
+    mesh.count=is2D?0:Math.max(0,Math.round(max*leafFactor));
+    mesh.visible=!is2D&&mesh.count>0;
+  }
+  for(const mesh of aczoSurveySprayLodMeshes){
+    const max=mesh.userData.seasonCount||mesh.userData.maxCount||0;
+    mesh.count=is2D?0:Math.max(0,Math.round(max*sprayFactor));
     mesh.visible=!is2D&&mesh.count>0;
   }
 }
@@ -27738,7 +27757,7 @@ function updateAnglingCameraTransition(dt){
       const worldSpan=Math.max(D.pondW,D.pondH);
       camera.position.x+=sideX*arc*Math.min(worldSpan*.10,Math.max(3.2,spanXY*.10));
       camera.position.y+=sideY*arc*Math.min(worldSpan*.10,Math.max(3.2,spanXY*.10));
-      camera.position.z+=arc*Math.min(worldSpan*.24,22);
+      camera.position.z+=arc*Math.min(worldSpan*.12,10);
     }
     updateAnglingOverviewCrossfade(rawU);
   }
@@ -27809,6 +27828,14 @@ function updateAnglingRodAnchor(){
   anglingRodAnchor.quaternion.copy(camera.quaternion);
   anglingRodAnchor.scale.copy(camera.scale);
   anglingRodAnchor.updateMatrixWorld(true);
+}
+
+function anglingSelectionOverviewHeight(){
+  // P11: Die Stellenauswahl soll den Weiher groß im Bild zeigen. Die alte
+  // Höhe basierte auf der gesamten Satellitenszene und zog die Kamera deshalb
+  // unnötig weit hoch. Nur die tatsächliche Weiherausdehnung ist hier relevant.
+  const pondSpan=Math.max(D.pondW,D.pondH);
+  return pondSpan*(anglingPhoneLayoutActive()?1.20:1.28);
 }
 
 function startAnglingMode(){
@@ -27885,8 +27912,8 @@ function startAnglingMode(){
   showAnglingIntroSlogan();
   const span=Math.max(D.sceneW,D.sceneH);
   beginAnglingCamera(
-    new THREE.Vector3(0,0,span*1.56),
-    new THREE.Vector3(0,0,0),36,5.10,()=>{
+    new THREE.Vector3(0,0,anglingSelectionOverviewHeight()),
+    new THREE.Vector3(0,0,0),36,4.35,()=>{
       anglingState='selecting';anglingStateTime=0;
       enforceAnglingSurfaceOnly();
       anglingSelectTitle.textContent='🎣 Angelplatz wählen';
@@ -27972,10 +27999,10 @@ function changeAnglingSpot(){
   beginAnglingOverviewCrossfade();
   waterUniforms.anglingView.value=0;anglingWaterTarget=0;
   const span=Math.max(D.sceneW,D.sceneH);
-  beginAnglingCamera(new THREE.Vector3(0,0,span*1.56),new THREE.Vector3(0,0,0),36,1.05,()=>{
+  beginAnglingCamera(new THREE.Vector3(0,0,anglingSelectionOverviewHeight()),new THREE.Vector3(0,0,0),36,.90,()=>{
     anglingState='selecting';anglingStateTime=0;
     enforceAnglingSurfaceOnly();
-  },new THREE.Vector3(0,1,0));
+  },new THREE.Vector3(0,1,0),anglingGameCameraZoom());
   if(anglingCameraTransition)anglingCameraTransition.overviewIntro=true;
 }
 
@@ -31797,10 +31824,20 @@ let aczoLastRenderedFrameAt=0;
   updateAczoMainEntranceMotionLight(visualDt);
   updatePersonalCampScene(visualDt);
   updateSeasonTestVisuals(visualDt);
-  updateAczoSurveyedNatureSeason(seasonDayOfDate(viewerNow()));
+  // P10: Material-/Jahreszeitenzustand aendert sich im normalen Betrieb nicht
+  // von Frame zu Frame. Die bisherige Abfrage blieb zwar gecacht, erzeugte aber
+  // dennoch fortlaufend Datum/Profil/Schluesselarbeit. Im Zeitraffer bleibt die
+  // Reaktion bewusst schnell, sonst genuegt ein halbes Sekundenraster.
+  const aczoSeasonPerfNow=performance.now();
+  const aczoSeasonFast=!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
+  if(!window.__aczoNextSeasonMaterialUpdateAt||aczoSeasonPerfNow>=window.__aczoNextSeasonMaterialUpdateAt){
+    const aczoSeasonDayNow=seasonDayOfDate(viewerNow());
+    updateAczoSurveyedNatureSeason(aczoSeasonDayNow);
+    updateRealBirchSeason(aczoSeasonDayNow);
+    window.__aczoNextSeasonMaterialUpdateAt=aczoSeasonPerfNow+(aczoSeasonFast?80:500);
+  }
   updateAczoSurveyForestLod();
   updateAczoWildBoars(visualDt);
-  updateRealBirchSeason(seasonDayOfDate(viewerNow()));
   updateAczoRealBirchFineLod();
   updateClubFlagPole(visualDt);
   if(typeof aczoShoreSealMat!=='undefined'&&aczoShoreSealMat.uniforms?.nightFactor){
