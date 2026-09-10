@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P61 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P62 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4567,7 +4567,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P61';
+const VIEWER_VERSION='ACZO56 · P62';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -20330,15 +20330,17 @@ function updateFishActors(dt){
       );
       if(dist<captureDistance){finishHuntEvent();continue;}
     }
-    // P61: Nur echte Grundfresser/Friedfische gehen am Futter mit dem Kopf nach unten.
-    // Räuber dürfen den Futterplatz weiterhin untersuchen, bleiben dabei aber waagerecht.
-    const feedBottomGrazer=feedSeeking&&!['pike','zander','perch','catfish'].includes(species);
+    // P62: Nur geeignete Grundfresser gehen am Futter mit dem Kopf nach unten.
+    // Hecht, Zander, Barsch, Wels und Stör bleiben dabei immer waagerecht.
+    const feedBottomGrazer=feedSeeking&&!['pike','zander','perch','catfish','sturgeon'].includes(species);
     const feedBottomLocked=feedBottomGrazer&&(f.feedBottomUntil||0)>fishWorldTime;
     const arrivalThreshold=feedBottomGrazer?.28:(feedSeeking?.09:.22);
 
     // Ein einmal grundelnder Fisch bleibt mehrere Sekunden in EINER ruhigen Pose,
     // auch wenn sein intern berechneter Futterzielpunkt leicht weiterwandert.
     if(feedBottomLocked){
+      f.sideFlipCandidate=0;
+      f.sideFlipCandidateSince=0;
       const feedDepth=pondDepthAt(f.obj.position.x,f.obj.position.y);
       if(feedDepth!=null){
         const floor=-feedDepth*exaggeration;
@@ -20384,7 +20386,7 @@ function updateFishActors(dt){
           f.visualPitch=-THREE.MathUtils.degToRad(45);
           f.pause=0;
         }else{
-          // Hecht, Zander, Barsch und Wels bleiben am Futterplatz horizontal.
+          // Hecht, Zander, Barsch, Wels und Stör bleiben am Futterplatz horizontal.
           f.visualPitch=0;
           f.phase+=step*(.75+f.speed*.45);
           if(f.obj.userData.tail)f.obj.userData.tail.rotation.z=Math.sin(f.phase)*.07;
@@ -20416,16 +20418,34 @@ function updateFishActors(dt){
     f.shadowYaw=Math.atan2(-fishMoveDelta.x,fishMoveDelta.y);
     if(f.obj.userData.fishBillboard){
       const screenX=fishMoveDelta.dot(fishCameraRight);
-      // P58: Richtungswechsel brauchen Hysterese und eine kurze Sperrzeit.
-      // Winzige Schwankungen um die Kameramitte dürfen den Fisch nicht mehr
-      // links/rechts/links/rechts spiegeln lassen.
+      // P62: Ein Fisch dreht erst, wenn er WIRKLICH längere Zeit in die
+      // entgegengesetzte Bildschirmrichtung schwimmt. Kamerawackler,
+      // kleine Zielkorrekturen und nahezu frontale Bewegung dürfen die
+      // Fototextur nicht mehr hektisch links/rechts spiegeln.
       if(!Number.isFinite(f.sideFlipCooldownUntil))f.sideFlipCooldownUntil=0;
-      if(fishWorldTime>=f.sideFlipCooldownUntil){
-        if(screenX>.055&&f.screenSide!==-1){
-          f.screenSide=-1;f.sideFlipCooldownUntil=fishWorldTime+.42;
-        }else if(screenX<-.055&&f.screenSide!==1){
-          f.screenSide=1;f.sideFlipCooldownUntil=fishWorldTime+.42;
+      if(!Number.isFinite(f.sideFlipCandidateSince))f.sideFlipCandidateSince=0;
+      if(!Number.isFinite(f.sideFlipCandidate))f.sideFlipCandidate=0;
+
+      const desiredSide=screenX>.14?-1:(screenX<-.14?1:0);
+      const wantsFlip=desiredSide!==0&&desiredSide!==f.screenSide;
+
+      if(wantsFlip){
+        if(f.sideFlipCandidate!==desiredSide){
+          f.sideFlipCandidate=desiredSide;
+          f.sideFlipCandidateSince=fishWorldTime;
+        }else if(
+          fishWorldTime>=f.sideFlipCooldownUntil &&
+          fishWorldTime-f.sideFlipCandidateSince>=.62
+        ){
+          f.screenSide=desiredSide;
+          f.sideFlipCooldownUntil=fishWorldTime+1.10;
+          f.sideFlipCandidate=0;
+          f.sideFlipCandidateSince=0;
         }
+      }else{
+        // Gleiche Richtung oder fast frontal: aktuelle Ausrichtung beibehalten.
+        f.sideFlipCandidate=0;
+        f.sideFlipCandidateSince=0;
       }
       f.obj.scale.x=f.screenSide*f.obj.userData.baseFishWidth;
       f.obj.scale.y=f.obj.userData.baseFishHeight;
@@ -31148,6 +31168,7 @@ function renderAnglingTargetAssistCamera(){
   if(!selecting&&!aiming){
     anglingTargetAssistGroup.visible=false;
     anglingFloatZoom.classList.remove('target-assist');
+    anglingFloatCaption.style.display='';
     // P40: Bei Spielstart/Kameraflug darf kein leerer Live-Rahmen stehen bleiben.
     if(anglingState!=='casting'){
       anglingFloatZoom.style.setProperty('display','none','important');
@@ -31164,7 +31185,11 @@ function renderAnglingTargetAssistCamera(){
   anglingFloatZoom.classList.add('target-assist');
   anglingFloatZoom.style.display='block';
   anglingFloatZoom.setAttribute('aria-hidden','false');
-  anglingFloatCaption.textContent=selecting?'Angelplatz':'Wurfziel';
+  // P62: Während der Stellenauswahl/Zielwahl braucht das Draufsichtsfenster
+  // unten keine Zusatzzeile. Sobald die Pose bzw. Schnur aktiv ist, greifen
+  // wieder unverändert die normalen Livefenster-Informationen.
+  anglingFloatCaption.textContent='';
+  anglingFloatCaption.style.display='none';
 
   const canvasRect=renderer.domElement.getBoundingClientRect(),zoomRect=anglingFloatZoom.getBoundingClientRect();
   if(zoomRect.width<20||zoomRect.height<20)return true;
