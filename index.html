@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P33 · Markierte Fernbaeume reduziert · Cloud Start beruhigt</title>
+<title>ACZO56 P34 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4523,7 +4523,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · P33';
+const VIEWER_VERSION='ACZO56 · P34';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -17674,6 +17674,14 @@ function aczoP13RemoteTreeKeep(x,y,salt=0){
 function aczoP33MarkedVegetationKeep(o,index=0){
   const x=Number(o?.x),y=Number(o?.y);
   if(!Number.isFinite(x)||!Number.isFinite(y))return true;
+  // P34: Die im Screenshot markierte aeussere Suedwest-Ecke wirklich freistellen.
+  // Nur die unmittelbare Weiher-Uferkulisse bleibt dort erhalten. Damit greift
+  // diese kleine Ausnahme bewusst vor der allgemeinen P32-Regel "Sued/Mosel
+  // komplett erhalten", ohne die restliche Moselkulisse anzutasten.
+  if(x<=-42&&y<=-38){
+    const d=aczoP13DistanceToPond(x,y);
+    if(d>9.0)return false;
+  }
   // Aeusserer Ost-/Nordoststreifen: komplett aus der 3D-Vegetation nehmen.
   // Diese Objekte liegen weit ausserhalb der Weiherkante und sind im Luftbild
   // bereits vorhanden, erzeugen aber als 3D-Kronen unnoetige GPU-/CPU-Last.
@@ -17707,7 +17715,7 @@ aczoSurveyManualTreeObjects.forEach((o,i)=>{
 });
 aczoSurveyBuildDeciduous(ACZO_SOUTH_LIFEBUOY_TREE);
 // Markante Tannen bleiben bewusst in ihrer detaillierten Originaldarstellung.
-ACZO_SURVEY_DATA.objects.filter((o,i)=>o.type==='conifer'&&aczoP13RemoteTreeKeep(o.x,o.y,2000+i)).forEach((o,i)=>aczoSurveyBuildConifer(o,i,false));
+ACZO_SURVEY_DATA.objects.filter((o,i)=>o.type==='conifer'&&aczoP13RemoteTreeKeep(o.x,o.y,2000+i)&&aczoP33MarkedVegetationKeep(o,2000+i)).forEach((o,i)=>aczoSurveyBuildConifer(o,i,false));
 // P9: Buesche innerhalb der beiden Mischwaldpolygone werden nicht mehr
 // aufgebaut. Vermessene Buesche an Ufer, Wegen und ausserhalb des Waldes
 // bleiben unveraendert erhalten.
@@ -17888,7 +17896,7 @@ function aczoSurveyBuildForestUnderstory(x,y,index,forestDepth){
 // Vermessene Buesche ausserhalb der direkten Uferkante werden nur an der
 // Suedseite/Mosel wieder als echte Detailbuesche inklusive Schatten aufgebaut.
 ACZO_SURVEY_DATA.objects
-  .filter(o=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)>10&&aczoP32SouthMoselZone(o.x,o.y))
+  .filter((o,i)=>o.type==='bush'&&aczoSurveyDistanceToPondEdge(o.x,o.y)>10&&aczoP32SouthMoselZone(o.x,o.y)&&aczoP33MarkedVegetationKeep(o,19000+i))
   .forEach(aczoSurveyBuildBush);
 
 let aczoSurveyFillerCount=0,aczoSurveyFillerCandidateCount=0,aczoSurveyFillerRejectedByDepth=0;
@@ -17904,6 +17912,7 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
     // Nord, West und Ost bekommen keinerlei Poly-Fuellbaeume oder Poly-Unterwuchs;
     // dort bleiben ausschliesslich die hochwertigen vermessenen Bestandsbaeume.
     if(!aczoP32SouthMoselZone(px,py)){aczoSurveyFillerRejectedByDepth++;continue;}
+    if(!aczoP33MarkedVegetationKeep({x:px,y:py},23000+aczoSurveyFillerCandidateCount)){aczoSurveyFillerRejectedByDepth++;continue;}
     if(!aczoP20FillerRemoteKeep(px,py,3000+aczoSurveyFillerCandidateCount)){aczoSurveyFillerRejectedByDepth++;continue;}
     const forestDepth=aczoSurveyDistanceToPondEdge(px,py),profile=aczoSurveyForestDepthProfile(forestDepth);
     // Keine P22-Poly-Unterwuchslappen mehr. Die vorhandenen Sued-Fuellpositionen
