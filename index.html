@@ -4580,45 +4580,6 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
 <script>
-/* ACZO TIMER EVENT TRACE: diagnostic only, runs before the main app script. */
-(()=>{
- const T0=performance.now(), events=[], schedules=[];
- const nativeTO=window.setTimeout.bind(window), nativeTI=window.setInterval.bind(window);
- const nativeCTO=window.clearTimeout.bind(window), nativeCTI=window.clearInterval.bind(window);
- const labelOf=(cb)=>{try{return (typeof cb==='function'&&(cb.name||String(cb).slice(0,90).replace(/\s+/g,' ')))||String(cb).slice(0,90)}catch(e){return '?'}};
- const log=(kind,label,delay,id)=>{const t=(performance.now()-T0)/1000;if(t>=8&&t<=38)events.push({t,kind,label,delay,id});};
- window.setTimeout=function(cb,delay,...args){
-   const d=Number(delay)||0, lab=labelOf(cb), born=(performance.now()-T0)/1000; let id;
-   if(typeof cb==='function'){ const wrapped=function(...a){log('timeout',lab,d,id);return cb.apply(this,a)}; id=nativeTO(wrapped,d,...args); }
-   else id=nativeTO(cb,d,...args);
-   if(d>=250) schedules.push({born,kind:'timeout',lab,d,id}); return id;
- };
- window.setInterval=function(cb,delay,...args){
-   const d=Number(delay)||0, lab=labelOf(cb), born=(performance.now()-T0)/1000; let id;
-   if(typeof cb==='function'){ const wrapped=function(...a){log('interval',lab,d,id);return cb.apply(this,a)}; id=nativeTI(wrapped,d,...args); }
-   else id=nativeTI(cb,d,...args);
-   if(d>=250) schedules.push({born,kind:'interval',lab,d,id}); return id;
- };
- window.clearTimeout=(id)=>nativeCTO(id); window.clearInterval=(id)=>nativeCTI(id);
- function panel(){let p=document.getElementById('aczoTimerTrace');if(!p){p=document.createElement('div');p.id='aczoTimerTrace';p.style.cssText='position:fixed;right:6px;bottom:92px;z-index:2147483647;max-width:72vw;max-height:48vh;overflow:auto;padding:8px 9px;border-radius:9px;background:rgba(15,20,25,.88);color:#fff;font:700 10px/1.3 Arial,sans-serif;white-space:pre-wrap;pointer-events:none';document.body.appendChild(p)}return p}
- nativeTO(()=>{panel().textContent='TIMER-TRACE läuft 45 s …\nNichts drücken, Karte einfach stehen lassen.'},700);
- nativeTO(()=>{
-   const p=panel(), relevant=events.filter(e=>e.t>=10&&e.t<=35);
-   const groups=new Map();
-   for(const e of relevant){const key=e.kind+' '+e.delay+'ms '+e.label;const g=groups.get(key)||{n:0,first:e.t,last:e.t};g.n++;g.last=e.t;groups.set(key,g)}
-   const ranked=[...groups.entries()].sort((a,b)=>b[1].n-a[1].n).slice(0,18);
-   const longSched=schedules.filter(x=>x.born<35&&(x.d>=1000||x.kind==='interval')).sort((a,b)=>a.born-b.born).slice(0,18);
-   let txt='TIMER-TRACE FERTIG\n10–35 s: '+relevant.length+' Timer-Aufrufe\n\nHäufigste Ausführungen:\n';
-   txt+=ranked.length?ranked.map(([k,g])=>g.n+'× '+g.first.toFixed(1)+'–'+g.last.toFixed(1)+'s · '+k).join('\n'):'keine';
-   txt+='\n\nLange/periodische Timer geplant:\n';
-   txt+=longSched.length?longSched.map(x=>x.born.toFixed(1)+'s · '+x.kind+' '+x.d+'ms · '+x.lab).join('\n'):'keine';
-   p.textContent=txt;
-   try{localStorage.setItem('aczoTimerTraceLast',JSON.stringify({events:relevant,schedules:longSched}))}catch(e){}
- },45000);
-})();
-</script>
-
-<script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
 const VIEWER_VERSION='ACZO56 · P66';
@@ -7005,7 +6966,7 @@ function aczoConfigureUnderwaterShadowLight(light){
   // P28: Auf Mobilgeraeten 384 statt 512 Schattenpixel. Die weichen Proxy-
   // Kronen verlieren kaum sichtbare Struktur, die Shadowmap-Flaeche sinkt aber
   // um rund 44 %. Desktop behaelt den bewaehrten 512er Referenzstand.
-  const shadowMapSize=ACZO_MOBILE_PERF?256:512;
+  const shadowMapSize=ACZO_MOBILE_PERF?384:512;
   light.shadow.mapSize.set(shadowMapSize,shadowMapSize);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
@@ -7734,9 +7695,7 @@ function setSeasonTimeAnchor(date){seasonTimeBaseDate=new Date(date);seasonTimeB
 function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYear(),0,0))/86400000));}
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
-function viewerNow(){
-  if(window.__ACZO_TEST_TAG14__) return new Date(window.__ACZO_TEST_TAG14__.getTime());
-return seasonTestMode?seasonTestDate():new Date();}
+function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
@@ -33111,29 +33070,11 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
-let aczoDiagLastRaf=0, aczoDiagRafSum=0, aczoDiagRafN=0;
-let aczoDiagMainSum=0, aczoDiagMainN=0, aczoDiagLastPaint=0, aczoDiagPanel=null;
-function aczoDiagEnsure(){
-  if(aczoDiagPanel)return;
-  const p=document.createElement('div');
-  p.style.cssText='position:fixed;left:8px;top:204px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;white-space:pre;pointer-events:none';
-  p.textContent='TAG 14:00 · SHADOW 256\nFPS --\nRAF -- ms\nMainJS -- ms';
-  document.body.appendChild(p); aczoDiagPanel=p;
-}
-setTimeout(aczoDiagEnsure,500);
-
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
- const aczoDiagMainStart=performance.now();
- if(aczoDiagLastRaf){
-   const gap=frameNow-aczoDiagLastRaf;
-   aczoDiagRafSum+=gap; aczoDiagRafN++;
- }
- aczoDiagLastRaf=frameNow;
-
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33153,7 +33094,11 @@ let aczoMapGestureFrame=0;
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- /* TEST: Native RAF, kein eigener 18/30/40-FPS-Deckel */
+ const aczoTargetFps=aczoArtificialCastFlight
+   ?(ACZO_MOBILE_PERF?40:46)
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
+ const aczoFrameGap=1000/aczoTargetFps;
+ if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
@@ -33428,27 +33373,9 @@ let aczoMapGestureFrame=0;
  renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
   renderAnglingReelCamera();
  updateViewerDebug(rawDt);
- const aczoDiagMainMs=performance.now()-aczoDiagMainStart;
- aczoDiagMainSum+=aczoDiagMainMs; aczoDiagMainN++;
- if(aczoDiagPanel && frameNow-aczoDiagLastPaint>=750){
-   aczoDiagLastPaint=frameNow;
-   const rav=aczoDiagRafN?aczoDiagRafSum/aczoDiagRafN:0;
-   const mav=aczoDiagMainN?aczoDiagMainSum/aczoDiagMainN:0;
-   const fps=rav?1000/rav:0;
-   aczoDiagPanel.textContent='TAG 14:00 · SHADOW 256\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
-   aczoDiagRafSum=0; aczoDiagRafN=0; aczoDiagMainSum=0; aczoDiagMainN=0;
- }
-
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
-})();
-
-/* TEST: feste Tageszeit 14:00. Nur Diagnosezweig. */
-(function(){
-  const d=new Date();
-  d.setHours(14,0,0,0);
-  window.__ACZO_TEST_TAG14__=d;
 })();
 </script>
 
