@@ -33398,12 +33398,13 @@ setTimeout(aczoNativeTestEnsurePanel,500);
    const rafAvg=aczoNativeTestRafN?aczoNativeTestRafSum/aczoNativeTestRafN:0;
    const mainAvg=aczoNativeTestMainN?aczoNativeTestMainSum/aczoNativeTestMainN:0;
    const fps=rafAvg?1000/rafAvg:0;
-   aczoNativeTestPanel.textContent='NATIVE RAF TEST\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
+   aczoNativeTestPanel.textContent='TAG · OHNE PREDATORPIT\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
    aczoNativeTestRafSum=0; aczoNativeTestRafN=0; aczoNativeTestMainSum=0; aczoNativeTestMainN=0;
  }
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
- schedulePersonalCampScene();
+ // DIAGNOSETEST: Predatorpit/Crafter-Camp wird nicht automatisch aufgebaut.
+ // schedulePersonalCampScene();
 })();
 </script>
 
