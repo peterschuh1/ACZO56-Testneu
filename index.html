@@ -7067,12 +7067,12 @@ function updateUnderwaterObstacleShadows(submerged){
       ?.20:THREE.MathUtils.lerp(.62,.20,Math.pow(cloud,.78));
   }
   if(aczoWaterStructureShadowReceiver&&aczoWaterStructureShadowMat){
-    aczoWaterStructureShadowReceiver.visible=false; /* TEST: kein Shadow-Sampling auf Weiherwasser */
+    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
     aczoWaterStructureShadowMat.opacity=useMoon
       ?.13:THREE.MathUtils.lerp(.44,.13,Math.pow(cloud,.78));
   }
   if(aczoMoselStructureShadowReceiver&&aczoMoselStructureShadowMat){
-    aczoMoselStructureShadowReceiver.visible=false; /* TEST: kein Shadow-Sampling auf Moselwasser */
+    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
     aczoMoselStructureShadowMat.opacity=useMoon
       ?.12:THREE.MathUtils.lerp(.38,.12,Math.pow(cloud,.78));
   }
@@ -8677,7 +8677,7 @@ aczoWaterStructureShadowReceiver.name='ACZO56_WASSEROBERFLAECHE_LIVE_SONNENSCHAT
 aczoWaterStructureShadowReceiver.position.z=.028;
 aczoWaterStructureShadowReceiver.renderOrder=4.045;
 aczoWaterStructureShadowReceiver.castShadow=false;
-aczoWaterStructureShadowReceiver.receiveShadow=false; /* TEST */
+aczoWaterStructureShadowReceiver.receiveShadow=true;
 aczoWaterStructureShadowReceiver.frustumCulled=false;
 aczoWaterStructureShadowReceiver.visible=false;
 scene.add(aczoWaterStructureShadowReceiver);
@@ -9211,7 +9211,7 @@ aczoMoselStructureShadowReceiver.name='ACZO56_MOSEL_LIVE_BAUM_UND_OBJEKTSCHATTEN
 aczoMoselStructureShadowReceiver.position.z=.242;
 aczoMoselStructureShadowReceiver.renderOrder=4.245;
 aczoMoselStructureShadowReceiver.castShadow=false;
-aczoMoselStructureShadowReceiver.receiveShadow=false; /* TEST */
+aczoMoselStructureShadowReceiver.receiveShadow=true;
 aczoMoselStructureShadowReceiver.frustumCulled=false;
 aczoMoselStructureShadowReceiver.visible=false;
 waterSurface.add(aczoMoselStructureShadowReceiver);
@@ -33083,7 +33083,7 @@ function aczoNativeTestEnsurePanel(){
  const p=document.createElement('div');
  p.id='aczo-native-raf-test';
  p.style.cssText='position:fixed;left:8px;top:40px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
- p.textContent='TAG 14:00 · WASSERSCHATTEN AUS\nFPS --\nRAF -- ms\nMainJS -- ms';
+ p.textContent='TAG 14:00 · RECEIVER MIN\nFPS --\nRAF -- ms\nMainJS -- ms';
  document.body.appendChild(p); aczoNativeTestPanel=p;
 }
 setTimeout(aczoNativeTestEnsurePanel,500);
@@ -33463,12 +33463,34 @@ setTimeout(()=>{
   }catch(e){}
 },700);
 
+/* TEST ONLY: Shadow map/casters stay active, but almost all receivers stop sampling it. */
+function aczoReceiveShadowMinTest(){
+  if(!scene) return;
+  let disabled=0, kept=0;
+  scene.traverse(o=>{
+    if(!o || !o.isMesh || !o.receiveShadow) return;
+    const n=((o.name||"")+" "+((o.parent&&o.parent.name)||"")).toLowerCase();
+
+    /* Keep one small, simple structural receiver so shadow reception is still demonstrably alive.
+       Prefer pier/steg/dock only; everything else becomes non-receiver for this diagnostic. */
+    if(/pier|steg|dock/.test(n) && kept===0){
+      kept++;
+      return;
+    }
+    o.receiveShadow=false;
+    disabled++;
+  });
+  window.__aczoReceiveShadowMinStats={disabled,kept};
+}
+setTimeout(aczoReceiveShadowMinTest,3200);
+setTimeout(aczoReceiveShadowMinTest,9000);
+
 setTimeout(()=>{
   try{
-    const x=document.createElement('div');
-    x.textContent='TEST: WASSERSCHATTEN AUS';
-    x.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(95,20,10,.84);color:#fff;font:800 10px Arial;pointer-events:none';
-    document.body.appendChild(x);
+    const d=document.createElement('div');
+    d.textContent='TEST: SHADOW-EMPFÄNGER MINIMAL';
+    d.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(85,20,10,.86);color:#fff;font:800 10px Arial;pointer-events:none';
+    document.body.appendChild(d);
   }catch(e){}
 },600);
 </script>
