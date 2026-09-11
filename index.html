@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P68 · TREE CUT · Final-Basis</title>
+<title>ACZO56 P68B · TREE CUT · 30 FPS Final-Basis</title>
 <!-- P68 TREE CUT: Performance-A/B-Test auf Basis der gesicherten Final-Version. Nur Vegetation reduziert. -->
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -33124,9 +33124,13 @@ let aczoMapGestureFrame=0;
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
+ // P68B: Fuer den sauberen Vergleich zur guten Final-Version bleibt die
+ // Hauptansicht auch im Stillstand bei ihrem bisherigen 30/32-FPS-Ziel.
+ // Keine kuenstliche Absenkung auf 18/16 FPS mehr; nur die kurze
+ // Kunstkoeder-Flugkamera behaelt ihr hoeheres Sonderbudget.
  const aczoTargetFps=aczoArtificialCastFlight
    ?(ACZO_MOBILE_PERF?40:46)
-   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
+   :(ACZO_MOBILE_PERF?30:32);
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
