@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P68 · Radikal-Schatten · Uferbaeume echt · Rest Fake</title>
+<title>ACZO56 P69 · ShadowMap AUS · Analytische Baumschatten</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4762,7 +4762,7 @@ const ACZO_BASE_PIXEL_RATIO=Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO
 renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
-renderer.shadowMap.enabled=true;
+renderer.shadowMap.enabled=false; // P69: echte Shadow-Map komplett deaktiviert
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 // V2.3.33 PERFORMANCE: Die komplette 2048er-Schattenkarte wurde zuvor in
 // jedem Bild neu berechnet. Statische Gebäude/Wälder benötigen das nicht;
@@ -7207,6 +7207,71 @@ function aczoRefreshAboveWaterShadowCasters(){
 }
 
 
+
+
+// P69: analytische Baum-Schatten ohne WebGL ShadowMap.
+// Drei weiche Ellipsen pro relevantem Uferbaum/-proxy. Richtung und Laenge folgen der Sonne.
+// Die Geometrie wird nur langsam aktualisiert; kein Shadow-Pass, keine Shadow-Textur.
+const aczoP69TreeShadows=[];
+const aczoP69TreeShadowRoots=new Set();
+function aczoP69SoftEllipse(opacity=.10){
+  const g=new THREE.CircleGeometry(1,20);
+  const m=new THREE.MeshBasicMaterial({color:0x111814,transparent:true,opacity,depthWrite:false,depthTest:true,side:THREE.DoubleSide});
+  const x=new THREE.Mesh(g,m);
+  x.castShadow=false;x.receiveShadow=false;x.renderOrder=6.22;x.raycast=()=>{};
+  return x;
+}
+function aczoP69RegisterTree(root){
+  if(!root||aczoP69TreeShadowRoots.has(root))return;
+  aczoP69TreeShadowRoots.add(root);
+  try{
+    const parts=[aczoP69SoftEllipse(.085),aczoP69SoftEllipse(.055),aczoP69SoftEllipse(.035)];
+    parts.forEach(p=>scene.add(p));
+    aczoP69TreeShadows.push({root,parts});
+  }catch(e){}
+}
+function aczoP69CollectTreeRoots(){
+  // P67 hatte diese Objekte als die wirklich relevanten Ufer-Caster bestimmt.
+  const roots=[];
+  if(typeof willowTreeGroups!=='undefined'&&willowTreeGroups) roots.push(...willowTreeGroups);
+  if(typeof aczoPondShoreShadowCasters!=='undefined'&&aczoPondShoreShadowCasters) roots.push(...aczoPondShoreShadowCasters);
+  if(typeof aczoShoreTreeShadowRoots!=='undefined'&&aczoShoreTreeShadowRoots) roots.push(...aczoShoreTreeShadowRoots);
+  if(typeof aczoNearShoreTreeGroups!=='undefined'&&aczoNearShoreTreeGroups) roots.push(...aczoNearShoreTreeGroups);
+  roots.forEach(aczoP69RegisterTree);
+}
+let aczoP69LastUpdate=0;
+const aczoP69Wp=new THREE.Vector3();
+function aczoP69UpdateTreeShadows(now=performance.now()){
+  if(now-aczoP69LastUpdate<220)return;
+  aczoP69LastUpdate=now;
+  aczoP69CollectTreeRoots();
+  let sx=1,sy=.25, sunAlt=.65, cloud=.0;
+  try{
+    // Aus Sonnenlichtposition eine horizontale Schattenrichtung ableiten.
+    if(typeof sunLight!=='undefined'&&sunLight){
+      const lp=sunLight.position;
+      const h=Math.max(.001,Math.hypot(lp.x,lp.y));
+      sx=-lp.x/h; sy=-lp.y/h;
+      sunAlt=Math.max(.12,Math.min(1,Math.abs(lp.z)/(h+Math.abs(lp.z))));
+    }
+    if(typeof currentCloudCover!=='undefined')cloud=Math.max(0,Math.min(1,currentCloudCover));
+  }catch(e){}
+  const len=Math.max(2.0,Math.min(10.5,2.0+(1-sunAlt)*10.0));
+  const alphaScale=.92-cloud*.38;
+  for(const rec of aczoP69TreeShadows){
+    if(!rec.root||!rec.root.visible){rec.parts.forEach(p=>p.visible=false);continue;}
+    rec.root.getWorldPosition(aczoP69Wp);
+    const ang=Math.atan2(sy,sx);
+    rec.parts.forEach((p,i)=>{
+      const f=[.46,.72,.94][i];
+      p.visible=true;
+      p.position.set(aczoP69Wp.x+sx*len*f,aczoP69Wp.y+sy*len*f,.045+i*.002);
+      p.rotation.z=ang;
+      p.scale.set(len*[.55,.46,.34][i], [1.45,1.9,2.25][i],1);
+      p.material.opacity=[.085,.055,.035][i]*alphaScale;
+    });
+  }
+}
 
 // P68: billige 0815-Fake-Schatten fuer sekundaere Objekte.
 // Keine Shadow-Map, kein receiveShadow, kein dynamisches Shadow-Refresh.
@@ -33191,7 +33256,7 @@ function aczoP67EnsureDiag(){
   const p=document.createElement('div');
   p.id='aczo-p67-fps';
   p.style.cssText='position:fixed;left:8px;top:204px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;white-space:pre;pointer-events:none';
-  p.textContent='P68 TREE SHADOWS ONLY\nFPS --\nRAF -- ms\nMainJS -- ms';
+  p.textContent='P69 NO SHADOWMAP\nFPS --\nRAF -- ms\nMainJS -- ms';
   document.body.appendChild(p);
   aczoP67DiagPanel=p;
 }
@@ -33499,7 +33564,9 @@ let aczoMapGestureFrame=0;
      &&!fishMode&&!(anglingMode&&anglingCinematicView==='underwater');
    aczoShoreSeal.visible=regularSurface||fishDiveTransition;
  }
- renderer.render(scene,camera);
+ renderer.shadowMap.enabled=false;
+  aczoP69UpdateTreeShadows(frameNow);
+  renderer.render(scene,camera);
  restoreCelestialDiscWorldPositions();
  if(window.__markMapStartupFirstFrame){
    window.__markMapStartupFirstFrame();
@@ -33516,7 +33583,7 @@ let aczoMapGestureFrame=0;
    const rav=aczoP67DiagRafN?aczoP67DiagRafSum/aczoP67DiagRafN:0;
    const mav=aczoP67DiagMainN?aczoP67DiagMainSum/aczoP67DiagMainN:0;
    const fps=rav?1000/rav:0;
-   aczoP67DiagPanel.textContent='P68 TREE SHADOWS ONLY\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
+   aczoP67DiagPanel.textContent='P69 NO SHADOWMAP\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
    aczoP67DiagRafSum=0; aczoP67DiagRafN=0; aczoP67DiagMainSum=0; aczoP67DiagMainN=0;
  }
 
