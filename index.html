@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P68B · TREE CUT · 30 FPS Final-Basis</title>
-<!-- P68 TREE CUT: Performance-A/B-Test auf Basis der gesicherten Final-Version. Nur Vegetation reduziert. -->
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -16619,7 +16618,7 @@ const realBirchLeafShape=new THREE.Shape();
 realBirchLeafShape.moveTo(0,-1);
 realBirchLeafShape.bezierCurveTo(.62,-.54,.56,.42,0,1);
 realBirchLeafShape.bezierCurveTo(-.56,.42,-.62,-.54,0,-1);
-const realBirchLeafGeometry=new THREE.ShapeGeometry(realBirchLeafShape,2); // P68: winzige Blaetter brauchen keine 4 Kurvensegmente
+const realBirchLeafGeometry=new THREE.ShapeGeometry(realBirchLeafShape,4);
 // Kleine gekreuzte Blattfaecher schliessen die Silhouette zwischen den
 // Einzelblaettern. Jeder Faecher besteht aus drei nur 24–62 cm grossen
 // Blattebenen; es entstehen bewusst keine kugeligen Meter-Kronen mehr.
@@ -16639,7 +16638,6 @@ function aczoBirchMakeSprayGeometry(){
 const realBirchSprayGeometry=aczoBirchMakeSprayGeometry();
 const realBirchLeafMeshes=[];
 const realBirchFineLeafMeshes=[];
-const realBirchSprayMeshes=[]; // P68: Blattfaecher duerfen nur in der Fernansicht reduziert werden
 const realBirchUp=new THREE.Vector3(0,1,0);
 
 function aczoBirchRandom(seed){
@@ -16756,7 +16754,7 @@ function aczoBirchRegisterObstacle(a,b,r){
 const ACZO_REAL_BIRCH_CONFIGS=[
   {
     // Exakter Flaechenschwerpunkt des frueheren Ost-Overlays: 43.163 / 7.748.
-    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:5200,sprayCount:1050,branchCount:18,
+    id:'OST',center:[43.1626,7.7485],seed:73191,leafCount:11800,sprayCount:1950,branchCount:27,
     crownWidth:13.7,crownDepth:10.9,crownBase:3.05,crownTop:12.5,submerge:1.08,
     // Vom Ufer bis durch die Overlay-Mitte fast schnurgerade und flach ueber
     // dem Wasser. Erst danach steigt der Hauptstamm in die hohe Krone auf.
@@ -16764,7 +16762,7 @@ const ACZO_REAL_BIRCH_CONFIGS=[
   },
   {
     // Exakter Flaechenschwerpunkt des frueheren West-Overlays.
-    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:2900,sprayCount:600,branchCount:13,
+    id:'WEST',center:[-46.2246,-15.1968],seed:42077,leafCount:6250,sprayCount:1080,branchCount:19,
     crownWidth:8.35,crownDepth:7.35,crownBase:2.82,crownTop:9.35,submerge:.68,
     // Natuerlicher, weitgehend gerader 45-Grad-Wuchs durch die Overlay-Mitte.
     trunk:[[0,-.48,.54],[.01,.72,1.22],[-.02,1.98,2.18],[.02,3.12,3.32],[-.01,4.20,4.55],[.03,4.92,5.65]]
@@ -16841,7 +16839,7 @@ function aczoBuildRealBirch(cfg){
     addCrownSegment(mid,end,radius*.68,true);
     leafAnchors.push(mid,end);
 
-    const secondaryCount=4; // P68 TREE CUT: Silhouette bleibt, unsichtbare Feinverzweigung reduziert
+    const secondaryCount=6;
     for(let s=0;s<secondaryCount;s++){
       const sa=mid.clone().lerp(end,.24+rnd()*.66);
       const angle=rnd()*Math.PI*2,span=.85+rnd()*1.65;
@@ -16856,7 +16854,7 @@ function aczoBuildRealBirch(cfg){
       addCrownSegment(sm,se,secondaryRadius*.72,true);
       leafAnchors.push(sm,se);
 
-      const fineCount=3; // P68 TREE CUT
+      const fineCount=5;
       for(let f=0;f<fineCount;f++){
         const fa=sm.clone().lerp(se,.26+rnd()*.68);
         const fineAngle=rnd()*Math.PI*2,fineSpan=.42+rnd()*.82;
@@ -16872,7 +16870,7 @@ function aczoBuildRealBirch(cfg){
         leafAnchors.push(fe);
 
         // Die letzten sichtbaren Aestchen sind nur noch wenige Millimeter dick.
-        for(let t=0;t<2;t++){
+        for(let t=0;t<3;t++){
           const twigAngle=rnd()*Math.PI*2,twigSpan=.20+rnd()*.42;
           const ta=fa.clone().lerp(fe,.46+rnd()*.46);
           const te=fe.clone().add(new THREE.Vector3(
@@ -16893,7 +16891,7 @@ function aczoBuildRealBirch(cfg){
   // Ostufer bis 1 m und am Westufer bis 60 cm ins Wasser. Haupt-, Seiten- und
   // Endzweige werden auf die echte Bodentiefe geklemmt und bilden keine frei
   // schwebenden Gerippelinien mehr.
-  const droopCount=cfg.id==='OST'?18:11; // P68 TREE CUT: markante Haengeaeste bleiben
+  const droopCount=cfg.id==='OST'?24:15;
   const droopTips=[],underwaterAnchors=[];
   const clampAboveFloor=p=>{
     const depth=pondDepthAt(p.x,p.y);
@@ -16923,7 +16921,7 @@ function aczoBuildRealBirch(cfg){
 
     // Jeder Hangaest faechert schon vor dem Endpunkt aus. So entstehen viele
     // ineinandergreifende statt sternfoermig aus einem Punkt kommende Zweige.
-    for(let f=0;f<3;f++){
+    for(let f=0;f<5;f++){
       const fa=mid.clone().lerp(end,.18+rnd()*.72);
       const angle=rnd()*Math.PI*2,span=.30+rnd()*.78;
       const tip=clampAboveFloor(fa.clone().add(new THREE.Vector3(
@@ -16931,7 +16929,7 @@ function aczoBuildRealBirch(cfg){
       )));
       addCrownSegment(fa,tip,.007+rnd()*.009,true);
       underwaterAnchors.push(tip);leafAnchors.push(tip);
-      for(let t=0;t<2;t++){
+      for(let t=0;t<3;t++){
         const twigAngle=angle+(rnd()-.5)*2.2,twigSpan=.16+rnd()*.40;
         const ta=fa.clone().lerp(tip,.42+rnd()*.48);
         const te=clampAboveFloor(tip.clone().add(new THREE.Vector3(
@@ -16990,7 +16988,7 @@ function aczoBuildRealBirch(cfg){
   }
   // Unter Wasser bilden kleinere Blattgruppen zusammen mit dem Astgewebe
   // einen geschlossenen, gruen belegten Saum, ohne den Boden zu schneiden.
-  for(const anchor of underwaterAnchors)for(let n=0;n<10;n++){ // P68: Unterwasser-Blattwolke deutlich leichter
+  for(const anchor of underwaterAnchors)for(let n=0;n<24;n++){
     const p=clampAboveFloor(anchor.clone().add(new THREE.Vector3(
       (rnd()-.5)*.58,(rnd()-.5)*.58,(rnd()-.56)*.30
     )));
@@ -17033,7 +17031,7 @@ function aczoBuildRealBirch(cfg){
   }
   for(const anchor of underwaterAnchors){
     if(anchor.z>WATER_OVERLAY_Z+.06)continue;
-    for(let n=0;n<2;n++){
+    for(let n=0;n<3;n++){
       const p=clampAboveFloor(anchor.clone().add(new THREE.Vector3(
         (rnd()-.5)*.66,(rnd()-.5)*.66,-.03-rnd()*.26
       )));
@@ -17056,13 +17054,11 @@ function aczoBuildRealBirch(cfg){
       dummy.scale.copy(items[i].scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
     }
     mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
-    mesh.castShadow=castsShadow;mesh.receiveShadow=false;mesh.frustumCulled=false;
-    mesh.userData.aczoNoReceiveShadow=true; // P68: Blattinstanzen sparen Shadow-Sampling, Kronenproxies bleiben
+    mesh.castShadow=castsShadow;mesh.receiveShadow=true;mesh.frustumCulled=false;
     mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;mesh.userData.underwater=underwater;
     mesh.userData.aczoNoShadow=!castsShadow;
     tree.add(mesh);realBirchLeafMeshes.push(mesh);
     if(name.includes('EINZELBLAETTER'))realBirchFineLeafMeshes.push(mesh);
-    if(name.includes('DICHTE_KRONE')||name.includes('DICHTER_UNTERWASSERSAUM'))realBirchSprayMeshes.push(mesh);
     return mesh;
   };
   addLeafInstances(leavesAbove,realBirchLeafGeometry,realBirchLeafMat,'BIRKE_'+cfg.id+'_EINZELBLAETTER',false,false);
@@ -17434,7 +17430,7 @@ function aczoSurveyBuildDeciduous(tree){
   }
   // P7: Kronen-Sprays tragen die sichtbare Silhouette. Unsichtbare Feinast-
   // Hierarchien werden reduziert, Hauptstruktur bleibt stehen.
-  const anchors=[],branchCount=tree.filler?5+Math.floor(rnd()*2):(birch?12:10)+Math.floor(rnd()*(birch?3:4)); // P68 TREE CUT
+  const anchors=[],branchCount=tree.filler?8+Math.floor(rnd()*3):(birch?18:16)+Math.floor(rnd()*(birch?4:5));
   for(let b=0;b<branchCount;b++){
     const u=.39+rnd()*.51,ti=Math.min(5,Math.max(2,Math.floor(u*6))),root=trunk[ti].clone().lerp(trunk[ti+1],rnd());
     const angle=rnd()*Math.PI*2,up=birch?.25+rnd()*.52:(rnd()-.12)*.62;
@@ -17445,12 +17441,12 @@ function aczoSurveyBuildDeciduous(tree){
     const branchColor=aczoSurveyShadeColor(birch?(rnd()<.66?0xd9dad4:0xa5a8a1):(rnd()<.22?tree.species.barkAlt:tree.species.bark),rnd,birch?.075:.16);
     const branchTarget=birch?aczoSurveyBirchSegments:aczoSurveyWoodSegments;
     aczoSurveyPushSegment(branchTarget,root,mid,r,branchColor);aczoSurveyPushSegment(branchTarget,mid,end,r*.61,branchColor);anchors.push(mid,end);
-    const secondaryCount=tree.filler?0:(birch?2:2); // P68 TREE CUT
+    const secondaryCount=tree.filler?1:(birch?4:3);
     for(let s=0;s<secondaryCount;s++){
       const a=mid.clone().lerp(end,.22+rnd()*.68),sa=angle+(rnd()-.5)*1.75,span=tree.crownRadius*(.17+rnd()*.28);
       const tip=a.clone().add(new THREE.Vector3(Math.cos(sa)*span,Math.sin(sa)*span*depth,(rnd()-.30)*tree.height*.09));
       const sr=r*(.27+rnd()*.15),secondaryColor=birch?aczoSurveyShadeColor(0x989b95,rnd,.08):aczoSurveyShadeColor(branchColor,rnd,.12);aczoSurveyPushSegment(branchTarget,a,tip,sr,secondaryColor);anchors.push(tip);
-      const twigCount=tree.filler?0:(birch?1:0); // P68 TREE CUT
+      const twigCount=tree.filler?0:(birch?2:1);
       for(let t=0;t<twigCount;t++){
         const ta=a.clone().lerp(tip,.36+rnd()*.58),aa=sa+(rnd()-.5)*1.9,tl=tree.crownRadius*(.07+rnd()*.14);
         const te=tip.clone().add(new THREE.Vector3(Math.cos(aa)*tl,Math.sin(aa)*tl,(rnd()-.46)*tree.height*.045));
@@ -17463,17 +17459,17 @@ function aczoSurveyBuildDeciduous(tree){
   // behalten ihre volle Detailstufe.
   // P37 PERFORMANCE: Feinste Einzelblaetter nochmals moderat reduziert.
   // Kronen-Sprays, Aeste und Schatten-Proxies bleiben 100 % erhalten.
-  const leafCount=tree.filler?0:(birch?360:190)+Math.floor(rnd()*(birch?140:110)); // P68: rund 50-65 % weniger Einzelblaetter
+  const leafCount=tree.filler?20+Math.floor(rnd()*19):(birch?980:525)+Math.floor(rnd()*(birch?315:220));
   for(let i=0;i<leafCount;i++){
     const anchor=anchors[Math.floor(rnd()*anchors.length)]||trunk[6],spread=.035+rnd()*(tree.filler?.28:.42),phi=rnd()*Math.PI*2,cz=rnd()*2-1,sr=Math.sqrt(Math.max(0,1-cz*cz));
     const p=anchor.clone().add(new THREE.Vector3(Math.cos(phi)*sr*spread,Math.sin(phi)*sr*spread,cz*spread*.82));
     aczoSurveyLeafItems.push({p,scale:new THREE.Vector3(.018+rnd()*.021,.030+rnd()*.032,1),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,toneBand:tree.toneBand||0,variation:(rnd()-.5)*.42,hueShift:tree.hueShift||0,satShift:tree.satShift||0,lightShift:tree.lightShift||0});
   }
-  const sprayCount=tree.filler?12+Math.floor(rnd()*8):(birch?115:90)+Math.floor(rnd()*(birch?45:40)); // P68 TREE CUT
+  const sprayCount=tree.filler?24+Math.floor(rnd()*14):(birch?220:205)+Math.floor(rnd()*(birch?95:95));
   for(let i=0;i<sprayCount;i++){
     let p;if(rnd()<.78&&anchors.length)p=anchors[Math.floor(rnd()*anchors.length)].clone().add(new THREE.Vector3((rnd()-.5)*.68,(rnd()-.5)*.68,(rnd()-.5)*.58));
     else{const a=rnd()*Math.PI*2,rad=Math.sqrt(rnd()),z=(rnd()*2-1);p=new THREE.Vector3(tree.x+Math.cos(a)*tree.crownRadius*rad,tree.y+Math.sin(a)*tree.crownDepth*rad,baseZ+tree.height*(birch?.79:.75)+z*tree.height*(birch?.115:.16));}
-    const size=tree.filler?(.34+rnd()*.34):((birch?.20:.23)+rnd()*(birch?.27:.32));aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.78+rnd()*.34),size*(.84+rnd()*.38),size*(.70+rnd()*.34)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,toneBand:tree.toneBand||0,variation:(rnd()-.5)*.56,hueShift:tree.hueShift||0,satShift:tree.satShift||0,lightShift:tree.lightShift||0});
+    const size=tree.filler?(.30+rnd()*.31):((birch?.17:.20)+rnd()*(birch?.23:.28));aczoSurveySprayItems.push({p,scale:new THREE.Vector3(size*(.78+rnd()*.34),size*(.84+rnd()*.38),size*(.70+rnd()*.34)),rot:new THREE.Euler(rnd()*Math.PI,rnd()*Math.PI,rnd()*Math.PI),species:tree.species,toneBand:tree.toneBand||0,variation:(rnd()-.5)*.56,hueShift:tree.hueShift||0,satShift:tree.satShift||0,lightShift:tree.lightShift||0});
   }
 }
 
@@ -17694,25 +17690,7 @@ function aczoP33MarkedVegetationKeep(o,index=0){
   }
   return true;
 }
-// P68 TREE CUT: sauberer A/B-Test auf Basis der gesicherten Final-Version.
-// Die erste sichtbare Uferreihe (<=10 m), alle vermessenen Birken und das
-// Gebaeudeumfeld bleiben. Dahinter werden Laubbaeume deterministisch stark
-// ausgeduennt. Positionen flackern nicht und aendern sich zwischen Starts nicht.
-function aczoP68TreeKeep(o,index=0){
-  const x=Number(o?.x),y=Number(o?.y);
-  if(!Number.isFinite(x)||!Number.isFinite(y))return true;
-  if(o.type==='birch')return true;
-  const d=aczoP13DistanceToPond(x,y);
-  if(d<=10.0)return true;
-  if(aczoP13NearBuildings(x,y)&&d<=18.0)return true;
-  let target=d<=14.0?.52:.20;
-  // Sued/Mosel bleibt als Kulisse etwas dichter, aber nicht mehr 1:1 voll.
-  if(y<=-42.0)target=d<=18.0?.46:.24;
-  let h=(Math.imul(Math.round((x+180)*100),73856093)^Math.imul(Math.round((y+180)*100),19349663)^Math.imul((index|0)+6801,83492791))>>>0;
-  h^=h>>>16;h=Math.imul(h,0x7feb352d)>>>0;h^=h>>>15;
-  return (h>>>0)/4294967296<target;
-}
-const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter((o,i)=>(o.type==='deciduous'||o.type==='birch')&&aczoP13RemoteTreeKeep(o.x,o.y,1000+i)&&aczoP33MarkedVegetationKeep(o,1000+i)&&aczoP68TreeKeep(o,1000+i));
+const aczoSurveyManualTreeObjects=ACZO_SURVEY_DATA.objects.filter((o,i)=>(o.type==='deciduous'||o.type==='birch')&&aczoP13RemoteTreeKeep(o.x,o.y,1000+i)&&aczoP33MarkedVegetationKeep(o,1000+i));
 // Markanter Laubbaum aus dem Uferfoto: zwischen der dritten und vierten
 // Süduferbirke, dabei rund einen Meter zum Weiher vorgezogen. Er wird vor dem
 // Wald-Batching erzeugt und bleibt dadurch ebenso performant wie alle Kronen.
@@ -17916,7 +17894,7 @@ ACZO_SURVEY_DATA.objects
 let aczoSurveyFillerCount=0,aczoSurveyFillerCandidateCount=0,aczoSurveyFillerRejectedByDepth=0;
 for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
   const poly=aczoSurveyForestAreas[ai].points,xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),rnd=aczoSurveyRandom(23091+ai*817);
-  const step=5.30; // P68 TREE CUT: Sued-Fuellwald knapp halbiert; markante/verm. Baeume bleiben
+  const step=3.72; // P22: dichteres Poly-Raster; Mehrbestand bleibt billige LowPoly-Geometrie
   for(let y=Math.min(...ys)+step*.5;y<Math.max(...ys);y+=step){for(let x=Math.min(...xs)+step*.5;x<Math.max(...xs);x+=step){
     const px=x+(rnd()-.5)*2.9,py=y+(rnd()-.5)*2.9;
     if(!aczoSurveyPointInPolygon(px,py,poly)||aczoSurveyClearAreas.some(a=>aczoSurveyPointInPolygon(px,py,a.points))||aczoSurveyInsidePond(px,py))continue;
@@ -18257,20 +18235,20 @@ function updateAczoSurveyForestLod(){
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
   // P5 unveraendert: Die feinsten Einzelblaetter verschwinden in der Ferne.
   let leafFactor=1;
-  if(dist>32){
-    const t=THREE.MathUtils.smoothstep(dist,32,52);
+  if(dist>42){
+    const t=THREE.MathUtils.smoothstep(dist,42,60);
     leafFactor=1-t;
   }
-  if(dist>=52)leafFactor=0; // P68: Einzelblaetter sind in der Gesamtansicht nicht aufloesbar
+  if(dist>=60)leafFactor=0;
 
   // P16: Die Kronenschatten stammen nun aus distanzunabhaengigen Proxies.
   // Dadurch duerfen ausschliesslich in der weiten Gesamtansicht einige der
   // gleichmaessig gemischten visuellen Blattfaecher entfallen. Baumpositionen,
   // Stämme, Aeste, Nahansicht und Kronenform bleiben voll erhalten.
-  const sprayFarFactor=ACZO_MOBILE_PERF ? .28 : .48;
-  const sprayFactor=dist<=38
+  const sprayFarFactor=ACZO_MOBILE_PERF ? .48 : .68;
+  const sprayFactor=dist<=58
     ?1
-    :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,38,82)); // P68: nur Fernansicht
+    :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,58,125));
   const key=Math.round(leafFactor*20)+'|s'+Math.round(sprayFactor*20)+'|'+(is2D?'2':'3');
   if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
   for(const mesh of aczoSurveyFineLodMeshes){
@@ -18296,21 +18274,13 @@ function updateAczoRealBirchFineLod(){
   if(now<aczoRealBirchNextLodAt)return;
   aczoRealBirchNextLodAt=now+165;
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
-  const farFactor=ACZO_MOBILE_PERF?.03:.10;
-  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,28,56));
-  const sprayFarFactor=ACZO_MOBILE_PERF?.42:.62;
-  const sprayFactor=dist<=34?1:THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,34,72));
-  const key=Math.round(factor*50)+'|s'+Math.round(sprayFactor*50)+'|'+(is2D?'2':'3')+'|'+(fishMode?'f':'m');
+  const farFactor=ACZO_MOBILE_PERF?.06:.14;
+  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,32,62));
+  const key=Math.round(factor*50)+'|'+(is2D?'2':'3')+'|'+(fishMode?'f':'m');
   if(key===aczoRealBirchLodKey)return;aczoRealBirchLodKey=key;
   for(const mesh of realBirchFineLeafMeshes){
     const season=mesh.userData.seasonCount??mesh.userData.maxCount??0;
     const localFactor=(mesh.userData.underwater&&fishMode&&ACZO_MOBILE_PERF)?Math.max(.55,factor):factor;
-    mesh.count=is2D?0:Math.max(0,Math.round(season*localFactor));
-    mesh.visible=!is2D&&mesh.count>0;
-  }
-  for(const mesh of realBirchSprayMeshes){
-    const season=mesh.userData.seasonCount??mesh.userData.maxCount??0;
-    const localFactor=(mesh.userData.underwater&&fishMode)?Math.max(.72,sprayFactor):sprayFactor;
     mesh.count=is2D?0:Math.max(0,Math.round(season*localFactor));
     mesh.visible=!is2D&&mesh.count>0;
   }
@@ -33100,40 +33070,16 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
-let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
-(function loop(frameNow=performance.now()){
+(function loop(){
  requestAnimationFrame(loop);
 
- // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
- // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
- // Im Stillstand sinkt die Last deutlich; während Bedienung und Kameraflügen
- // bleibt das Budget hoch genug für eine gleichmäßige Bewegung.
- const aczoInteractive=viewerInputBusy()||fishMode||skyLookMode||anglingMode
-   ||!!fishTransition||!!currentVisit||!!bmwX3Visit
-   ||rainSystem.visible||seasonSnowPoints.visible
-   ||!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
- // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
- // Wald-/Wasser-Renderpasses pro Sekunde. Die Ruheauflösung bleibt unverändert.
+ // P69 DIAGNOSE: Kein kuenstliches FPS-Limit im Haupt-Renderloop.
+ // Jeder vom Browser angebotene requestAnimationFrame darf die Szene rendern.
+ // Damit zeigt die Debug-FPS-Anzeige die tatsaechlich erreichbare Leistung.
+ // Die bestehende Gesten-Aufloesungslogik bleibt unveraendert.
  updateAczoMapGestureResolution();
- // P26: Die Kunstkoeder-Flugkamera sitzt sehr nah am bewegten Koeder. Fuer
- // diese kurze Phase bekommt sie ein hoeheres Framebudget. Gleichzeitig setzt
- // P26 das teure zweite Vollrendering des Rollen-Livefensters waehrend des
- // Fluges aus, sodass die Gesamtlast dabei sogar sinkt.
- const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
-   &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
-   &&anglingCinematicView==='flight');
- // P68B: Fuer den sauberen Vergleich zur guten Final-Version bleibt die
- // Hauptansicht auch im Stillstand bei ihrem bisherigen 30/32-FPS-Ziel.
- // Keine kuenstliche Absenkung auf 18/16 FPS mehr; nur die kurze
- // Kunstkoeder-Flugkamera behaelt ihr hoeheres Sonderbudget.
- const aczoTargetFps=aczoArtificialCastFlight
-   ?(ACZO_MOBILE_PERF?40:46)
-   :(ACZO_MOBILE_PERF?30:32);
- const aczoFrameGap=1000/aczoTargetFps;
- if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
- aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
  // Nach App-Wechseln oder einzelnen Safari-Aussetzern darf kein riesiger
