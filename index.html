@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P67 · Schatten-System neu aufgebaut</title>
+<title>ACZO56 P68 · Radikal-Schatten · Uferbaeume echt · Rest Fake</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -7146,9 +7146,7 @@ function aczoP67PrepareLeanShadowSystem(){
   // Personen, Fassaden usw. die Shadow-Map nicht noch einmal samplen.
   const receivers=[
     aczoLandShadowReceiver,
-    aczoWaterStructureShadowReceiver,
-    aczoMoselStructureShadowReceiver,
-    (typeof aczoPondStructureShadowReceiver!=='undefined'?aczoPondStructureShadowReceiver:null)
+    aczoWaterStructureShadowReceiver
   ];
   receivers.forEach(o=>{if(o){o.castShadow=false;o.receiveShadow=true;}});
 
@@ -7157,10 +7155,10 @@ function aczoP67PrepareLeanShadowSystem(){
   // bleiben aus dem Shadow-Pass; die Krone kommt aus dem weichen Proxy.
   if(typeof realBirchGroup!=='undefined')aczoP67EnableCastOnly(realBirchGroup);
 
-  // Alle Stege bleiben echte Schattenwerfer.
-  if(typeof northPierGroup!=='undefined')aczoP67EnableCastOnly(northPierGroup);
-  if(typeof aczoSmallPierGroup!=='undefined')aczoP67EnableCastOnly(aczoSmallPierGroup);
-  if(typeof eastBoatPierGroup!=='undefined')aczoP67EnableCastOnly(eastBoatPierGroup);
+  // P68 RADIKAL: Nur Uferbaeume duerfen echte Shadow-Map-Schatten werfen.
+  if(typeof northPierGroup!=='undefined')aczoP67DisableTrueShadows(northPierGroup);
+  if(typeof aczoSmallPierGroup!=='undefined')aczoP67DisableTrueShadows(aczoSmallPierGroup);
+  if(typeof eastBoatPierGroup!=='undefined')aczoP67DisableTrueShadows(eastBoatPierGroup);
 
   // Vermessene Natur: nur Ufer-Kronenproxies und wenige schlanke
   // Stamm-/Astbatches direkt am Weiher. Hintergrundwald bleibt komplett raus.
@@ -7203,14 +7201,54 @@ function aczoRefreshAboveWaterShadowCasters(){
   if(typeof eastBoatModel!=='undefined')aczoP67DisableTrueShadows(eastBoatModel);
   if(typeof aczoFacilityGroup!=='undefined')aczoP67DisableTrueShadows(aczoFacilityGroup);
   if(typeof aczoConstructionFenceGroup!=='undefined')aczoP67DisableTrueShadows(aczoConstructionFenceGroup);
+  if(typeof northPierGroup!=='undefined')aczoP67DisableTrueShadows(northPierGroup);
+  if(typeof aczoSmallPierGroup!=='undefined')aczoP67DisableTrueShadows(aczoSmallPierGroup);
+  if(typeof eastBoatPierGroup!=='undefined')aczoP67DisableTrueShadows(eastBoatPierGroup);
 }
 
 
-// P67 RELEASE-SHADOW-POLICY:
-// Echte Caster: Uferweiden, direkte Ufer-Waldproxies/-Staemme, Nord-/Klein-/Bootsstege.
-// Echte Receiver: Land-, Weiher-, Mosel- und Unterwasser-Strukturschattenfaenger.
-// Keine Echt-Schatten: Personen, Radfahrer/Verkehr, Voegel, Fahrzeuge, Gebaeude,
-// Bauzaun, Fahne, Wildtiere, Hintergrundwald. Deren optische Kontakt-/Lichtsysteme bleiben erhalten.
+
+// P68: billige 0815-Fake-Schatten fuer sekundaere Objekte.
+// Keine Shadow-Map, kein receiveShadow, kein dynamisches Shadow-Refresh.
+function aczoP68MakeBlobShadow(rx,ry,opacity=.18){
+  const mat=new THREE.MeshBasicMaterial({
+    color:0x000000,transparent:true,opacity,depthWrite:false,depthTest:true,side:THREE.DoubleSide
+  });
+  const m=new THREE.Mesh(new THREE.CircleGeometry(1,20),mat);
+  m.scale.set(rx,ry,1);
+  m.position.z=.035;
+  m.renderOrder=6.28;
+  m.castShadow=false;m.receiveShadow=false;
+  m.userData.aczoP68FakeShadow=true;
+  m.raycast=()=>{};
+  return m;
+}
+function aczoP68AttachBlob(root,rx,ry,opacity=.18,z=.035){
+  if(!root)return;
+  root.userData=root.userData||{};
+  if(root.userData.aczoP68BlobAttached)return;
+  try{
+    const m=aczoP68MakeBlobShadow(rx,ry,opacity);
+    m.position.z=z;root.add(m);root.userData.aczoP68BlobAttached=true;
+  }catch(e){}
+}
+function aczoP68AttachCheapShadows(){
+  if(typeof bmwX3VisitGroup!=='undefined')aczoP68AttachBlob(bmwX3VisitGroup,1.45,2.65,.20,.04);
+  if(typeof personalSceneGroup!=='undefined')aczoP68AttachBlob(personalSceneGroup,1.20,1.70,.16,.04);
+  if(typeof trafficGroup!=='undefined')aczoP68AttachBlob(trafficGroup,1.10,1.90,.14,.04);
+  if(typeof eastBoatModel!=='undefined')aczoP68AttachBlob(eastBoatModel,1.0,2.0,.12,.03);
+  if(typeof northPierGroup!=='undefined')aczoP68AttachBlob(northPierGroup,3.3,.75,.12,.03);
+  if(typeof eastBoatPierGroup!=='undefined')aczoP68AttachBlob(eastBoatPierGroup,2.6,1.2,.12,.03);
+  if(typeof flagPoleGroup!=='undefined')aczoP68AttachBlob(flagPoleGroup,.35,.35,.09,.03);
+  if(typeof aczoWildBoarGroup!=='undefined')aczoP68AttachBlob(aczoWildBoarGroup,.65,1.05,.10,.03);
+}
+
+// P68 RADIKAL-SHADOW-POLICY:
+// Echte Caster: NUR Uferbaeume direkt am Weiher, inkl. weicher Kronenproxies.
+// Echte Receiver: NUR Land- und Weiher-Schattenfaenger.
+// Fake-Schatten: Stege, Fahrzeuge, Predatorpit/Personen, Fahne, Boot, Wildtiere.
+// Keine Echt-Schatten: Voegel, Radfahrer/Verkehr, Gebaeude, Bauzaun, Hintergrundwald.
+// Keine dynamischen Shadow-Map-Refreshs durch bewegliche Objekte.
 // TEST V13: ausschließlich tagsüber aktive Kopie desjenigen gerichteten
 // Relieflichts, das nachts die schönen kameraabhängigen Glanzflecken auf der
 // MeshPhong-Tiefengeometrie erzeugt. Die Nacht wird davon nicht berührt.
@@ -11493,7 +11531,7 @@ for(let i=0;i<ACZO_BIRD_POOL_SIZE;i++){
   mesh.renderOrder=3;
   mesh.userData.aczoNoShadow=true;
   mesh.userData.aczoNoReceiveShadow=true;
-  birdGroup.add(mesh);
+  mesh.castShadow=false;mesh.receiveShadow=false;birdGroup.add(mesh);
   aczoBirdPool.push({
     obj:mesh,active:false,speed:0,vx:0,vy:0,life:0,baseZ:0,
     driftPhase:i*1.731
@@ -15625,7 +15663,7 @@ function aczoBuildFenceBanner(){
   const width=3.00,height=width*(243/600);
   const geometry=new THREE.PlaneGeometry(width,height);
   geometry.rotateX(Math.PI*.5);
-  const texture=new THREE.TextureLoader().load(ACZO_FENCE_BANNER_DATA_URL,()=>{renderer.shadowMap.needsUpdate=true;});
+  const texture=new THREE.TextureLoader().load(ACZO_FENCE_BANNER_DATA_URL,()=>{});
   texture.encoding=THREE.sRGBEncoding;
   texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
   texture.minFilter=THREE.LinearMipmapLinearFilter;
@@ -33153,7 +33191,7 @@ function aczoP67EnsureDiag(){
   const p=document.createElement('div');
   p.id='aczo-p67-fps';
   p.style.cssText='position:fixed;left:8px;top:204px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;white-space:pre;pointer-events:none';
-  p.textContent='P67 SHADOW CLEAN\nFPS --\nRAF -- ms\nMainJS -- ms';
+  p.textContent='P68 TREE SHADOWS ONLY\nFPS --\nRAF -- ms\nMainJS -- ms';
   document.body.appendChild(p);
   aczoP67DiagPanel=p;
 }
@@ -33439,6 +33477,7 @@ let aczoMapGestureFrame=0;
  updateWaterStarReflectionPoints(visualDt);
  if(typeof updateCleanOverhangVisibility==='function')updateCleanOverhangVisibility();
  aczoRefreshAboveWaterShadowCasters();
+ aczoP68AttachCheapShadows();
  updateUnderwaterObstacleShadows(!!window.__aczoUnderwaterSceneActive);
  updateCompass();
  // Harte Objekt-Isolation unmittelbar vor dem Rendern. Dadurch kann keine
@@ -33477,7 +33516,7 @@ let aczoMapGestureFrame=0;
    const rav=aczoP67DiagRafN?aczoP67DiagRafSum/aczoP67DiagRafN:0;
    const mav=aczoP67DiagMainN?aczoP67DiagMainSum/aczoP67DiagMainN:0;
    const fps=rav?1000/rav:0;
-   aczoP67DiagPanel.textContent='P67 SHADOW CLEAN\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
+   aczoP67DiagPanel.textContent='P68 TREE SHADOWS ONLY\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
    aczoP67DiagRafSum=0; aczoP67DiagRafN=0; aczoP67DiagMainSum=0; aczoP67DiagMainN=0;
  }
 
