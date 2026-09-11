@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · NATIVE RAF TAGTEST</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4762,7 +4762,7 @@ const ACZO_BASE_PIXEL_RATIO=Math.min(window.devicePixelRatio||1,ACZO_PIXEL_RATIO
 renderer.setPixelRatio(ACZO_BASE_PIXEL_RATIO);
 renderer.outputEncoding=THREE.sRGBEncoding;
 // Echte weiche Schatten für Unterwasserhindernisse und sichtbare 3D-Objekte.
-renderer.shadowMap.enabled=false;
+renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 // V2.3.33 PERFORMANCE: Die komplette 2048er-Schattenkarte wurde zuvor in
 // jedem Bild neu berechnet. Statische Gebäude/Wälder benötigen das nicht;
@@ -7697,8 +7697,6 @@ function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds(
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
 function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
-// P66 Native-RAF TAGTEST: gleiche lokale Kalenderlage, fuer den Performancevergleich fest auf 14:00 Uhr gesetzt.
-seasonStartupNow.setHours(14,0,0,0);
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
 setSeasonTimeAnchor(seasonStartupNow);
@@ -33075,27 +33073,8 @@ const clock=new THREE.Clock();
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
-let aczoNativeTestLastRaf=0, aczoNativeTestRafSum=0, aczoNativeTestRafN=0;
-let aczoNativeTestMainSum=0, aczoNativeTestMainN=0, aczoNativeTestLastUi=0;
-let aczoNativeTestPanel=null;
-function aczoNativeTestEnsurePanel(){
- if(aczoNativeTestPanel)return;
- const p=document.createElement('div');
- p.id='aczo-native-raf-test';
- p.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
- p.textContent='NATIVE RAF TEST\nFPS --\nRAF -- ms\nMainJS -- ms';
- document.body.appendChild(p); aczoNativeTestPanel=p;
-}
-setTimeout(aczoNativeTestEnsurePanel,500);
-
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
- const aczoNativeTestMainStart=performance.now();
- if(aczoNativeTestLastRaf){
-   const gap=frameNow-aczoNativeTestLastRaf;
-   aczoNativeTestRafSum+=gap; aczoNativeTestRafN++;
- }
- aczoNativeTestLastRaf=frameNow;
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33115,8 +33094,11 @@ setTimeout(aczoNativeTestEnsurePanel,500);
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- // P66 NATIVE RAF TEST: kein eigener 18/30/40-FPS-Deckel.
- // Der Browser darf jeden requestAnimationFrame zeichnen.
+ const aczoTargetFps=aczoArtificialCastFlight
+   ?(ACZO_MOBILE_PERF?40:46)
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
+ const aczoFrameGap=1000/aczoTargetFps;
+ if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
@@ -33391,21 +33373,34 @@ setTimeout(aczoNativeTestEnsurePanel,500);
  renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
   renderAnglingReelCamera();
  updateViewerDebug(rawDt);
- const aczoNativeTestMainMs=performance.now()-aczoNativeTestMainStart;
- aczoNativeTestMainSum+=aczoNativeTestMainMs; aczoNativeTestMainN++;
- if(aczoNativeTestPanel&&frameNow-aczoNativeTestLastUi>=750){
-   aczoNativeTestLastUi=frameNow;
-   const rafAvg=aczoNativeTestRafN?aczoNativeTestRafSum/aczoNativeTestRafN:0;
-   const mainAvg=aczoNativeTestMainN?aczoNativeTestMainSum/aczoNativeTestMainN:0;
-   const fps=rafAvg?1000/rafAvg:0;
-   aczoNativeTestPanel.textContent='TAG · SCHATTEN AUS\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
-   aczoNativeTestRafSum=0; aczoNativeTestRafN=0; aczoNativeTestMainSum=0; aczoNativeTestMainN=0;
- }
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
- // DIAGNOSETEST: Predatorpit/Crafter-Camp wird nicht automatisch aufgebaut.
- // schedulePersonalCampScene();
+ schedulePersonalCampScene();
 })();
+
+/* P66 SHADOW OPT TEST
+   Mobile-only shadow-pass pruning. Visible geometry remains untouched.
+   Keep important structural/hero objects on their existing shadow path. */
+function aczoOptimizeMobileShadowCasters(){
+  if(!ACZO_MOBILE_PERF || !scene) return;
+  let disabled=0, kept=0;
+  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|willow|weide|birch|birke|mosel)/i;
+  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget)/i;
+  scene.traverse(o=>{
+    if(!o || !o.isObject3D || !o.castShadow) return;
+    const n=(o.name||"")+" "+((o.parent&&o.parent.name)||"");
+    if(keepRx.test(n)){ kept++; return; }
+    if(vegRx.test(n)){
+      o.castShadow=false;
+      disabled++;
+      return;
+    }
+    kept++;
+  });
+  window.__aczoShadowOptStats={disabled,kept};
+}
+setTimeout(aczoOptimizeMobileShadowCasters,3500);
+setTimeout(aczoOptimizeMobileShadowCasters,12000);
 </script>
 
 
