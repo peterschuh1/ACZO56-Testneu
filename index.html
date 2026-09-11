@@ -7696,7 +7696,7 @@ function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYe
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
 function viewerNow(){
-  if(window.__ACZO_FORCE_TAG14__) return new Date(window.__ACZO_FORCE_TAG14__.getTime());
+  if(window.__ACZO_TEST_TAG14__) return new Date(window.__ACZO_TEST_TAG14__.getTime());
 return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
@@ -33072,31 +33072,28 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
+let aczoDiagLastRaf=0, aczoDiagRafSum=0, aczoDiagRafN=0;
+let aczoDiagMainSum=0, aczoDiagMainN=0, aczoDiagLastPaint=0, aczoDiagPanel=null;
+function aczoDiagEnsure(){
+  if(aczoDiagPanel)return;
+  const p=document.createElement('div');
+  p.style.cssText='position:fixed;left:8px;top:204px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;white-space:pre;pointer-events:none';
+  p.textContent='TAG 14:00 · SHADOW 256\nFPS --\nRAF -- ms\nMainJS -- ms';
+  document.body.appendChild(p); aczoDiagPanel=p;
+}
+setTimeout(aczoDiagEnsure,500);
+
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
-let aczoNativeTestLastRaf=0, aczoNativeTestRafSum=0, aczoNativeTestRafN=0;
-let aczoNativeTestMainSum=0, aczoNativeTestMainN=0, aczoNativeTestLastUi=0;
-let aczoNativeTestPanel=null;
-function aczoNativeTestEnsurePanel(){
- if(aczoNativeTestPanel)return;
- const p=document.createElement('div');
- p.id='aczo-native-raf-test';
- p.style.cssText='position:fixed;left:8px;top:40px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
- p.textContent='TAG 14:00 · AMBIENT 3-FRAME\nFPS --\nRAF -- ms\nMainJS -- ms';
- document.body.appendChild(p); aczoNativeTestPanel=p;
-}
-setTimeout(aczoNativeTestEnsurePanel,500);
-
-
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
- const aczoNativeTestMainStart=performance.now();
- if(aczoNativeTestLastRaf){
-   const gap=frameNow-aczoNativeTestLastRaf;
-   aczoNativeTestRafSum+=gap; aczoNativeTestRafN++;
+ const aczoDiagMainStart=performance.now();
+ if(aczoDiagLastRaf){
+   const gap=frameNow-aczoDiagLastRaf;
+   aczoDiagRafSum+=gap; aczoDiagRafN++;
  }
- aczoNativeTestLastRaf=frameNow;
+ aczoDiagLastRaf=frameNow;
 
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
@@ -33117,7 +33114,7 @@ setTimeout(aczoNativeTestEnsurePanel,500);
  const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
    &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
    &&anglingCinematicView==='flight');
- /* TEST: Native RAF, kein eigener 18/30/40-FPS-Deckel. */
+ /* TEST: Native RAF, kein eigener 18/30/40-FPS-Deckel */
  aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
@@ -33132,25 +33129,22 @@ setTimeout(aczoNativeTestEnsurePanel,500);
   // Eingabe Vorrang. Wolken/Verkehr/Jahreszeiten muessen nicht in jedem
   // Kameraframe CPU-Arbeit erzeugen; jeder dritte Frame haelt sie sichtbar
   // in Bewegung, waehrend OrbitControls deutlich mehr Luft bekommt.
-  const aczoPlainMap=!fishMode&&!skyLookMode&&!anglingMode&&!fishTransition;
-  if(aczoPlainMap)aczoMapGestureFrame++;else aczoMapGestureFrame=0;
-  // TEST: Den bereits bewaehrten 3-Frame-Ambient-Pfad der Kamerabewegung
-  // auch bei statischer 2D/3D-Karte verwenden. Spiel-/Angelmodi bleiben unveraendert.
-  const aczoRunAmbientHeavy=!aczoPlainMap||(aczoMapGestureFrame%3===0);
-  const aczoAmbientDt=visualDt*(aczoPlainMap?3:1);
+  const aczoPlainMapGesture=activeViewerPointers.size>0&&!fishMode&&!skyLookMode&&!anglingMode;
+  if(aczoPlainMapGesture)aczoMapGestureFrame++;else aczoMapGestureFrame=0;
+  const aczoRunAmbientHeavy=!aczoPlainMapGesture||(aczoMapGestureFrame%3===0);
   if(aczoRunAmbientHeavy){
-    updateSkyClouds(aczoAmbientDt);
+    updateSkyClouds(visualDt*(aczoPlainMapGesture?3:1));
     updateRealCloudReflections();
-    updateRainRipples(aczoAmbientDt);
-    updateBirds(aczoAmbientDt);
-    updateTraffic(aczoAmbientDt);
-    updateCarVisit(aczoAmbientDt);
-    updateBmwX3Visit(aczoAmbientDt);
-    updateAczoFacilityDoors(aczoAmbientDt);
-    updateAczoConstructionGates(aczoAmbientDt);
-    updateAczoMainEntranceMotionLight(aczoAmbientDt);
-    updatePersonalCampScene(aczoAmbientDt);
-    updateSeasonTestVisuals(aczoAmbientDt);
+    updateRainRipples(visualDt*(aczoPlainMapGesture?3:1));
+    updateBirds(visualDt*(aczoPlainMapGesture?3:1));
+    updateTraffic(visualDt*(aczoPlainMapGesture?3:1));
+    updateCarVisit(visualDt*(aczoPlainMapGesture?3:1));
+    updateBmwX3Visit(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoFacilityDoors(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoConstructionGates(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoMainEntranceMotionLight(visualDt*(aczoPlainMapGesture?3:1));
+    updatePersonalCampScene(visualDt*(aczoPlainMapGesture?3:1));
+    updateSeasonTestVisuals(visualDt*(aczoPlainMapGesture?3:1));
   }
   // P10: Material-/Jahreszeitenzustand aendert sich im normalen Betrieb nicht
   // von Frame zu Frame. Die bisherige Abfrage blieb zwar gecacht, erzeugte aber
@@ -33395,15 +33389,15 @@ setTimeout(aczoNativeTestEnsurePanel,500);
  renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
   renderAnglingReelCamera();
  updateViewerDebug(rawDt);
- const aczoNativeTestMainMs=performance.now()-aczoNativeTestMainStart;
- aczoNativeTestMainSum+=aczoNativeTestMainMs; aczoNativeTestMainN++;
- if(aczoNativeTestPanel&&frameNow-aczoNativeTestLastUi>=750){
-   aczoNativeTestLastUi=frameNow;
-   const rafAvg=aczoNativeTestRafN?aczoNativeTestRafSum/aczoNativeTestRafN:0;
-   const mainAvg=aczoNativeTestMainN?aczoNativeTestMainSum/aczoNativeTestMainN:0;
-   const fps=rafAvg?1000/rafAvg:0;
-   aczoNativeTestPanel.textContent='TAG 14:00 · SCHATTEN OPT\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
-   aczoNativeTestRafSum=0; aczoNativeTestRafN=0; aczoNativeTestMainSum=0; aczoNativeTestMainN=0;
+ const aczoDiagMainMs=performance.now()-aczoDiagMainStart;
+ aczoDiagMainSum+=aczoDiagMainMs; aczoDiagMainN++;
+ if(aczoDiagPanel && frameNow-aczoDiagLastPaint>=750){
+   aczoDiagLastPaint=frameNow;
+   const rav=aczoDiagRafN?aczoDiagRafSum/aczoDiagRafN:0;
+   const mav=aczoDiagMainN?aczoDiagMainSum/aczoDiagMainN:0;
+   const fps=rav?1000/rav:0;
+   aczoDiagPanel.textContent='TAG 14:00 · SHADOW 256\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
+   aczoDiagRafSum=0; aczoDiagRafN=0; aczoDiagMainSum=0; aczoDiagMainN=0;
  }
 
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
@@ -33411,62 +33405,12 @@ setTimeout(aczoNativeTestEnsurePanel,500);
  schedulePersonalCampScene();
 })();
 
-/* P66 SHADOW OPT TEST
-   Mobile-only shadow-pass pruning. Visible geometry remains untouched.
-   Keep important structural/hero objects on their existing shadow path. */
-function aczoOptimizeMobileShadowCasters(){
-  if(!ACZO_MOBILE_PERF || !scene) return;
-  let disabled=0, kept=0;
-  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|willow|weide|birch|birke|mosel)/i;
-  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget)/i;
-  scene.traverse(o=>{
-    if(!o || !o.isObject3D || !o.castShadow) return;
-    const n=(o.name||"")+" "+((o.parent&&o.parent.name)||"");
-    if(keepRx.test(n)){ kept++; return; }
-    if(vegRx.test(n)){
-      o.castShadow=false;
-      disabled++;
-      return;
-    }
-    kept++;
-  });
-  window.__aczoShadowOptStats={disabled,kept};
-}
-setTimeout(aczoOptimizeMobileShadowCasters,3500);
-setTimeout(aczoOptimizeMobileShadowCasters,12000);
-
-/* TEST ONLY: fester Tag 14:00 für Schattenvergleich */
-(function aczoForceTag14(){
+/* TEST: feste Tageszeit 14:00. Nur Diagnosezweig. */
+(function(){
   const d=new Date();
   d.setHours(14,0,0,0);
-  try{
-    if(typeof seasonTestDate!=='undefined') seasonTestDate=d;
-  }catch(e){}
-  try{
-    if(typeof testDate!=='undefined') testDate=d;
-  }catch(e){}
-  try{
-    if(typeof viewerTestDate!=='undefined') viewerTestDate=d;
-  }catch(e){}
-  try{
-    if(typeof seasonTestMode!=='undefined') seasonTestMode=true;
-  }catch(e){}
-  try{
-    if(typeof testMode!=='undefined') testMode=true;
-  }catch(e){}
-  window.__ACZO_FORCE_TAG14__=d;
+  window.__ACZO_TEST_TAG14__=d;
 })();
-
-setTimeout(()=>{
-  try{
-    const b=document.createElement('div');
-    b.textContent='TAG 14:00 · SCHATTEN OPT';
-    b.style.cssText='position:absolute;left:8px;top:8px;z-index:10000;padding:6px 8px;border-radius:8px;background:rgba(80,25,10,.86);color:#fff;font:800 11px Arial;pointer-events:none';
-    (document.getElementById('viewer')||document.body).appendChild(b);
-  }catch(e){}
-},700);
-
-setTimeout(()=>{try{const d=document.createElement('div');d.textContent='TEST: AMBIENT AUCH STATISCH NUR JEDEN 3. FRAME';d.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(20,65,35,.88);color:#fff;font:800 10px Arial;pointer-events:none';document.body.appendChild(d);}catch(e){}},600);
 </script>
 
 
