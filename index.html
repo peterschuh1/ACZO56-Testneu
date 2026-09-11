@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P67 · Schatten-System neu aufgebaut</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -6943,13 +6943,12 @@ let aczoMoselStructureShadowMat=null;
 // P16: Unsichtbare, stark vereinfachte Kronen duerfen ausschliesslich in der
 // Schattenkamera erscheinen. Die normale Kamera bleibt auf Layer 0.
 const ACZO_TREE_SHADOW_PROXY_LAYER=2;
-let aczoNextAnimatedShadowRefreshAt=0;
-function aczoRequestAnimatedShadowRefresh(){
-  const now=performance.now();
-  if(now<aczoNextAnimatedShadowRefreshAt)return;
-  aczoNextAnimatedShadowRefreshAt=now+(ACZO_MOBILE_PERF?170:110);
-  renderer.shadowMap.needsUpdate=true;
-}
+// P67: Echte Shadow-Map-Schatten stammen nur noch von statischen Uferbaeumen
+// und Stegen. Personen, Verkehr, Tore, Fahnen und Tiere benutzen keine teuren
+// dynamischen Shadow-Map-Updates mehr. Deren bisherige Refresh-Anforderung ist
+// deshalb absichtlich ein No-op. Sonne/Wetter aktualisieren die Karte weiterhin
+// ueber updateUnderwaterObstacleShadows() bei einer echten Lichtaenderung.
+function aczoRequestAnimatedShadowRefresh(){}
 // Feste, helle Tagesrichtung fuer die bewusst zeitunabhaengige NEUTRAL-
 // Ansicht. Sie darf niemals eine zuvor aktive Nachtposition erben.
 const aczoNeutralShadowSunPosition=new THREE.Vector3(
@@ -7100,53 +7099,118 @@ function updateUnderwaterObstacleShadows(submerged){
   // Das entfernte Foto-Overlay darf keinen Doppelwurf erzeugen. Echtes
   // Totholz und alle modellierten Hindernisse bleiben dagegen Schattenwerfer.
   if(lightChanged&&typeof cleanOverhangGroup!=='undefined')cleanOverhangGroup.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-  if(lightChanged&&typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
+  /* P67: northWood bleibt aus dem teuren Echt-Schattenpass. */
   renderer.shadowMap.needsUpdate=true;
 }
 
-function aczoEnableShadowTree(root){
+function aczoP67DisableTrueShadows(root){
   if(!root)return;
   root.traverse(o=>{
-    if(!o.isMesh||o===aczoLandShadowReceiver)return;
-    o.castShadow=!(o.userData&&o.userData.aczoNoShadow);
-    o.receiveShadow=!(o.userData&&o.userData.aczoNoReceiveShadow);
-  });
-}
-function aczoEnableCastOnlyShadowTree(root){
-  if(!root)return;
-  root.traverse(o=>{
-    if(!o.isMesh||o===aczoLandShadowReceiver)return;
-    o.castShadow=!(o.userData&&o.userData.aczoNoShadow);
+    if(!o||!o.isMesh)return;
+    o.castShadow=false;
     o.receiveShadow=false;
   });
 }
+function aczoP67EnableCastOnly(root){
+  if(!root)return;
+  root.traverse(o=>{
+    if(!o||!o.isMesh)return;
+    const n=String(o.name||'');
+    // bewusst schattenfreie Teile bleiben schattenfrei
+    const forbidden=!!(o.userData&&o.userData.aczoNoShadow)
+      ||/FUGE|BLECHLOCHUNG|DRAHTGITTER/.test(n);
+    o.castShadow=!forbidden;
+    o.receiveShadow=false;
+  });
+}
+// Kompatibilitaet fuer alte Build-Aufrufe: niemals mehr pauschal receiveShadow
+// einschalten. Genau dieses historische Verhalten hat zu viele Materialien in
+// den Shadow-Sampling-Pfad gezogen.
+function aczoEnableShadowTree(root){aczoP67EnableCastOnly(root);}
+function aczoEnableCastOnlyShadowTree(root){aczoP67EnableCastOnly(root);}
+
 let aczoStaticShadowCastersPrepared=false;
+function aczoP67PrepareLeanShadowSystem(){
+  if(aczoStaticShadowCastersPrepared)return;
+  aczoStaticShadowCastersPrepared=true;
+
+  // Erst alles auf null. Danach wird nur die kleine Whitelist freigeschaltet.
+  scene.traverse(o=>{
+    if(!o||!o.isMesh)return;
+    o.castShadow=false;
+    o.receiveShadow=false;
+  });
+
+  // Die vier grossen, eigens dafuer vorgesehenen Schattenfaenger bleiben die
+  // einzigen echten Receiver. So muessen Baumblätter, Fahrzeuge, Zaeune,
+  // Personen, Fassaden usw. die Shadow-Map nicht noch einmal samplen.
+  const receivers=[
+    aczoLandShadowReceiver,
+    aczoWaterStructureShadowReceiver,
+    aczoMoselStructureShadowReceiver,
+    (typeof aczoPondStructureShadowReceiver!=='undefined'?aczoPondStructureShadowReceiver:null)
+  ];
+  receivers.forEach(o=>{if(o){o.castShadow=false;o.receiveShadow=true;}});
+
+  // Wichtig fuer die Optik: die zwei grossen Uferweiden mit echten Staemmen/
+  // Aesten. Einzelblaetter/Kronensprays respektieren ihr aczoNoShadow-Flag und
+  // bleiben aus dem Shadow-Pass; die Krone kommt aus dem weichen Proxy.
+  if(typeof realBirchGroup!=='undefined')aczoP67EnableCastOnly(realBirchGroup);
+
+  // Alle Stege bleiben echte Schattenwerfer.
+  if(typeof northPierGroup!=='undefined')aczoP67EnableCastOnly(northPierGroup);
+  if(typeof aczoSmallPierGroup!=='undefined')aczoP67EnableCastOnly(aczoSmallPierGroup);
+  if(typeof eastBoatPierGroup!=='undefined')aczoP67EnableCastOnly(eastBoatPierGroup);
+
+  // Vermessene Natur: nur Ufer-Kronenproxies und wenige schlanke
+  // Stamm-/Astbatches direkt am Weiher. Hintergrundwald bleibt komplett raus.
+  if(typeof aczoSurveyedNatureGroup!=='undefined'){
+    aczoSurveyedNatureGroup.traverse(o=>{
+      if(!o||!o.isMesh)return;
+      o.receiveShadow=false;
+      let keep=!!(o.userData&&o.userData.aczoP67ShoreShadowProxy);
+      if(!keep&&o.userData&&o.userData.aczoForestChunk&&o.userData.aczoChunkCenter){
+        const c=o.userData.aczoChunkCenter;
+        keep=aczoP13DistanceToPond(c.x,c.y)<=ACZO_P67_SHORE_TREE_SHADOW_BAND
+          &&/STAEMME_AESTE|AST|HOLZ|WOOD/.test(String(o.name||'').toUpperCase());
+      }
+      const n=String(o.name||'').toUpperCase();
+      if(!keep&&/SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME|MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE/.test(n))keep=true;
+      o.castShadow=keep;
+    });
+  }
+
+  renderer.shadowMap.needsUpdate=true;
+}
+
 function aczoRefreshAboveWaterShadowCasters(){
   if(typeof aczoFacilityGroup!=='undefined')aczoFacilityGroup.visible=!is2D;
   if(typeof aczoConstructionFenceGroup!=='undefined')aczoConstructionFenceGroup.visible=!is2D;
   if(typeof aczoOuterForestGroup!=='undefined')aczoOuterForestGroup.visible=false;
   if(typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=!is2D;
-  // Große, statische Gruppen werden genau einmal vorbereitet. Die frühere
-  // Komplett-Traversierung des detailreichen Waldes alle 2,5 Sekunden war
-  // unsichtbare Dauerarbeit und setzte sogar bewusst ausgeschaltete
-  // Einzelblatt-Schatten wieder auf true.
-  if(!aczoStaticShadowCastersPrepared){
-    aczoStaticShadowCastersPrepared=true;
-    aczoEnableShadowTree(flagPoleGroup);
-    aczoEnableShadowTree(personalSceneGroup);
-    if(typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
-    if(typeof eastBoatPierGroup!=='undefined')aczoEnableShadowTree(eastBoatPierGroup);
-    if(typeof eastBoatModel!=='undefined')aczoEnableShadowTree(eastBoatModel);
-    if(typeof northPierGroup!=='undefined')aczoEnableShadowTree(northPierGroup);
-    if(typeof aczoSmallPierGroup!=='undefined')aczoEnableShadowTree(aczoSmallPierGroup);
-    if(typeof realBirchGroup!=='undefined')aczoEnableShadowTree(realBirchGroup);
-    if(typeof aczoFacilityGroup!=='undefined')aczoEnableShadowTree(aczoFacilityGroup);
-    if(typeof aczoConstructionFenceGroup!=='undefined')aczoEnableShadowTree(aczoConstructionFenceGroup);
-    if(typeof aczoSurveyedNatureGroup!=='undefined')aczoEnableShadowTree(aczoSurveyedNatureGroup);
-  }
+
+  aczoP67PrepareLeanShadowSystem();
+
+  // Spaeter erzeugte/animierte Kleingruppen duerfen keine echten Schatten
+  // nachtraeglich wieder einschalten. Die Gruppen sind klein; diese Traversals
+  // sind billiger als ein weiterer Shadow-Map-Render und betreffen keine Baeume.
+  if(typeof flagPoleGroup!=='undefined')aczoP67DisableTrueShadows(flagPoleGroup);
+  if(typeof personalSceneGroup!=='undefined')aczoP67DisableTrueShadows(personalSceneGroup);
+  if(typeof trafficGroup!=='undefined')aczoP67DisableTrueShadows(trafficGroup);
+  if(typeof birdGroup!=='undefined')aczoP67DisableTrueShadows(birdGroup);
+  if(typeof bmwX3VisitGroup!=='undefined')aczoP67DisableTrueShadows(bmwX3VisitGroup);
+  if(typeof aczoWildBoarGroup!=='undefined')aczoP67DisableTrueShadows(aczoWildBoarGroup);
+  if(typeof eastBoatModel!=='undefined')aczoP67DisableTrueShadows(eastBoatModel);
+  if(typeof aczoFacilityGroup!=='undefined')aczoP67DisableTrueShadows(aczoFacilityGroup);
+  if(typeof aczoConstructionFenceGroup!=='undefined')aczoP67DisableTrueShadows(aczoConstructionFenceGroup);
 }
 
 
+// P67 RELEASE-SHADOW-POLICY:
+// Echte Caster: Uferweiden, direkte Ufer-Waldproxies/-Staemme, Nord-/Klein-/Bootsstege.
+// Echte Receiver: Land-, Weiher-, Mosel- und Unterwasser-Strukturschattenfaenger.
+// Keine Echt-Schatten: Personen, Radfahrer/Verkehr, Voegel, Fahrzeuge, Gebaeude,
+// Bauzaun, Fahne, Wildtiere, Hintergrundwald. Deren optische Kontakt-/Lichtsysteme bleiben erhalten.
 // TEST V13: ausschließlich tagsüber aktive Kopie desjenigen gerichteten
 // Relieflichts, das nachts die schönen kameraabhängigen Glanzflecken auf der
 // MeshPhong-Tiefengeometrie erzeugt. Die Nacht wird davon nicht berührt.
@@ -16656,6 +16720,7 @@ function aczoBirchRandom(seed){
 const aczoSeasonalTreeShadowProxyItems=[];
 const aczoEvergreenTreeShadowProxyItems=[];
 const aczoTreeSeasonalShadowProxyMeshes=[];
+const ACZO_P67_SHORE_TREE_SHADOW_BAND=18.0;
 function aczoAddTreeShadowLobes(center,rx,ry,rz,seed,lobeCount=3,angle=0){
   const rnd=aczoBirchRandom(seed+9271);
   for(let i=0;i<lobeCount;i++){
@@ -16691,17 +16756,26 @@ function aczoShuffleShadowProxyItems(items,seed){
   for(let i=items.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[items[i],items[j]]=[items[j],items[i]];}
 }
 function aczoBuildTreeShadowProxyMesh(items,geometry,name,seasonal){
-  if(!items.length)return null;
-  aczoShuffleShadowProxyItems(items,seasonal?731925:731926);
+  // P67: Nur Baeume unmittelbar am Weiher duerfen noch echte Kronenschatten
+  // in die Shadow-Map schreiben. Entfernte Wald-/Hintergrundbaeume bleiben
+  // sichtbar, sind fuer den Schattenpass aber komplett irrelevant.
+  const shoreItems=items.filter(item=>{
+    const p=item&&item.p;
+    return p&&Number.isFinite(p.x)&&Number.isFinite(p.y)
+      &&aczoP13DistanceToPond(p.x,p.y)<=ACZO_P67_SHORE_TREE_SHADOW_BAND;
+  });
+  if(!shoreItems.length)return null;
+  aczoShuffleShadowProxyItems(shoreItems,seasonal?731925:731926);
   const material=new THREE.MeshBasicMaterial({color:0x000000,colorWrite:false,depthWrite:false});
-  const mesh=new THREE.InstancedMesh(geometry,material,items.length),dummy=new THREE.Object3D();
-  items.forEach((item,i)=>{
+  const mesh=new THREE.InstancedMesh(geometry,material,shoreItems.length),dummy=new THREE.Object3D();
+  shoreItems.forEach((item,i)=>{
     dummy.position.copy(item.p);dummy.rotation.copy(item.rot);dummy.scale.copy(item.scale);
     dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
   });
   mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;
   mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=false;mesh.frustumCulled=false;
-  mesh.userData.aczoNoReceiveShadow=true;mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;
+  mesh.userData.aczoNoReceiveShadow=true;mesh.userData.maxCount=shoreItems.length;mesh.userData.seasonCount=shoreItems.length;
+  mesh.userData.aczoP67ShoreShadowProxy=true;
   mesh.layers.set(ACZO_TREE_SHADOW_PROXY_LAYER);mesh.raycast=()=>{};
   aczoSurveyedNatureGroup.add(mesh);
   if(seasonal)aczoTreeSeasonalShadowProxyMeshes.push(mesh);
@@ -33069,12 +33143,35 @@ function makeSeasonPoints(count,color,size){const arr=new Float32Array(count*3);
 const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLeafPoints=makeSeasonPoints(seasonLeafCount,0xc28a3a,.18);
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
+
+/* P67 Diagnoseanzeige: nur Anzeige, keine Renderlogik-Aenderung. */
+let aczoP67DiagPanel=null;
+let aczoP67DiagLastRaf=0,aczoP67DiagRafSum=0,aczoP67DiagRafN=0;
+let aczoP67DiagMainSum=0,aczoP67DiagMainN=0,aczoP67DiagLastPaint=0;
+function aczoP67EnsureDiag(){
+  if(aczoP67DiagPanel)return;
+  const p=document.createElement('div');
+  p.id='aczo-p67-fps';
+  p.style.cssText='position:fixed;left:8px;top:204px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;white-space:pre;pointer-events:none';
+  p.textContent='P67 SHADOW CLEAN\nFPS --\nRAF -- ms\nMainJS -- ms';
+  document.body.appendChild(p);
+  aczoP67DiagPanel=p;
+}
+setTimeout(aczoP67EnsureDiag,500);
+
 const clock=new THREE.Clock();
 let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
+ const aczoP67MainStart=performance.now();
+ if(aczoP67DiagLastRaf){
+   const g=frameNow-aczoP67DiagLastRaf;
+   aczoP67DiagRafSum+=g; aczoP67DiagRafN++;
+ }
+ aczoP67DiagLastRaf=frameNow;
+
 
  // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
  // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
@@ -33373,6 +33470,17 @@ let aczoMapGestureFrame=0;
  renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
   renderAnglingReelCamera();
  updateViewerDebug(rawDt);
+ const aczoP67MainMs=performance.now()-aczoP67MainStart;
+ aczoP67DiagMainSum+=aczoP67MainMs; aczoP67DiagMainN++;
+ if(aczoP67DiagPanel && frameNow-aczoP67DiagLastPaint>=750){
+   aczoP67DiagLastPaint=frameNow;
+   const rav=aczoP67DiagRafN?aczoP67DiagRafSum/aczoP67DiagRafN:0;
+   const mav=aczoP67DiagMainN?aczoP67DiagMainSum/aczoP67DiagMainN:0;
+   const fps=rav?1000/rav:0;
+   aczoP67DiagPanel.textContent='P67 SHADOW CLEAN\nFPS '+fps.toFixed(1)+'\nRAF '+rav.toFixed(1)+' ms\nMainJS '+mav.toFixed(1)+' ms';
+   aczoP67DiagRafSum=0; aczoP67DiagRafN=0; aczoP67DiagMainSum=0; aczoP67DiagMainN=0;
+ }
+
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
  schedulePersonalCampScene();
