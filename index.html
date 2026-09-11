@@ -4769,7 +4769,39 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 // bewegte Personen, Fahrzeuge, Fahnen und der Sonnenlauf werden unten gezielt
 // mit einer begrenzten Frequenz aktualisiert.
 renderer.shadowMap.autoUpdate=false;
-renderer.shadowMap.needsUpdate=true;
+
+/* P66 mobile shadow cache test: coalesce repeated shadow-map refreshes.
+   Visual shadow settings remain unchanged. */
+let aczoShadowCacheLastRefresh=0;
+let aczoShadowCachePending=false;
+const ACZO_SHADOW_CACHE_MS=2400;
+function aczoRequestShadowRefresh(force=false){
+  if(!renderer || !renderer.shadowMap || !renderer.shadowMap.enabled) return;
+  if(!ACZO_MOBILE_PERF || force){
+    renderer.shadowMap.needsUpdate=true;
+    aczoShadowCacheLastRefresh=performance.now();
+    aczoShadowCachePending=false;
+    return;
+  }
+  const now=performance.now();
+  if(now-aczoShadowCacheLastRefresh>=ACZO_SHADOW_CACHE_MS){
+    renderer.shadowMap.needsUpdate=true;
+    aczoShadowCacheLastRefresh=now;
+    aczoShadowCachePending=false;
+  }else{
+    aczoShadowCachePending=true;
+  }
+}
+function aczoFlushShadowRefresh(){
+  if(!ACZO_MOBILE_PERF || !aczoShadowCachePending) return;
+  const now=performance.now();
+  if(now-aczoShadowCacheLastRefresh>=ACZO_SHADOW_CACHE_MS){
+    renderer.shadowMap.needsUpdate=true;
+    aczoShadowCacheLastRefresh=now;
+    aczoShadowCachePending=false;
+  }
+}
+aczoRequestShadowRefresh(false);
 
 // V6.31 SYSTEM-AUDIT: Auf Smartphones ist die Kunstkoeder-Unterwasseransicht
 // der teuerste Modus (Unterwasserwelt + viele Fische + zweites Live-Uferbild).
@@ -6948,7 +6980,7 @@ function aczoRequestAnimatedShadowRefresh(){
   const now=performance.now();
   if(now<aczoNextAnimatedShadowRefreshAt)return;
   aczoNextAnimatedShadowRefreshAt=now+(ACZO_MOBILE_PERF?170:110);
-  renderer.shadowMap.needsUpdate=true;
+  aczoRequestShadowRefresh(false);
 }
 // Feste, helle Tagesrichtung fuer die bewusst zeitunabhaengige NEUTRAL-
 // Ansicht. Sie darf niemals eine zuvor aktive Nachtposition erben.
@@ -7101,7 +7133,7 @@ function updateUnderwaterObstacleShadows(submerged){
   // Totholz und alle modellierten Hindernisse bleiben dagegen Schattenwerfer.
   if(lightChanged&&typeof cleanOverhangGroup!=='undefined')cleanOverhangGroup.traverse(o=>{if(o.isMesh)o.castShadow=false;});
   if(lightChanged&&typeof northWood!=='undefined')aczoEnableCastOnlyShadowTree(northWood);
-  renderer.shadowMap.needsUpdate=true;
+  aczoRequestShadowRefresh(false);
 }
 
 function aczoEnableShadowTree(root){
@@ -9573,7 +9605,8 @@ waterBtn.onclick=()=>{
 function aczoCaptureCurrentMapPng(){
   // Direkt vor dem Capture neu rendern. So funktioniert toDataURL auch ohne
   // dauerhaftes preserveDrawingBuffer und belastet die normale Animation nicht.
-  renderer.render(scene,camera);
+  aczoFlushShadowRefresh();
+ renderer.render(scene,camera);
   return renderer.domElement.toDataURL('image/png',1.0);
 }
 let aczoPrintSnapshot=null;
@@ -15563,7 +15596,7 @@ function aczoBuildFenceBanner(){
   const width=3.00,height=width*(243/600);
   const geometry=new THREE.PlaneGeometry(width,height);
   geometry.rotateX(Math.PI*.5);
-  const texture=new THREE.TextureLoader().load(ACZO_FENCE_BANNER_DATA_URL,()=>{renderer.shadowMap.needsUpdate=true;});
+  const texture=new THREE.TextureLoader().load(ACZO_FENCE_BANNER_DATA_URL,()=>{aczoRequestShadowRefresh(false);});
   texture.encoding=THREE.sRGBEncoding;
   texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
   texture.minFilter=THREE.LinearMipmapLinearFilter;
@@ -16034,7 +16067,7 @@ function updateAczoOuterForestSeason(day){
     });
     if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   }
-  renderer.shadowMap.needsUpdate=true;
+  aczoRequestShadowRefresh(false);
 }
 updateAczoOuterForestSeason(seasonDayOfDate(viewerNow()));
 
@@ -17283,7 +17316,7 @@ function updateRealBirchSeason(day){
     mesh.count=mesh.userData.seasonCount;
     mesh.visible=!is2D&&mesh.count>0;
   }
-  renderer.shadowMap.needsUpdate=true;
+  aczoRequestShadowRefresh(false);
 }
 updateRealBirchSeason(seasonDayOfDate(viewerNow()));
 
@@ -18228,7 +18261,7 @@ function updateAczoSurveyedNatureSeason(day){
     mesh.count=mesh.userData.seasonCount;
     mesh.visible=!is2D&&mesh.count>0;
   }
-  aczoSurveyedNatureGroup.visible=!is2D;renderer.shadowMap.needsUpdate=true;
+  aczoSurveyedNatureGroup.visible=!is2D;aczoRequestShadowRefresh(false);
 }
 // P14: stabile schattenpraegende Kronen trotz Kamera-Zoom.
 let aczoSurveyLastLodAt=0,aczoSurveyLastLodKey='';
@@ -33430,6 +33463,7 @@ function aczoOptimizeMobileShadowCasters(){
   window.__aczoShadowOptStats={disabled,kept};
 }
 setTimeout(aczoOptimizeMobileShadowCasters,3500);
+setTimeout(()=>aczoRequestShadowRefresh(true),3650);
 setTimeout(aczoOptimizeMobileShadowCasters,12000);
 
 /* TEST ONLY: fester Tag 14:00 für Schattenvergleich */
