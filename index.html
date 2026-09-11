@@ -33463,61 +33463,59 @@ setTimeout(()=>{
   }catch(e){}
 },700);
 
-/* =========================================================
-   SHADOW-CASTER ANALYSE (TEST ONLY)
-   Zählt sichtbare aktive Schattenwerfer und deren Dreiecke,
-   ohne Render-/Schattenlogik zu verändern.
-   ========================================================= */
-const aczoShadowCasterDiag={panel:null,last:0};
-function aczoShadowCasterCategory(o){
-  const n=((o&&o.name)||'')+' '+((o&&o.parent&&o.parent.name)||'');
-  if(/leaf|leav|blatt|foliage|spray|crown|krone/i.test(n)) return 'Blätter/Kronen';
-  if(/tree|baum|forest|wald|branch|ast|birch|birke|willow|weide|conifer|fichte|tanne|pine/i.test(n)) return 'Bäume/Wald';
-  if(/bush|busch|shrub|hedge|hecke|veget/i.test(n)) return 'Büsche/Vegetation';
-  if(/pier|steg|dock|bridge|boot|boat/i.test(n)) return 'Stege/Boot';
-  if(/house|haus|garage|sanit|roof|dach|building|gebäude|wall|wand/i.test(n)) return 'Gebäude';
-  if(/crafter|vehicle|car|bmw|fahrzeug/i.test(n)) return 'Fahrzeuge';
-  if(/person|angler|predator|human|visitor|besucher/i.test(n)) return 'Personen';
-  if(/fence|zaun|flag|fahne|mast|sign|schild/i.test(n)) return 'Zaun/Fahne/Schild';
-  return 'Sonstige';
+
+/* P66 SHADOW CASTER ANALYSE V2: counts real instances and readable mobile UI */
+let aczoShadowAnalysePanel=null;
+function aczoShadowTriPerGeometry(g){
+  if(!g || !g.attributes || !g.attributes.position)return 0;
+  if(g.index && g.index.count)return Math.floor(g.index.count/3);
+  return Math.floor(g.attributes.position.count/3);
 }
-function aczoShadowObjectVisible(o){
-  let p=o;
-  while(p){ if(p.visible===false)return false; p=p.parent; }
-  return true;
-}
-function aczoShadowTriCount(o){
-  const g=o&&o.geometry;if(!g)return 0;
-  try{
-    if(g.index&&g.index.count)return Math.floor(g.index.count/3);
-    const a=g.attributes&&g.attributes.position;
-    return a&&a.count?Math.floor(a.count/3):0;
-  }catch(e){return 0;}
-}
-function aczoUpdateShadowCasterDiag(force=false){
-  const now=performance.now();
-  if(!force&&now-aczoShadowCasterDiag.last<1500)return;
-  aczoShadowCasterDiag.last=now;
-  if(!aczoShadowCasterDiag.panel){
-    const p=document.createElement('div');
-    p.style.cssText='position:fixed;right:8px;top:78px;z-index:2147483646;max-width:205px;padding:7px 8px;border-radius:8px;background:rgba(0,0,0,.72);color:#fff;font:700 9px/1.28 Arial,sans-serif;pointer-events:none;white-space:pre;text-align:left';
-    document.body.appendChild(p);aczoShadowCasterDiag.panel=p;
-  }
-  const cats={};let meshes=0,tris=0,alphaMeshes=0,alphaTris=0;
+function aczoShadowAnalyseV2(){
+  if(!scene)return;
+  let meshes=0, draws=0, instances=0, tris=0, alphaTris=0;
+  const groups={vegetation:0,leaves:0,buildings:0,piers:0,vehicles:0,people:0,other:0};
   scene.traverse(o=>{
-    if(!o||!o.isMesh||!o.castShadow||!aczoShadowObjectVisible(o))return;
-    const t=aczoShadowTriCount(o), c=aczoShadowCasterCategory(o);
-    meshes++;tris+=t;
-    if(!cats[c])cats[c]={m:0,t:0};cats[c].m++;cats[c].t+=t;
+    if(!o || !o.isMesh || !o.visible || !o.castShadow)return;
+    meshes++;
+    const per=aczoShadowTriPerGeometry(o.geometry);
+    const cnt=(o.isInstancedMesh ? Math.max(0,o.count|0) : 1);
+    instances+=cnt;
+    draws++;
+    const total=per*cnt;
+    tris+=total;
     const mats=Array.isArray(o.material)?o.material:[o.material];
-    if(mats.some(m=>m&&(m.transparent||Number(m.alphaTest||0)>0))){alphaMeshes++;alphaTris+=t;}
+    if(mats.some(m=>m&&(m.transparent || (m.alphaTest||0)>0 || m.alphaMap)))alphaTris+=total;
+    const n=((o.name||"")+" "+((o.parent&&o.parent.name)||"")).toLowerCase();
+    if(/leaf|leav|blatt|foliage|spray|crown|krone/.test(n))groups.leaves+=total;
+    else if(/tree|baum|forest|wald|bush|busch|shrub|hecke|hedge|birch|birke|willow|weide|conifer|fichte|tanne|pine|veget/.test(n))groups.vegetation+=total;
+    else if(/house|haus|garage|sanit|building|geb[aä]ude/.test(n))groups.buildings+=total;
+    else if(/pier|steg|dock|bridge|brücke/.test(n))groups.piers+=total;
+    else if(/crafter|vehicle|car|bmw|auto|boot|boat/.test(n))groups.vehicles+=total;
+    else if(/person|angler|predator|human|visitor|mensch/.test(n))groups.people+=total;
+    else groups.other+=total;
   });
-  const rows=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).slice(0,8)
-    .map(([k,v])=>k+': '+v.m+' / '+(v.t/1000).toFixed(0)+'k').join('\\n');
-  aczoShadowCasterDiag.panel.textContent='SHADOW CASTERS\\nMeshes '+meshes+' · '+(tris/1e6).toFixed(2)+'M Tri\\nAlpha '+alphaMeshes+' · '+(alphaTris/1e6).toFixed(2)+'M\\n'+rows;
+  if(!aczoShadowAnalysePanel){
+    const p=document.createElement('div');
+    p.id='aczo-shadow-analyse-v2';
+    p.style.cssText='position:fixed;right:7px;top:326px;z-index:2147483646;width:190px;max-width:46vw;padding:7px 8px;border-radius:8px;background:rgba(0,0,0,.78);color:#fff;font:700 9px/1.28 Arial,sans-serif;pointer-events:none;white-space:pre-line;overflow:hidden';
+    document.body.appendChild(p);aczoShadowAnalysePanel=p;
+  }
+  const m=x=>(x/1000000).toFixed(2)+'M';
+  aczoShadowAnalysePanel.textContent=
+    'SHADOW V2\n'+
+    'Meshes '+meshes+' | Inst '+instances+'\n'+
+    'Tris '+m(tris)+' | Alpha '+m(alphaTris)+'\n'+
+    'Bäume '+m(groups.vegetation)+'\n'+
+    'Blätter '+m(groups.leaves)+'\n'+
+    'Gebäude '+m(groups.buildings)+'\n'+
+    'Stege '+m(groups.piers)+'\n'+
+    'Fahrzeuge '+m(groups.vehicles)+'\n'+
+    'Personen '+m(groups.people)+'\n'+
+    'Sonstige '+m(groups.other);
 }
-setInterval(()=>aczoUpdateShadowCasterDiag(false),1500);
-setTimeout(()=>aczoUpdateShadowCasterDiag(true),4500);
+setTimeout(aczoShadowAnalyseV2,1500);
+setInterval(aczoShadowAnalyseV2,2000);
 setTimeout(()=>aczoUpdateShadowCasterDiag(true),12500);
 </script>
 
