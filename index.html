@@ -33083,7 +33083,7 @@ function aczoNativeTestEnsurePanel(){
  const p=document.createElement('div');
  p.id='aczo-native-raf-test';
  p.style.cssText='position:fixed;left:8px;top:40px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
- p.textContent='TAG 14:00 · RECEIVER MIN\nFPS --\nRAF -- ms\nMainJS -- ms';
+ p.textContent='TAG 14:00 · AMBIENT 3-FRAME\nFPS --\nRAF -- ms\nMainJS -- ms';
  document.body.appendChild(p); aczoNativeTestPanel=p;
 }
 setTimeout(aczoNativeTestEnsurePanel,500);
@@ -33132,22 +33132,25 @@ setTimeout(aczoNativeTestEnsurePanel,500);
   // Eingabe Vorrang. Wolken/Verkehr/Jahreszeiten muessen nicht in jedem
   // Kameraframe CPU-Arbeit erzeugen; jeder dritte Frame haelt sie sichtbar
   // in Bewegung, waehrend OrbitControls deutlich mehr Luft bekommt.
-  const aczoPlainMapGesture=activeViewerPointers.size>0&&!fishMode&&!skyLookMode&&!anglingMode;
-  if(aczoPlainMapGesture)aczoMapGestureFrame++;else aczoMapGestureFrame=0;
-  const aczoRunAmbientHeavy=!aczoPlainMapGesture||(aczoMapGestureFrame%3===0);
+  const aczoPlainMap=!fishMode&&!skyLookMode&&!anglingMode&&!fishTransition;
+  if(aczoPlainMap)aczoMapGestureFrame++;else aczoMapGestureFrame=0;
+  // TEST: Den bereits bewaehrten 3-Frame-Ambient-Pfad der Kamerabewegung
+  // auch bei statischer 2D/3D-Karte verwenden. Spiel-/Angelmodi bleiben unveraendert.
+  const aczoRunAmbientHeavy=!aczoPlainMap||(aczoMapGestureFrame%3===0);
+  const aczoAmbientDt=visualDt*(aczoPlainMap?3:1);
   if(aczoRunAmbientHeavy){
-    updateSkyClouds(visualDt*(aczoPlainMapGesture?3:1));
+    updateSkyClouds(aczoAmbientDt);
     updateRealCloudReflections();
-    updateRainRipples(visualDt*(aczoPlainMapGesture?3:1));
-    updateBirds(visualDt*(aczoPlainMapGesture?3:1));
-    updateTraffic(visualDt*(aczoPlainMapGesture?3:1));
-    updateCarVisit(visualDt*(aczoPlainMapGesture?3:1));
-    updateBmwX3Visit(visualDt*(aczoPlainMapGesture?3:1));
-    updateAczoFacilityDoors(visualDt*(aczoPlainMapGesture?3:1));
-    updateAczoConstructionGates(visualDt*(aczoPlainMapGesture?3:1));
-    updateAczoMainEntranceMotionLight(visualDt*(aczoPlainMapGesture?3:1));
-    updatePersonalCampScene(visualDt*(aczoPlainMapGesture?3:1));
-    updateSeasonTestVisuals(visualDt*(aczoPlainMapGesture?3:1));
+    updateRainRipples(aczoAmbientDt);
+    updateBirds(aczoAmbientDt);
+    updateTraffic(aczoAmbientDt);
+    updateCarVisit(aczoAmbientDt);
+    updateBmwX3Visit(aczoAmbientDt);
+    updateAczoFacilityDoors(aczoAmbientDt);
+    updateAczoConstructionGates(aczoAmbientDt);
+    updateAczoMainEntranceMotionLight(aczoAmbientDt);
+    updatePersonalCampScene(aczoAmbientDt);
+    updateSeasonTestVisuals(aczoAmbientDt);
   }
   // P10: Material-/Jahreszeitenzustand aendert sich im normalen Betrieb nicht
   // von Frame zu Frame. Die bisherige Abfrage blieb zwar gecacht, erzeugte aber
@@ -33463,36 +33466,7 @@ setTimeout(()=>{
   }catch(e){}
 },700);
 
-/* TEST ONLY: Shadow map/casters stay active, but almost all receivers stop sampling it. */
-function aczoReceiveShadowMinTest(){
-  if(!scene) return;
-  let disabled=0, kept=0;
-  scene.traverse(o=>{
-    if(!o || !o.isMesh || !o.receiveShadow) return;
-    const n=((o.name||"")+" "+((o.parent&&o.parent.name)||"")).toLowerCase();
-
-    /* Keep one small, simple structural receiver so shadow reception is still demonstrably alive.
-       Prefer pier/steg/dock only; everything else becomes non-receiver for this diagnostic. */
-    if(/pier|steg|dock/.test(n) && kept===0){
-      kept++;
-      return;
-    }
-    o.receiveShadow=false;
-    disabled++;
-  });
-  window.__aczoReceiveShadowMinStats={disabled,kept};
-}
-setTimeout(aczoReceiveShadowMinTest,3200);
-setTimeout(aczoReceiveShadowMinTest,9000);
-
-setTimeout(()=>{
-  try{
-    const d=document.createElement('div');
-    d.textContent='TEST: SHADOW-EMPFÄNGER MINIMAL';
-    d.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(85,20,10,.86);color:#fff;font:800 10px Arial;pointer-events:none';
-    document.body.appendChild(d);
-  }catch(e){}
-},600);
+setTimeout(()=>{try{const d=document.createElement('div');d.textContent='TEST: AMBIENT AUCH STATISCH NUR JEDEN 3. FRAME';d.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(20,65,35,.88);color:#fff;font:800 10px Arial;pointer-events:none';document.body.appendChild(d);}catch(e){}},600);
 </script>
 
 
