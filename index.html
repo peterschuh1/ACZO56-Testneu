@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P69 · Unlimited FPS Diagnose</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4860,25 +4860,6 @@ if(viewerDebugEnabled){
   });
   host.appendChild(viewerDebugPanel);
 }
-function aczoDiagEffectiveVisible(o){
-  for(let p=o;p;p=p.parent)if(p.visible===false)return false;
-  return true;
-}
-const aczoDiagFrustum=new THREE.Frustum(),aczoDiagProjView=new THREE.Matrix4();
-function aczoDiagCountFrustumMeshes(root){
-  if(!root||root.visible===false)return 0;
-  camera.updateMatrixWorld();
-  aczoDiagProjView.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
-  aczoDiagFrustum.setFromProjectionMatrix(aczoDiagProjView);
-  let n=0;
-  root.traverse(o=>{
-    if(!o.isMesh||!aczoDiagEffectiveVisible(o))return;
-    try{
-      if(o.frustumCulled===false||aczoDiagFrustum.intersectsObject(o))n++;
-    }catch(e){n++;}
-  });
-  return n;
-}
 function updateViewerDebug(rawDt){
   if(!viewerDebugPanel)return;
   const now=performance.now();
@@ -4890,20 +4871,10 @@ function updateViewerDebug(rawDt){
   if(span<1000)return;
   const fps=Math.round(viewerDebugFrames*1000/span);
   const info=renderer.info.render;
-  const cloudTotal=(typeof cloudGroup!=='undefined')?cloudGroup.children.length:0;
-  const cloudVisible=(typeof cloudGroup!=='undefined'&&cloudGroup.visible)?cloudGroup.children.filter(c=>c.visible).length:0;
-  const reflVisible=(typeof cloudReflectionGroup!=='undefined'&&cloudReflectionGroup.visible)?cloudReflectionGroup.children.filter(c=>c.visible).length:0;
-  let minCZ=Infinity,maxCZ=-Infinity;
-  if(typeof cloudGroup!=='undefined')cloudGroup.children.forEach(c=>{if(c.visible){minCZ=Math.min(minCZ,c.position.z);maxCZ=Math.max(maxCZ,c.position.z);}});
-  const cloudZ=Number.isFinite(minCZ)?`${Math.round(minCZ)}-${Math.round(maxCZ)}`:'-';
-  const natureVis=(typeof aczoSurveyedNatureGroup!=='undefined')?aczoDiagCountFrustumMeshes(aczoSurveyedNatureGroup):0;
-  const birchVis=(typeof realBirchGroup!=='undefined')?aczoDiagCountFrustumMeshes(realBirchGroup):0;
   viewerDebugPanel.textContent=
     `FPS ${fps}  max ${Math.round(viewerDebugMaxFrameMs)} ms\n`+
     `Draws ${info.calls}  Tri ${info.triangles}\n`+
-    `Wolken ${cloudVisible}/${cloudTotal}  Spiegel ${reflVisible}  Wetter ${Math.round(liveWeather.cloud||0)}%\n`+
-    `CamZ ${camera.position.z.toFixed(1)}  CloudZ ${cloudZ}\n`+
-    `Uferwald ${natureVis}  Weiden ${birchVis}\n`+
+    `Wetter ${simulationEnabled?'LIVE':'NEUTRAL'}  Wolken ${Math.round(liveWeather.cloud||0)} %\n`+
     `Touch ${activeViewerPointers.size}  Aussetzer ${viewerDebugLongFrames}`;
   viewerDebugFrames=0;viewerDebugMaxFrameMs=0;viewerDebugLastUpdate=now;
 }
@@ -7740,69 +7711,9 @@ function seasonWinterFactor(day){
   return 0;
 }
 
-// P69 DIAGNOSE: Die normalen Produktions-Layer bleiben unverändert aktiv.
-// Die vier zusätzlichen Schalter greifen NUR bei ?debug=1 unmittelbar vor dem
-// Haupt-Render. Dadurch können wir den Lastverursacher isolieren, ohne Wetter-,
-// Wasser-, Schatten- oder Vegetationslogik dauerhaft umzubauen.
-const diagnosticState={mirror:true,alpha:true,spec:true,relief:true,lift:true,disc:true,baseWaves:true,lane:true,depthSpots:true,waterObject:true,pondObject:true,extraObjects:true,stars:true,solarScatter:true,
-  clouds:true,cloudReflections:true,surveyNature:true,realBirches:true};
-
-function aczoDiagRestoreNormalVisibility(){
-  if(!viewerDebugEnabled)return;
-  try{
-    if(diagnosticState.clouds&&typeof applyWeatherScene==='function')applyWeatherScene();
-    if(diagnosticState.cloudReflections&&typeof updateRealCloudReflections==='function')updateRealCloudReflections();
-    if(diagnosticState.surveyNature&&typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=!is2D;
-    if(diagnosticState.realBirches&&typeof realBirchGroup!=='undefined')realBirchGroup.visible=!is2D;
-  }catch(e){}
-}
-function applyDiagnosticLayers(){
-  if(!viewerDebugEnabled)return;
-  if(!diagnosticState.clouds){
-    if(typeof cloudGroup!=='undefined')cloudGroup.visible=false;
-    if(typeof cloudReflectionGroup!=='undefined')cloudReflectionGroup.visible=false;
-  }else if(!diagnosticState.cloudReflections){
-    if(typeof cloudReflectionGroup!=='undefined')cloudReflectionGroup.visible=false;
-  }
-  if(!diagnosticState.surveyNature&&typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=false;
-  if(!diagnosticState.realBirches&&typeof realBirchGroup!=='undefined')realBirchGroup.visible=false;
-}
-
-let aczoDiagPanel=null;
-function aczoDiagButton(label,key,combinedCloud=false){
-  const b=document.createElement('button');
-  b.type='button';
-  Object.assign(b.style,{minHeight:'26px',padding:'3px 6px',borderRadius:'7px',border:'1px solid rgba(255,255,255,.7)',font:'700 9px Arial',color:'#fff',cursor:'pointer',whiteSpace:'nowrap'});
-  function paint(){
-    const on=combinedCloud?(diagnosticState.clouds&&diagnosticState.cloudReflections):diagnosticState[key];
-    b.textContent=label+': '+(on?'AN':'AUS');
-    b.style.background=on?'rgba(18,108,61,.94)':'rgba(150,48,40,.96)';
-  }
-  b.addEventListener('click',e=>{
-    e.preventDefault();e.stopPropagation();
-    if(combinedCloud){
-      const next=!(diagnosticState.clouds&&diagnosticState.cloudReflections);
-      diagnosticState.clouds=next;diagnosticState.cloudReflections=next;
-    }else diagnosticState[key]=!diagnosticState[key];
-    aczoDiagRestoreNormalVisibility();
-    paint();
-  });
-  b._aczoPaint=paint;paint();return b;
-}
-function aczoBuildDiagPanel(){
-  if(!viewerDebugEnabled||aczoDiagPanel)return;
-  aczoDiagPanel=document.createElement('div');
-  Object.assign(aczoDiagPanel.style,{position:'absolute',left:'6px',top:'112px',zIndex:'10000',display:'grid',gridTemplateColumns:'repeat(2,max-content)',gap:'4px',padding:'5px',borderRadius:'8px',background:'rgba(0,0,0,.58)',pointerEvents:'auto'});
-  aczoDiagPanel.appendChild(aczoDiagButton('Wolken+Spiegel','clouds',true));
-  aczoDiagPanel.appendChild(aczoDiagButton('Nur Spiegel','cloudReflections'));
-  aczoDiagPanel.appendChild(aczoDiagButton('Uferwald','surveyNature'));
-  aczoDiagPanel.appendChild(aczoDiagButton('Weiden','realBirches'));
-  const reset=document.createElement('button');reset.type='button';reset.textContent='Alle AN';
-  Object.assign(reset.style,{gridColumn:'1 / -1',minHeight:'25px',padding:'3px 6px',borderRadius:'7px',border:'1px solid rgba(255,255,255,.7)',background:'rgba(55,73,82,.96)',color:'#fff',font:'700 9px Arial'});
-  reset.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();diagnosticState.clouds=diagnosticState.cloudReflections=diagnosticState.surveyNature=diagnosticState.realBirches=true;aczoDiagRestoreNormalVisibility();aczoDiagPanel.querySelectorAll('button').forEach(x=>x._aczoPaint&&x._aczoPaint());});
-  aczoDiagPanel.appendChild(reset);host.appendChild(aczoDiagPanel);
-}
-if(viewerDebugEnabled)aczoBuildDiagPanel();
+// In der Online-Fassung bleiben alle geprüften Ebenen dauerhaft aktiv.
+const diagnosticState={mirror:true,alpha:true,spec:true,relief:true,lift:true,disc:true,baseWaves:true,lane:true,depthSpots:true,waterObject:true,pondObject:true,extraObjects:true,stars:true,solarScatter:true};
+function applyDiagnosticLayers(){}
 
 
 
@@ -33159,16 +33070,36 @@ const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLea
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
 const clock=new THREE.Clock();
+let aczoLastRenderedFrameAt=0;
 let aczoMapGestureFrame=0;
 
-(function loop(){
+(function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
 
- // P69 DIAGNOSE: Kein kuenstliches FPS-Limit im Haupt-Renderloop.
- // Jeder vom Browser angebotene requestAnimationFrame darf die Szene rendern.
- // Damit zeigt die Debug-FPS-Anzeige die tatsaechlich erreichbare Leistung.
- // Die bestehende Gesten-Aufloesungslogik bleibt unveraendert.
+ // P17 PERFORMANCE: Animation und Bedienung bekommen ein klares Framebudget.
+ // Vögel erzwingen dank ihres leichten Richtungsschattens keinen teuren Modus.
+ // Im Stillstand sinkt die Last deutlich; während Bedienung und Kameraflügen
+ // bleibt das Budget hoch genug für eine gleichmäßige Bewegung.
+ const aczoInteractive=viewerInputBusy()||fishMode||skyLookMode||anglingMode
+   ||!!fishTransition||!!currentVisit||!!bmwX3Visit
+   ||rainSystem.visible||seasonSnowPoints.visible
+   ||!!(anglingUi&&anglingUi.classList.contains('time-shifting'));
+ // P7: Ein 120-Hz-iPhone braucht fuer diesen Viewer keine 120 kompletten
+ // Wald-/Wasser-Renderpasses pro Sekunde. Die Ruheauflösung bleibt unverändert.
  updateAczoMapGestureResolution();
+ // P26: Die Kunstkoeder-Flugkamera sitzt sehr nah am bewegten Koeder. Fuer
+ // diese kurze Phase bekommt sie ein hoeheres Framebudget. Gleichzeitig setzt
+ // P26 das teure zweite Vollrendering des Rollen-Livefensters waehrend des
+ // Fluges aus, sodass die Gesamtlast dabei sogar sinkt.
+ const aczoArtificialCastFlight=!!(anglingMode&&anglingState==='casting'
+   &&typeof anglingUsesArtificialLure==='function'&&anglingUsesArtificialLure()
+   &&anglingCinematicView==='flight');
+ const aczoTargetFps=aczoArtificialCastFlight
+   ?(ACZO_MOBILE_PERF?40:46)
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
+ const aczoFrameGap=1000/aczoTargetFps;
+ if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
+ aczoLastRenderedFrameAt=frameNow;
 
  const rawDt=clock.getDelta();
  // Nach App-Wechseln oder einzelnen Safari-Aussetzern darf kein riesiger
