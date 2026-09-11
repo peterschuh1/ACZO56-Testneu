@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P67 · Performance Rebuild · Final Edition</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -3939,29 +3939,6 @@ html,body{
     bottom:72px!important;
     top:auto!important;
   }
-}
-
-/* =========================================================
-   P67 PERFORMANCE REBUILD – mobile compositor budget
-   Die WebGL-Szene bleibt optisch unveraendert. Auf Touch-Geraeten werden
-   lediglich teure CSS-Backdrop-Filter und die mehrfach geblurrten
-   Linsenreflex-Geister vereinfacht. Wasser-/Sonnen-/Mondreflexionen im
-   Three.js-Renderer bleiben vollstaendig erhalten.
-   ========================================================= */
-@media (pointer:coarse), (max-width:700px){
-  .astro-info,.legend,.fish-collection,
-  .angling-select-panel,.angling-hud-panel,.angling-catch-card,
-  .angling-setup,.angling-line-summary,.angling-strike-meter,
-  .angling-game-panel,.help-overlay{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-  }
-  .celestial-lens-flare{mix-blend-mode:normal!important;}
-  .celestial-lens-flare .flare-ring-a,
-  .celestial-lens-flare .flare-ring-b,
-  .celestial-lens-flare .flare-ring-c,
-  .celestial-lens-flare .flare-streak{display:none!important;}
-  .celestial-lens-flare .flare-source{filter:none!important;}
 }
 </style>
 
@@ -16764,12 +16741,7 @@ function aczoBirchInstancedSegments(name,segments,material,parent,cast=true){
     mesh.setMatrixAt(i,dummy.matrix);
   }
   mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
-  // P67: Der Baum wirft seinen Schatten weiterhin ueber Stamm/Proxy-System.
-  // Auf den tausenden Astfragmenten selbst muss jedoch kein zweiter
-  // Schattenempfang berechnet werden. Das spart Shadow-Sampling, ohne die
-  // projizierten Baum-/Kronenschatten zu entfernen.
-  mesh.castShadow=cast;mesh.receiveShadow=false;mesh.frustumCulled=false;
-  mesh.userData.aczoNoReceiveShadow=true;
+  mesh.castShadow=cast;mesh.receiveShadow=true;mesh.frustumCulled=false;
   parent.add(mesh);return mesh;
 }
 function aczoBirchRegisterObstacle(a,b,r){
@@ -17082,12 +17054,9 @@ function aczoBuildRealBirch(cfg){
       dummy.scale.copy(items[i].scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
     }
     mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);mesh.instanceMatrix.needsUpdate=true;mesh.name=name;
-    // P67: Einzelblaetter und Kronensprays werfen bewusst keine eigenen
-    // Shadowmaps; die stabilen Kronen-Proxies liefern den sichtbaren Schatten.
-    // Also brauchen diese zehntausenden Fragmente auch keinen Shadow-Empfang.
-    mesh.castShadow=castsShadow;mesh.receiveShadow=false;mesh.frustumCulled=false;
+    mesh.castShadow=castsShadow;mesh.receiveShadow=true;mesh.frustumCulled=false;
     mesh.userData.maxCount=items.length;mesh.userData.seasonCount=items.length;mesh.userData.underwater=underwater;
-    mesh.userData.aczoNoShadow=!castsShadow;mesh.userData.aczoNoReceiveShadow=true;
+    mesh.userData.aczoNoShadow=!castsShadow;
     tree.add(mesh);realBirchLeafMeshes.push(mesh);
     if(name.includes('EINZELBLAETTER'))realBirchFineLeafMeshes.push(mesh);
     return mesh;
@@ -17956,13 +17925,13 @@ for(let ai=0;ai<aczoSurveyForestAreas.length;ai++){
 }
 
 aczoSurveyShuffle(aczoSurveyLeafItems,19561201);aczoSurveyShuffle(aczoSurveySprayItems,19561202);
-aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE',true,false);
+aczoSurveyBuildSegments(aczoSurveyWoodSegments,aczoSurveyWoodMat,'NATURWALD_INDIVIDUELLE_STAEMME_AESTE_UND_BUSCHZWEIGE');
 // P32: Legacy-Poly-Batches bleiben leer; keine Poly-Fuellvegetation wird mehr erzeugt.
 aczoSurveyBuildSegments(aczoSurveyLowPolyWoodSegments,aczoSurveyWoodMat,'NATURWALD_P32_LEER_POLY_STAEMME',false,true);
 aczoSurveyBuildSegments(aczoSurveyLowPolyConiferSegments,aczoSurveyDarkWoodMat,'NATURWALD_P32_LEER_POLY_TANNENSTAEMME',false,true);
 aczoSurveyBuildSegments(aczoSurveyBirchSegments,aczoSurveyBirchMat,'SUEDUFER_GROSSE_BIRKEN_HELLE_STRUKTURIERTE_STAEMME',true,false);
 aczoSurveyBuildSegments(aczoSurveyBirchMarks,aczoSurveyBirchMarkMat,'NATURWALD_UND_SUEDUFER_UNREGELMAESSIGE_BORKENFELDER',true,false);
-aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE',true,false);
+aczoSurveyBuildSegments(aczoSurveyConiferSegments,aczoSurveyDarkWoodMat,'MARKANTE_TANNEN_STAEMME_UND_ASTQUIRLE');
 aczoSurveyBuildSegments(aczoSurveyReedSegments,aczoSurveyReedMat,'UFER_SCHILF_EINZELHALME',true);
 aczoSurveyBuildSegments(aczoSurveyReedHeads,aczoSurveyReedHeadMat,'UFER_SCHILF_SAMENSTAENDE',true);
 aczoSurveyBuildFoliageBatches(aczoSurveyLeafItems,realBirchLeafGeometry,'NATURWALD_EINZELBLAETTER',false,false,true);
@@ -18260,19 +18229,6 @@ function updateAczoSurveyedNatureSeason(day){
   aczoSurveyedNatureGroup.visible=!is2D;renderer.shadowMap.needsUpdate=true;
 }
 // P14: stabile schattenpraegende Kronen trotz Kamera-Zoom.
-// P67: Waerend einer echten Kamera-Geste werden nur die feinsten visuellen
-// Blattinstanzen reduziert. Stamm, Aeste, Kronensilhouette und Schatten-Proxies
-// bleiben erhalten. Nach dem Loslassen steigt die Qualitaet automatisch wieder.
-function aczoFoliageInteractionFactor(){
-  if(activeViewerPointers.size>0)return ACZO_MOBILE_PERF?.38:.62;
-  if(viewerInputBusy())return ACZO_MOBILE_PERF?.62:.82;
-  return 1;
-}
-function aczoSprayInteractionFactor(){
-  if(activeViewerPointers.size>0)return ACZO_MOBILE_PERF?.78:.90;
-  if(viewerInputBusy())return ACZO_MOBILE_PERF?.90:.96;
-  return 1;
-}
 let aczoSurveyLastLodAt=0,aczoSurveyLastLodKey='';
 function updateAczoSurveyForestLod(){
   const now=performance.now();if(now<aczoSurveyLastLodAt)return;aczoSurveyLastLodAt=now+180;
@@ -18284,17 +18240,15 @@ function updateAczoSurveyForestLod(){
     leafFactor=1-t;
   }
   if(dist>=60)leafFactor=0;
-  leafFactor*=aczoFoliageInteractionFactor();
 
   // P16: Die Kronenschatten stammen nun aus distanzunabhaengigen Proxies.
   // Dadurch duerfen ausschliesslich in der weiten Gesamtansicht einige der
   // gleichmaessig gemischten visuellen Blattfaecher entfallen. Baumpositionen,
   // Stämme, Aeste, Nahansicht und Kronenform bleiben voll erhalten.
   const sprayFarFactor=ACZO_MOBILE_PERF ? .48 : .68;
-  let sprayFactor=dist<=58
+  const sprayFactor=dist<=58
     ?1
     :THREE.MathUtils.lerp(1,sprayFarFactor,THREE.MathUtils.smoothstep(dist,58,125));
-  sprayFactor*=aczoSprayInteractionFactor();
   const key=Math.round(leafFactor*20)+'|s'+Math.round(sprayFactor*20)+'|'+(is2D?'2':'3');
   if(key===aczoSurveyLastLodKey)return;aczoSurveyLastLodKey=key;
   for(const mesh of aczoSurveyFineLodMeshes){
@@ -18321,8 +18275,7 @@ function updateAczoRealBirchFineLod(){
   aczoRealBirchNextLodAt=now+165;
   const dist=Math.max(0,camera.position.distanceTo(controls.target));
   const farFactor=ACZO_MOBILE_PERF?.06:.14;
-  let factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,32,62));
-  factor*=aczoFoliageInteractionFactor();
+  const factor=THREE.MathUtils.lerp(1,farFactor,THREE.MathUtils.smoothstep(dist,32,62));
   const key=Math.round(factor*50)+'|'+(is2D?'2':'3')+'|'+(fishMode?'f':'m');
   if(key===aczoRealBirchLodKey)return;aczoRealBirchLodKey=key;
   for(const mesh of realBirchFineLeafMeshes){
@@ -33116,29 +33069,9 @@ function makeSeasonPoints(count,color,size){const arr=new Float32Array(count*3);
 const seasonSnowPoints=makeSeasonPoints(seasonFlakeCount,0xf2f7ff,.42),seasonLeafPoints=makeSeasonPoints(seasonLeafCount,0xc28a3a,.18);
 function updateSeasonTestVisuals(dt){const now=viewerNow(),day=seasonDayOfDate(now),p=seasonVisualProfile(day),winterFactor=seasonWinterFactor(day),winterBrown=seasonWinterBrownStrength();if(typeof satUniforms!=='undefined'){const targetR=THREE.MathUtils.lerp(.66,.54,winterBrown);const targetG=THREE.MathUtils.lerp(.58,.40,winterBrown);const targetB=THREE.MathUtils.lerp(.46,.28,winterBrown);const tintR=THREE.MathUtils.lerp(p.tint[0],targetR,winterFactor*.98);const tintG=THREE.MathUtils.lerp(p.tint[1],targetG,winterFactor*1.00);const tintB=THREE.MathUtils.lerp(p.tint[2],targetB,winterFactor*.96);satUniforms.seasonTint.value.setRGB(tintR,tintG,tintB);satUniforms.seasonStrength.value=THREE.MathUtils.clamp(p.strength+winterFactor*(.16+.18*winterBrown),0,.88);satUniforms.seasonSnow.value=seasonTestMode?seasonTestSnowCover/100:0;}const snowing=seasonTestSnowing(),snowIntensity=snowing?Math.min(1,Math.max(.18,(liveWeather.precipitation||0)/2.2)):0;seasonSnowPoints.visible=!is2D&&snowIntensity>.01;seasonSnowPoints.material.opacity=.42+.48*snowIntensity;if(seasonSnowPoints.visible){const a=seasonSnowPoints.geometry.attributes.position.array;for(let i=0;i<seasonFlakeCount;i++){const k=i*3;a[k+2]-=dt*(3.0+snowIntensity*5.4);a[k]+=cloudWindWorld.x*dt*(.42+cloudWindWorldSpeed*1.15);a[k+1]+=cloudWindWorld.y*dt*(.42+cloudWindWorldSpeed*1.15);if(a[k+2]<.4){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=42+Math.random()*34;}}seasonSnowPoints.geometry.attributes.position.needsUpdate=true;}const leafIntensity=p.leaves*(seasonTestMode?Math.min(1,.25+liveWeather.windSpeed/18):1);seasonLeafPoints.visible=!is2D&&leafIntensity>.08&&!snowing;seasonLeafPoints.material.opacity=.18+.55*leafIntensity;if(seasonLeafPoints.visible){const a=seasonLeafPoints.geometry.attributes.position.array;for(let i=0;i<seasonLeafCount;i++){const k=i*3;a[k+2]-=dt*(.25+leafIntensity*.65);a[k]+=cloudWindWorld.x*dt*(.6+cloudWindWorldSpeed*1.2)+Math.sin(waterUniforms.time.value+i)*dt*.15;a[k+1]+=cloudWindWorld.y*dt*(.6+cloudWindWorldSpeed*1.2);if(a[k+2]<.35){a[k]=(Math.random()-.5)*D.sceneW;a[k+1]=(Math.random()-.5)*D.sceneH;a[k+2]=5+Math.random()*18;}}seasonLeafPoints.geometry.attributes.position.needsUpdate=true;}}
 
-// P67 STATIC-SCENE CACHE: Die beiden groessten Naturwurzeln bewegen sich nie.
-// Jahreszeit/LOD aendern nur Material, Sichtbarkeit und Instanzanzahl. Ihre
-// lokalen Transformationsmatrizen muessen deshalb nicht in jedem Renderpass
-// erneut aufgebaut werden.
-function aczoFreezeStaticSceneRoot(root){
-  if(!root||typeof root.traverse!=='function')return;
-  root.updateMatrixWorld(true);
-  root.traverse(o=>{
-    if(!o||o.userData?.aczoDynamicTransform)return;
-    o.updateMatrix();
-    o.matrixAutoUpdate=false;
-  });
-  root.updateMatrixWorld(true);
-}
-aczoFreezeStaticSceneRoot(realBirchGroup);
-aczoFreezeStaticSceneRoot(aczoSurveyedNatureGroup);
-
 const clock=new THREE.Clock();
 let aczoLastRenderedFrameAt=0;
-let aczoNextAmbientUpdateAt=0,aczoAmbientVisualDt=0;
-let aczoNextViewDependentUpdateAt=0;
-let aczoNextWaterStarUpdateAt=0,aczoWaterStarVisualDt=0;
-let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
+let aczoMapGestureFrame=0;
 
 (function loop(frameNow=performance.now()){
  requestAnimationFrame(loop);
@@ -33163,7 +33096,7 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
    &&anglingCinematicView==='flight');
  const aczoTargetFps=aczoArtificialCastFlight
    ?(ACZO_MOBILE_PERF?40:46)
-   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?10:12));
+   :(aczoInteractive?(ACZO_MOBILE_PERF?30:32):(ACZO_MOBILE_PERF?18:16));
  const aczoFrameGap=1000/aczoTargetFps;
  if(aczoLastRenderedFrameAt&&frameNow-aczoLastRenderedFrameAt<aczoFrameGap)return;
  aczoLastRenderedFrameAt=frameNow;
@@ -33176,34 +33109,26 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
 
   // V7.63: Im Zeitraffer läuft die komplette sichtbare Umwelt schneller.
   // Die eigentliche Zeitwechsel-Dauer und Spielzustände verwenden weiterhin das echte dt.
-  // P67 SCHEDULER: Umweltanimationen besitzen ein eigenes Zeitbudget statt
-  // automatisch mit jedem WebGL-Renderpass zu laufen. Beim Drehen bleibt die
-  // Kamera fluessig; im Stillstand sinkt CPU-Arbeit deutlich. Die verstrichene
-  // visuelle Zeit wird gesammelt, deshalb laufen Wolken, Verkehr und Wetter
-  // trotz niedrigerer Updatefrequenz mit korrekter Geschwindigkeit weiter.
+  // P30 INPUT-PERFORMANCE: Waehrend einer echten 3D-Kamerageste hat die
+  // Eingabe Vorrang. Wolken/Verkehr/Jahreszeiten muessen nicht in jedem
+  // Kameraframe CPU-Arbeit erzeugen; jeder dritte Frame haelt sie sichtbar
+  // in Bewegung, waehrend OrbitControls deutlich mehr Luft bekommt.
   const aczoPlainMapGesture=activeViewerPointers.size>0&&!fishMode&&!skyLookMode&&!anglingMode;
-  aczoAmbientVisualDt+=visualDt;
-  const aczoAmbientHz=aczoPlainMapGesture
-    ?(ACZO_MOBILE_PERF?10:12)
-    :(aczoInteractive?18:8);
-  const aczoRunAmbientHeavy=!aczoNextAmbientUpdateAt||frameNow>=aczoNextAmbientUpdateAt;
+  if(aczoPlainMapGesture)aczoMapGestureFrame++;else aczoMapGestureFrame=0;
+  const aczoRunAmbientHeavy=!aczoPlainMapGesture||(aczoMapGestureFrame%3===0);
   if(aczoRunAmbientHeavy){
-    const ambientDt=aczoAmbientVisualDt;
-    aczoAmbientVisualDt=0;
-    aczoNextAmbientUpdateAt=frameNow+1000/aczoAmbientHz;
-    updateSkyClouds(ambientDt);
+    updateSkyClouds(visualDt*(aczoPlainMapGesture?3:1));
     updateRealCloudReflections();
-    updateRainRipples(ambientDt);
-    updateBirds(ambientDt);
-    updateTraffic(ambientDt);
-    updateCarVisit(ambientDt);
-    updateBmwX3Visit(ambientDt);
-    updateAczoFacilityDoors(ambientDt);
-    updateAczoConstructionGates(ambientDt);
-    updateAczoMainEntranceMotionLight(ambientDt);
-    updatePersonalCampScene(ambientDt);
-    updateSeasonTestVisuals(ambientDt);
-    updateAczoWildBoars(ambientDt);
+    updateRainRipples(visualDt*(aczoPlainMapGesture?3:1));
+    updateBirds(visualDt*(aczoPlainMapGesture?3:1));
+    updateTraffic(visualDt*(aczoPlainMapGesture?3:1));
+    updateCarVisit(visualDt*(aczoPlainMapGesture?3:1));
+    updateBmwX3Visit(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoFacilityDoors(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoConstructionGates(visualDt*(aczoPlainMapGesture?3:1));
+    updateAczoMainEntranceMotionLight(visualDt*(aczoPlainMapGesture?3:1));
+    updatePersonalCampScene(visualDt*(aczoPlainMapGesture?3:1));
+    updateSeasonTestVisuals(visualDt*(aczoPlainMapGesture?3:1));
   }
   // P10: Material-/Jahreszeitenzustand aendert sich im normalen Betrieb nicht
   // von Frame zu Frame. Die bisherige Abfrage blieb zwar gecacht, erzeugte aber
@@ -33218,6 +33143,7 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
     window.__aczoNextSeasonMaterialUpdateAt=aczoSeasonPerfNow+(aczoSeasonFast?80:500);
   }
   updateAczoSurveyForestLod();
+  updateAczoWildBoars(visualDt);
   updateAczoRealBirchFineLod();
   updateClubFlagPole(visualDt);
   if(typeof aczoShoreSealMat!=='undefined'&&aczoShoreSealMat.uniforms?.nightFactor){
@@ -33256,7 +33182,7 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
   updateFishShadows();
   updateUnderwaterEffects(dt);
   updateAnglingMode(dt);
-  if(anglingMode)updateAnglingClockDisplay();
+  updateAnglingClockDisplay();
  if(waterVisible){
    // Flache Uferperspektive benötigt etwas klarer wahrnehmbare Bewegung.
    // Außerhalb des Angelmodus bleibt das bisherige Tempo exakt .48.
@@ -33315,8 +33241,8 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
    waterUniforms.cloudWindSpeed.value=cloudWindWorldSpeed;
  }
 
- // P67: Kameraabhaengige astronomische Reflexe werden nach controls.update()
- // gemeinsam mit den uebrigen View-Uniforms aktualisiert.
+ // V8.58: separater astronomischer Reflex-Layer. Kein Eingriff in waterMat.
+ updateDirectCelestialWaterReflections();
 
  if(simulationEnabled && rainSystem.visible && seasonTestRaining()){    const pos=rainGeo.attributes.position;
    const precip=Math.max(liveWeather.precipitation||0,liveWeather.rain||0);
@@ -33408,49 +33334,16 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
  // Sonne oder Mond nicht dauerhaft ausgeblendet zurücklassen.
  positionCelestialDiscsForMainCamera();
  enforceCelestialDiscVisibility();
-
- // P67 VIEW-BUDGET: Projektionen, Reflexanker und DOM-Lensflare muessen bei
- // bewegter Kamera jedes Renderbild verfolgen. Steht die Kamera, reichen vier
- // Aktualisierungen pro Sekunde vollkommen aus; der WebGL-Render selbst bleibt
- // davon unabhaengig und Wasser/Sonne/Mond behalten ihre Animation.
- const aczoRunViewDependent=aczoInteractive||!aczoNextViewDependentUpdateAt
-   ||frameNow>=aczoNextViewDependentUpdateAt;
- if(aczoRunViewDependent){
-   aczoNextViewDependentUpdateAt=frameNow+(aczoInteractive?0:250);
-   updateDirectCelestialWaterReflections();
-   updateCelestialReflectionScreens();
-   updateCelestialDepthLighting();
-   updateCelestialLensFlare();
-   updateCompass();
- }
+ updateCelestialReflectionScreens();
+ updateCelestialDepthLighting();
+ updateCelestialLensFlare();
  updateContourDistanceLod();
  applyDiagnosticLayers();
-
- // Sternspiegelungen projizieren jeden Katalogstern einzeln auf die Wasser-
- // polygonmaske. Das ist visuell langsam und braucht keine Renderfrequenz.
- aczoWaterStarVisualDt+=visualDt;
- if(!aczoNextWaterStarUpdateAt||frameNow>=aczoNextWaterStarUpdateAt){
-   const starDt=aczoWaterStarVisualDt;
-   aczoWaterStarVisualDt=0;
-   aczoNextWaterStarUpdateAt=frameNow+(aczoInteractive?67:125);
-   updateWaterStarReflectionPoints(starDt);
- }
+ updateWaterStarReflectionPoints(visualDt);
  if(typeof updateCleanOverhangVisibility==='function')updateCleanOverhangVisibility();
  aczoRefreshAboveWaterShadowCasters();
-
- // Die Schattenroutine besitzt bereits einen quantisierten Licht-Cache. P67
- // spart zusaetzlich die komplette Zustandspruefung in jedem Renderbild; bei
- // Ansichtswechseln wird durch die Signatur trotzdem sofort aktualisiert.
- const aczoShadowStateSignature=(is2D?'2':'3')+'|'+(waterVisible?'w':'-')
-   +'|'+(simulationEnabled?'l':'n')+'|'+(fishMode?'f':'-')
-   +'|'+(anglingMode?String(anglingCinematicView||'a'):'-')
-   +'|'+(window.__aczoUnderwaterSceneActive?'u':'s');
- if(aczoShadowStateSignature!==aczoLastShadowStateSignature
-   ||!aczoNextShadowStateUpdateAt||frameNow>=aczoNextShadowStateUpdateAt){
-   aczoLastShadowStateSignature=aczoShadowStateSignature;
-   aczoNextShadowStateUpdateAt=frameNow+(aczoInteractive?125:320);
-   updateUnderwaterObstacleShadows(!!window.__aczoUnderwaterSceneActive);
- }
+ updateUnderwaterObstacleShadows(!!window.__aczoUnderwaterSceneActive);
+ updateCompass();
  // Harte Objekt-Isolation unmittelbar vor dem Rendern. Dadurch kann keine
  // Wetter- oder Animationsroutine ein ausgeschaltetes Diagnoseobjekt reaktivieren.
  if(typeof diagnosticState!=='undefined'){
@@ -33476,12 +33369,9 @@ let aczoNextShadowStateUpdateAt=0,aczoLastShadowStateSignature='';
    window.__markMapStartupFirstFrame();
    window.__markMapStartupFirstFrame=null;
  }
- if(anglingMode){
-   updateAnglingAmbientStatus(dt);
-   renderAnglingFloatCamera();
-   if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
-   renderAnglingReelCamera();
- }
+ updateAnglingAmbientStatus(dt);
+ renderAnglingFloatCamera();if(anglingUsesDeeper()&&anglingUi.classList.contains('line-active'))drawAnglingDeeperSonar();
+  renderAnglingReelCamera();
  updateViewerDebug(rawDt);
  // Der Zehn-Sekunden-Timer beginnt erst nach dem ersten wirklich gezeichneten
  // Kartenbild. Der Viewer selbst bleibt dadurch beim Start sofort bedienbar.
