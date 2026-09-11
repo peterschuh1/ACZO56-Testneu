@@ -7695,7 +7695,9 @@ function setSeasonTimeAnchor(date){seasonTimeBaseDate=new Date(date);seasonTimeB
 function seasonDayOfDate(d){return Math.max(1,Math.floor((d-new Date(d.getFullYear(),0,0))/86400000));}
 function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
-function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
+function viewerNow(){
+  if(window.__ACZO_FORCE_TAG14__) return new Date(window.__ACZO_FORCE_TAG14__.getTime());
+return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
@@ -33401,6 +33403,37 @@ function aczoOptimizeMobileShadowCasters(){
 }
 setTimeout(aczoOptimizeMobileShadowCasters,3500);
 setTimeout(aczoOptimizeMobileShadowCasters,12000);
+
+/* TEST ONLY: fester Tag 14:00 für Schattenvergleich */
+(function aczoForceTag14(){
+  const d=new Date();
+  d.setHours(14,0,0,0);
+  try{
+    if(typeof seasonTestDate!=='undefined') seasonTestDate=d;
+  }catch(e){}
+  try{
+    if(typeof testDate!=='undefined') testDate=d;
+  }catch(e){}
+  try{
+    if(typeof viewerTestDate!=='undefined') viewerTestDate=d;
+  }catch(e){}
+  try{
+    if(typeof seasonTestMode!=='undefined') seasonTestMode=true;
+  }catch(e){}
+  try{
+    if(typeof testMode!=='undefined') testMode=true;
+  }catch(e){}
+  window.__ACZO_FORCE_TAG14__=d;
+})();
+
+setTimeout(()=>{
+  try{
+    const b=document.createElement('div');
+    b.textContent='TAG 14:00 · SCHATTEN OPT';
+    b.style.cssText='position:absolute;left:8px;top:8px;z-index:10000;padding:6px 8px;border-radius:8px;background:rgba(80,25,10,.86);color:#fff;font:800 11px Arial;pointer-events:none';
+    (document.getElementById('viewer')||document.body).appendChild(b);
+  }catch(e){}
+},700);
 </script>
 
 
