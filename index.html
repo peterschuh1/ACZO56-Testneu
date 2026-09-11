@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Shadow Proxy Test</title>
+<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -7067,12 +7067,12 @@ function updateUnderwaterObstacleShadows(submerged){
       ?.20:THREE.MathUtils.lerp(.62,.20,Math.pow(cloud,.78));
   }
   if(aczoWaterStructureShadowReceiver&&aczoWaterStructureShadowMat){
-    aczoWaterStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
+    aczoWaterStructureShadowReceiver.visible=false; /* TEST: kein Shadow-Sampling auf Weiherwasser */
     aczoWaterStructureShadowMat.opacity=useMoon
       ?.13:THREE.MathUtils.lerp(.44,.13,Math.pow(cloud,.78));
   }
   if(aczoMoselStructureShadowReceiver&&aczoMoselStructureShadowMat){
-    aczoMoselStructureShadowReceiver.visible=surface&&waterVisible&&(useSun||useMoon);
+    aczoMoselStructureShadowReceiver.visible=false; /* TEST: kein Shadow-Sampling auf Moselwasser */
     aczoMoselStructureShadowMat.opacity=useMoon
       ?.12:THREE.MathUtils.lerp(.38,.12,Math.pow(cloud,.78));
   }
@@ -8677,7 +8677,7 @@ aczoWaterStructureShadowReceiver.name='ACZO56_WASSEROBERFLAECHE_LIVE_SONNENSCHAT
 aczoWaterStructureShadowReceiver.position.z=.028;
 aczoWaterStructureShadowReceiver.renderOrder=4.045;
 aczoWaterStructureShadowReceiver.castShadow=false;
-aczoWaterStructureShadowReceiver.receiveShadow=true;
+aczoWaterStructureShadowReceiver.receiveShadow=false; /* TEST */
 aczoWaterStructureShadowReceiver.frustumCulled=false;
 aczoWaterStructureShadowReceiver.visible=false;
 scene.add(aczoWaterStructureShadowReceiver);
@@ -9211,7 +9211,7 @@ aczoMoselStructureShadowReceiver.name='ACZO56_MOSEL_LIVE_BAUM_UND_OBJEKTSCHATTEN
 aczoMoselStructureShadowReceiver.position.z=.242;
 aczoMoselStructureShadowReceiver.renderOrder=4.245;
 aczoMoselStructureShadowReceiver.castShadow=false;
-aczoMoselStructureShadowReceiver.receiveShadow=true;
+aczoMoselStructureShadowReceiver.receiveShadow=false; /* TEST */
 aczoMoselStructureShadowReceiver.frustumCulled=false;
 aczoMoselStructureShadowReceiver.visible=false;
 waterSurface.add(aczoMoselStructureShadowReceiver);
@@ -33083,7 +33083,7 @@ function aczoNativeTestEnsurePanel(){
  const p=document.createElement('div');
  p.id='aczo-native-raf-test';
  p.style.cssText='position:fixed;left:8px;top:40px;z-index:2147483647;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.76);color:#fff;font:700 11px/1.35 Arial,sans-serif;pointer-events:none;white-space:pre';
- p.textContent='TAG 14:00 · SHADOW ANALYSE\nFPS --\nRAF -- ms\nMainJS -- ms';
+ p.textContent='TAG 14:00 · WASSERSCHATTEN AUS\nFPS --\nRAF -- ms\nMainJS -- ms';
  document.body.appendChild(p); aczoNativeTestPanel=p;
 }
 setTimeout(aczoNativeTestEnsurePanel,500);
@@ -33399,7 +33399,7 @@ setTimeout(aczoNativeTestEnsurePanel,500);
    const rafAvg=aczoNativeTestRafN?aczoNativeTestRafSum/aczoNativeTestRafN:0;
    const mainAvg=aczoNativeTestMainN?aczoNativeTestMainSum/aczoNativeTestMainN:0;
    const fps=rafAvg?1000/rafAvg:0;
-   aczoNativeTestPanel.textContent='TAG 14:00 · SHADOW ANALYSE\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
+   aczoNativeTestPanel.textContent='TAG 14:00 · SCHATTEN OPT\nFPS '+fps.toFixed(1)+'\nRAF '+rafAvg.toFixed(1)+' ms\nMainJS '+mainAvg.toFixed(1)+' ms';
    aczoNativeTestRafSum=0; aczoNativeTestRafN=0; aczoNativeTestMainSum=0; aczoNativeTestMainN=0;
  }
 
@@ -33413,24 +33413,21 @@ setTimeout(aczoNativeTestEnsurePanel,500);
    Keep important structural/hero objects on their existing shadow path. */
 function aczoOptimizeMobileShadowCasters(){
   if(!ACZO_MOBILE_PERF || !scene) return;
-  let disabled=0, kept=0, proxies=0;
-  // P66 SHADOW PROXY TEST: sichtbare Baumgeometrie bleibt 1:1 erhalten.
-  // Im Schattenpass duerfen nur die bereits vorhandenen, extrem billigen
-  // Kronen-Proxies arbeiten. Detailstaemme, Aeste, Birkenmarken und Weiden-
-  // Segmente werden nur als Shadow-Caster abgeschaltet, nie unsichtbar gemacht.
-  const proxyRx=/(STABILE_KRONENSCHATTEN_PROXIES|STABILE_NADELBAUMSCHATTEN_PROXIES)/i;
-  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|mosel)/i;
-  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget|willow|weide|birch|birke|stamm|aest|zweig|borke)/i;
+  let disabled=0, kept=0;
+  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|willow|weide|birch|birke|mosel)/i;
+  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget)/i;
   scene.traverse(o=>{
     if(!o || !o.isObject3D || !o.castShadow) return;
     const n=(o.name||"")+" "+((o.parent&&o.parent.name)||"");
-    if(proxyRx.test(n)){ o.castShadow=true; proxies++; kept++; return; }
     if(keepRx.test(n)){ kept++; return; }
-    if(vegRx.test(n)){ o.castShadow=false; disabled++; return; }
+    if(vegRx.test(n)){
+      o.castShadow=false;
+      disabled++;
+      return;
+    }
     kept++;
   });
-  renderer.shadowMap.needsUpdate=true;
-  window.__aczoShadowOptStats={disabled,kept,proxies};
+  window.__aczoShadowOptStats={disabled,kept};
 }
 setTimeout(aczoOptimizeMobileShadowCasters,3500);
 setTimeout(aczoOptimizeMobileShadowCasters,12000);
@@ -33460,67 +33457,20 @@ setTimeout(aczoOptimizeMobileShadowCasters,12000);
 setTimeout(()=>{
   try{
     const b=document.createElement('div');
-    b.textContent='TAG 14:00 · SHADOW ANALYSE';
+    b.textContent='TAG 14:00 · SCHATTEN OPT';
     b.style.cssText='position:absolute;left:8px;top:8px;z-index:10000;padding:6px 8px;border-radius:8px;background:rgba(80,25,10,.86);color:#fff;font:800 11px Arial;pointer-events:none';
     (document.getElementById('viewer')||document.body).appendChild(b);
   }catch(e){}
 },700);
 
-
-/* P66 SHADOW CASTER ANALYSE V2: counts real instances and readable mobile UI */
-let aczoShadowAnalysePanel=null;
-function aczoShadowTriPerGeometry(g){
-  if(!g || !g.attributes || !g.attributes.position)return 0;
-  if(g.index && g.index.count)return Math.floor(g.index.count/3);
-  return Math.floor(g.attributes.position.count/3);
-}
-function aczoShadowAnalyseV2(){
-  if(!scene)return;
-  let meshes=0, draws=0, instances=0, tris=0, alphaTris=0;
-  const groups={vegetation:0,leaves:0,buildings:0,piers:0,vehicles:0,people:0,other:0};
-  scene.traverse(o=>{
-    if(!o || !o.isMesh || !o.visible || !o.castShadow)return;
-    meshes++;
-    const per=aczoShadowTriPerGeometry(o.geometry);
-    const cnt=(o.isInstancedMesh ? Math.max(0,o.count|0) : 1);
-    instances+=cnt;
-    draws++;
-    const total=per*cnt;
-    tris+=total;
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    if(mats.some(m=>m&&(m.transparent || (m.alphaTest||0)>0 || m.alphaMap)))alphaTris+=total;
-    const n=((o.name||"")+" "+((o.parent&&o.parent.name)||"")).toLowerCase();
-    if(/leaf|leav|blatt|foliage|spray|crown|krone/.test(n))groups.leaves+=total;
-    else if(/tree|baum|forest|wald|bush|busch|shrub|hecke|hedge|birch|birke|willow|weide|conifer|fichte|tanne|pine|veget/.test(n))groups.vegetation+=total;
-    else if(/house|haus|garage|sanit|building|geb[aä]ude/.test(n))groups.buildings+=total;
-    else if(/pier|steg|dock|bridge|brücke/.test(n))groups.piers+=total;
-    else if(/crafter|vehicle|car|bmw|auto|boot|boat/.test(n))groups.vehicles+=total;
-    else if(/person|angler|predator|human|visitor|mensch/.test(n))groups.people+=total;
-    else groups.other+=total;
-  });
-  if(!aczoShadowAnalysePanel){
-    const p=document.createElement('div');
-    p.id='aczo-shadow-analyse-v2';
-    p.style.cssText='position:fixed;right:7px;top:326px;z-index:2147483646;width:190px;max-width:46vw;padding:7px 8px;border-radius:8px;background:rgba(0,0,0,.78);color:#fff;font:700 9px/1.28 Arial,sans-serif;pointer-events:none;white-space:pre-line;overflow:hidden';
-    document.body.appendChild(p);aczoShadowAnalysePanel=p;
-  }
-  const m=x=>(x/1000000).toFixed(2)+'M';
-  aczoShadowAnalysePanel.textContent=
-    'SHADOW V2\n'+
-    'Meshes '+meshes+' | Inst '+instances+'\n'+
-    'Tris '+m(tris)+' | Alpha '+m(alphaTris)+'\n'+
-    'Bäume '+m(groups.vegetation)+'\n'+
-    'Blätter '+m(groups.leaves)+'\n'+
-    'Gebäude '+m(groups.buildings)+'\n'+
-    'Stege '+m(groups.piers)+'\n'+
-    'Fahrzeuge '+m(groups.vehicles)+'\n'+
-    'Personen '+m(groups.people)+'\n'+
-    'Sonstige '+m(groups.other);
-}
-setTimeout(aczoShadowAnalyseV2,1500);
-setInterval(aczoShadowAnalyseV2,2000);
-// alter Diagnoseaufruf entfernt: Funktion existiert in dieser Testbasis nicht.
-
+setTimeout(()=>{
+  try{
+    const x=document.createElement('div');
+    x.textContent='TEST: WASSERSCHATTEN AUS';
+    x.style.cssText='position:fixed;right:8px;top:264px;z-index:2147483647;padding:6px 8px;border-radius:8px;background:rgba(95,20,10,.84);color:#fff;font:800 10px Arial;pointer-events:none';
+    document.body.appendChild(x);
+  }catch(e){}
+},600);
 </script>
 
 
