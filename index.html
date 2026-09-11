@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P66 · Shadow Proxy Test</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -33413,21 +33413,24 @@ setTimeout(aczoNativeTestEnsurePanel,500);
    Keep important structural/hero objects on their existing shadow path. */
 function aczoOptimizeMobileShadowCasters(){
   if(!ACZO_MOBILE_PERF || !scene) return;
-  let disabled=0, kept=0;
-  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|willow|weide|birch|birke|mosel)/i;
-  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget)/i;
+  let disabled=0, kept=0, proxies=0;
+  // P66 SHADOW PROXY TEST: sichtbare Baumgeometrie bleibt 1:1 erhalten.
+  // Im Schattenpass duerfen nur die bereits vorhandenen, extrem billigen
+  // Kronen-Proxies arbeiten. Detailstaemme, Aeste, Birkenmarken und Weiden-
+  // Segmente werden nur als Shadow-Caster abgeschaltet, nie unsichtbar gemacht.
+  const proxyRx=/(STABILE_KRONENSCHATTEN_PROXIES|STABILE_NADELBAUMSCHATTEN_PROXIES)/i;
+  const keepRx=/(house|haus|garage|sanit|pier|steg|dock|bridge|fence|zaun|crafter|vehicle|car|person|angler|predator|flag|mast|boat|boot|mosel)/i;
+  const vegRx=/(tree|baum|forest|wald|leaf|leav|blatt|branch|ast|bush|busch|shrub|hedge|hecke|spray|crown|krone|conifer|fichte|tanne|pine|veget|willow|weide|birch|birke|stamm|aest|zweig|borke)/i;
   scene.traverse(o=>{
     if(!o || !o.isObject3D || !o.castShadow) return;
     const n=(o.name||"")+" "+((o.parent&&o.parent.name)||"");
+    if(proxyRx.test(n)){ o.castShadow=true; proxies++; kept++; return; }
     if(keepRx.test(n)){ kept++; return; }
-    if(vegRx.test(n)){
-      o.castShadow=false;
-      disabled++;
-      return;
-    }
+    if(vegRx.test(n)){ o.castShadow=false; disabled++; return; }
     kept++;
   });
-  window.__aczoShadowOptStats={disabled,kept};
+  renderer.shadowMap.needsUpdate=true;
+  window.__aczoShadowOptStats={disabled,kept,proxies};
 }
 setTimeout(aczoOptimizeMobileShadowCasters,3500);
 setTimeout(aczoOptimizeMobileShadowCasters,12000);
@@ -33516,7 +33519,8 @@ function aczoShadowAnalyseV2(){
 }
 setTimeout(aczoShadowAnalyseV2,1500);
 setInterval(aczoShadowAnalyseV2,2000);
-setTimeout(()=>aczoUpdateShadowCasterDiag(true),12500);
+// alter Diagnoseaufruf entfernt: Funktion existiert in dieser Testbasis nicht.
+
 </script>
 
 
