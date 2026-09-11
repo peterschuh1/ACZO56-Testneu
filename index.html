@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · NATIVE RAF TEST</title>
+<title>ACZO56 P66 · NATIVE RAF TAGTEST</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -7697,6 +7697,8 @@ function seasonHourOfDate(d){return d.getHours()+d.getMinutes()/60+d.getSeconds(
 function seasonTestDate(){const base=seasonTimeBaseDate||seasonDateFromDayHour();return new Date(base.getTime()+(Date.now()-seasonTimeBaseStamp));}
 function viewerNow(){return seasonTestMode?seasonTestDate():new Date();}
 const seasonStartupNow=new Date();
+// P66 Native-RAF TAGTEST: gleiche lokale Kalenderlage, fuer den Performancevergleich fest auf 14:00 Uhr gesetzt.
+seasonStartupNow.setHours(14,0,0,0);
 seasonTestDay=seasonDayOfDate(seasonStartupNow);
 seasonTestHour=seasonHourOfDate(seasonStartupNow);
 setSeasonTimeAnchor(seasonStartupNow);
