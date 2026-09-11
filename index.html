@@ -6966,7 +6966,7 @@ function aczoConfigureUnderwaterShadowLight(light){
   // P28: Auf Mobilgeraeten 384 statt 512 Schattenpixel. Die weichen Proxy-
   // Kronen verlieren kaum sichtbare Struktur, die Shadowmap-Flaeche sinkt aber
   // um rund 44 %. Desktop behaelt den bewaehrten 512er Referenzstand.
-  const shadowMapSize=ACZO_MOBILE_PERF?384:512;
+  const shadowMapSize=ACZO_MOBILE_PERF?256:512;
   light.shadow.mapSize.set(shadowMapSize,shadowMapSize);
   const sceneSpan=Math.max(D.sceneW,D.sceneH);
   light.shadow.camera.near=.25;
