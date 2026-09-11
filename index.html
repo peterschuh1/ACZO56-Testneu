@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ACZO56 P66 · Suedwest-Ecke freigestellt · Cloud Start beruhigt</title>
+<title>ACZO56 P69 · Unlimited FPS Diagnose</title>
 <!-- V7.83: Kritische Viewer-Ressourcen früh anfordern. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://geo4.service24.rlp.de" crossorigin>
@@ -4860,6 +4860,25 @@ if(viewerDebugEnabled){
   });
   host.appendChild(viewerDebugPanel);
 }
+function aczoDiagEffectiveVisible(o){
+  for(let p=o;p;p=p.parent)if(p.visible===false)return false;
+  return true;
+}
+const aczoDiagFrustum=new THREE.Frustum(),aczoDiagProjView=new THREE.Matrix4();
+function aczoDiagCountFrustumMeshes(root){
+  if(!root||root.visible===false)return 0;
+  camera.updateMatrixWorld();
+  aczoDiagProjView.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
+  aczoDiagFrustum.setFromProjectionMatrix(aczoDiagProjView);
+  let n=0;
+  root.traverse(o=>{
+    if(!o.isMesh||!aczoDiagEffectiveVisible(o))return;
+    try{
+      if(o.frustumCulled===false||aczoDiagFrustum.intersectsObject(o))n++;
+    }catch(e){n++;}
+  });
+  return n;
+}
 function updateViewerDebug(rawDt){
   if(!viewerDebugPanel)return;
   const now=performance.now();
@@ -4871,10 +4890,20 @@ function updateViewerDebug(rawDt){
   if(span<1000)return;
   const fps=Math.round(viewerDebugFrames*1000/span);
   const info=renderer.info.render;
+  const cloudTotal=(typeof cloudGroup!=='undefined')?cloudGroup.children.length:0;
+  const cloudVisible=(typeof cloudGroup!=='undefined'&&cloudGroup.visible)?cloudGroup.children.filter(c=>c.visible).length:0;
+  const reflVisible=(typeof cloudReflectionGroup!=='undefined'&&cloudReflectionGroup.visible)?cloudReflectionGroup.children.filter(c=>c.visible).length:0;
+  let minCZ=Infinity,maxCZ=-Infinity;
+  if(typeof cloudGroup!=='undefined')cloudGroup.children.forEach(c=>{if(c.visible){minCZ=Math.min(minCZ,c.position.z);maxCZ=Math.max(maxCZ,c.position.z);}});
+  const cloudZ=Number.isFinite(minCZ)?`${Math.round(minCZ)}-${Math.round(maxCZ)}`:'-';
+  const natureVis=(typeof aczoSurveyedNatureGroup!=='undefined')?aczoDiagCountFrustumMeshes(aczoSurveyedNatureGroup):0;
+  const birchVis=(typeof realBirchGroup!=='undefined')?aczoDiagCountFrustumMeshes(realBirchGroup):0;
   viewerDebugPanel.textContent=
     `FPS ${fps}  max ${Math.round(viewerDebugMaxFrameMs)} ms\n`+
     `Draws ${info.calls}  Tri ${info.triangles}\n`+
-    `Wetter ${simulationEnabled?'LIVE':'NEUTRAL'}  Wolken ${Math.round(liveWeather.cloud||0)} %\n`+
+    `Wolken ${cloudVisible}/${cloudTotal}  Spiegel ${reflVisible}  Wetter ${Math.round(liveWeather.cloud||0)}%\n`+
+    `CamZ ${camera.position.z.toFixed(1)}  CloudZ ${cloudZ}\n`+
+    `Uferwald ${natureVis}  Weiden ${birchVis}\n`+
     `Touch ${activeViewerPointers.size}  Aussetzer ${viewerDebugLongFrames}`;
   viewerDebugFrames=0;viewerDebugMaxFrameMs=0;viewerDebugLastUpdate=now;
 }
@@ -7711,9 +7740,69 @@ function seasonWinterFactor(day){
   return 0;
 }
 
-// In der Online-Fassung bleiben alle geprüften Ebenen dauerhaft aktiv.
-const diagnosticState={mirror:true,alpha:true,spec:true,relief:true,lift:true,disc:true,baseWaves:true,lane:true,depthSpots:true,waterObject:true,pondObject:true,extraObjects:true,stars:true,solarScatter:true};
-function applyDiagnosticLayers(){}
+// P69 DIAGNOSE: Die normalen Produktions-Layer bleiben unverändert aktiv.
+// Die vier zusätzlichen Schalter greifen NUR bei ?debug=1 unmittelbar vor dem
+// Haupt-Render. Dadurch können wir den Lastverursacher isolieren, ohne Wetter-,
+// Wasser-, Schatten- oder Vegetationslogik dauerhaft umzubauen.
+const diagnosticState={mirror:true,alpha:true,spec:true,relief:true,lift:true,disc:true,baseWaves:true,lane:true,depthSpots:true,waterObject:true,pondObject:true,extraObjects:true,stars:true,solarScatter:true,
+  clouds:true,cloudReflections:true,surveyNature:true,realBirches:true};
+
+function aczoDiagRestoreNormalVisibility(){
+  if(!viewerDebugEnabled)return;
+  try{
+    if(diagnosticState.clouds&&typeof applyWeatherScene==='function')applyWeatherScene();
+    if(diagnosticState.cloudReflections&&typeof updateRealCloudReflections==='function')updateRealCloudReflections();
+    if(diagnosticState.surveyNature&&typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=!is2D;
+    if(diagnosticState.realBirches&&typeof realBirchGroup!=='undefined')realBirchGroup.visible=!is2D;
+  }catch(e){}
+}
+function applyDiagnosticLayers(){
+  if(!viewerDebugEnabled)return;
+  if(!diagnosticState.clouds){
+    if(typeof cloudGroup!=='undefined')cloudGroup.visible=false;
+    if(typeof cloudReflectionGroup!=='undefined')cloudReflectionGroup.visible=false;
+  }else if(!diagnosticState.cloudReflections){
+    if(typeof cloudReflectionGroup!=='undefined')cloudReflectionGroup.visible=false;
+  }
+  if(!diagnosticState.surveyNature&&typeof aczoSurveyedNatureGroup!=='undefined')aczoSurveyedNatureGroup.visible=false;
+  if(!diagnosticState.realBirches&&typeof realBirchGroup!=='undefined')realBirchGroup.visible=false;
+}
+
+let aczoDiagPanel=null;
+function aczoDiagButton(label,key,combinedCloud=false){
+  const b=document.createElement('button');
+  b.type='button';
+  Object.assign(b.style,{minHeight:'26px',padding:'3px 6px',borderRadius:'7px',border:'1px solid rgba(255,255,255,.7)',font:'700 9px Arial',color:'#fff',cursor:'pointer',whiteSpace:'nowrap'});
+  function paint(){
+    const on=combinedCloud?(diagnosticState.clouds&&diagnosticState.cloudReflections):diagnosticState[key];
+    b.textContent=label+': '+(on?'AN':'AUS');
+    b.style.background=on?'rgba(18,108,61,.94)':'rgba(150,48,40,.96)';
+  }
+  b.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();
+    if(combinedCloud){
+      const next=!(diagnosticState.clouds&&diagnosticState.cloudReflections);
+      diagnosticState.clouds=next;diagnosticState.cloudReflections=next;
+    }else diagnosticState[key]=!diagnosticState[key];
+    aczoDiagRestoreNormalVisibility();
+    paint();
+  });
+  b._aczoPaint=paint;paint();return b;
+}
+function aczoBuildDiagPanel(){
+  if(!viewerDebugEnabled||aczoDiagPanel)return;
+  aczoDiagPanel=document.createElement('div');
+  Object.assign(aczoDiagPanel.style,{position:'absolute',left:'6px',top:'112px',zIndex:'10000',display:'grid',gridTemplateColumns:'repeat(2,max-content)',gap:'4px',padding:'5px',borderRadius:'8px',background:'rgba(0,0,0,.58)',pointerEvents:'auto'});
+  aczoDiagPanel.appendChild(aczoDiagButton('Wolken+Spiegel','clouds',true));
+  aczoDiagPanel.appendChild(aczoDiagButton('Nur Spiegel','cloudReflections'));
+  aczoDiagPanel.appendChild(aczoDiagButton('Uferwald','surveyNature'));
+  aczoDiagPanel.appendChild(aczoDiagButton('Weiden','realBirches'));
+  const reset=document.createElement('button');reset.type='button';reset.textContent='Alle AN';
+  Object.assign(reset.style,{gridColumn:'1 / -1',minHeight:'25px',padding:'3px 6px',borderRadius:'7px',border:'1px solid rgba(255,255,255,.7)',background:'rgba(55,73,82,.96)',color:'#fff',font:'700 9px Arial'});
+  reset.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();diagnosticState.clouds=diagnosticState.cloudReflections=diagnosticState.surveyNature=diagnosticState.realBirches=true;aczoDiagRestoreNormalVisibility();aczoDiagPanel.querySelectorAll('button').forEach(x=>x._aczoPaint&&x._aczoPaint());});
+  aczoDiagPanel.appendChild(reset);host.appendChild(aczoDiagPanel);
+}
+if(viewerDebugEnabled)aczoBuildDiagPanel();
 
 
 
