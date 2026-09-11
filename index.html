@@ -33126,9 +33126,54 @@ function aczoAutoRecFinish(){
   const first=drops[0],near=aczoAutoRecEvents.filter(e=>e.t>=first.t-4&&e.t<=first.t+1).slice(-8);
   txt+='Vor erstem Drop:\n'+(near.length?near.map(e=>e.t.toFixed(1)+'s '+e.name+(e.detail?' · '+e.detail:'')).join('\n'):'keine markierten Ereignisse');
  }else txt+='Kein FPS-Drop <24 in den ersten 35 s.';
+ const snaps=aczoAutoRecEvents.filter(e=>e.name.indexOf('SCENE ')===0);
+ if(snaps.length)txt+='\nSCENE:\n'+snaps.map(e=>e.t.toFixed(1)+'s '+e.detail).join('\n');
  txt+='\nWorst RAF '+aczoAutoRecWorstRAF.toFixed(1)+' ms';p.textContent=txt;
  try{localStorage.setItem('aczoAutoRecLast',JSON.stringify({drops,events:aczoAutoRecEvents,worstRAF:aczoAutoRecWorstRAF}));}catch(e){}
 }
+
+function aczoSceneLoadSnapshot(label){
+ try{
+  let meshes=0, inst=0, tris=0, transparent=0, casters=0, receivers=0;
+  const cats={tree:0,leaf:0,building:0,pier:0,person:0,vehicle:0,water:0,other:0};
+  scene.traverse(o=>{
+   if(!(o.isMesh||o.isInstancedMesh)||!o.visible)return;
+   meshes++;
+   const n=((o.name||'')+' '+((o.parent&&o.parent.name)||'')).toLowerCase();
+   let c='other';
+   if(/tree|baum|birch|forest|willow|conifer|leaf|blatt|crown|krone/.test(n)) c=/leaf|blatt|crown|krone/.test(n)?'leaf':'tree';
+   else if(/house|haus|garage|sanit|building|hütte|huette/.test(n)) c='building';
+   else if(/pier|steg|dock/.test(n)) c='pier';
+   else if(/person|angler|predator|human/.test(n)) c='person';
+   else if(/vehicle|crafter|bmw|car|auto/.test(n)) c='vehicle';
+   else if(/water|wasser|mosel/.test(n)) c='water';
+   cats[c]++;
+   if(o.isInstancedMesh)inst+=o.count||0;
+   if(o.castShadow)casters++;
+   if(o.receiveShadow)receivers++;
+   const g=o.geometry;
+   if(g){
+    let t=0;
+    if(g.index)t=g.index.count/3;
+    else if(g.attributes&&g.attributes.position)t=g.attributes.position.count/3;
+    if(o.isInstancedMesh)t*=o.count||1;
+    tris+=t;
+   }
+   const mats=Array.isArray(o.material)?o.material:[o.material];
+   if(mats.some(m=>m&&m.transparent))transparent++;
+  });
+  aczoAutoRecEvent('SCENE '+label,
+    'mesh '+meshes+' inst '+inst+' tris '+Math.round(tris/1000)+'k transp '+transparent+
+    ' cast '+casters+' recv '+receivers+
+    ' | tree '+cats.tree+' leaf '+cats.leaf+' build '+cats.building+' pier '+cats.pier+
+    ' person '+cats.person+' veh '+cats.vehicle+' water '+cats.water);
+ }catch(e){aczoAutoRecEvent('SCENE SNAP ERR',e.message||e);}
+}
+setTimeout(()=>aczoSceneLoadSnapshot('2s'),2000);
+setTimeout(()=>aczoSceneLoadSnapshot('10s'),10000);
+setTimeout(()=>aczoSceneLoadSnapshot('20s'),20000);
+setTimeout(()=>aczoSceneLoadSnapshot('30s'),30000);
+
 setTimeout(aczoAutoRecFinish,35000);
 
 const clock=new THREE.Clock();
