@@ -1341,6 +1341,12 @@ html,body{
 .angling-log-list{display:flex;flex-direction:column;gap:4px;margin-bottom:9px;text-align:left}
 .angling-log-entry{display:grid;grid-template-columns:1fr auto auto;gap:7px;padding:6px 8px;border-radius:9px;background:rgba(255,255,255,.09);font-size:9px;font-weight:850}
 .angling-log-empty{padding:14px;font-size:10px;opacity:.82}
+.angling-log-sync-note{
+  margin:0 0 8px;padding:7px 9px;border-radius:9px;
+  background:rgba(255,214,82,.10);border:1px solid rgba(255,224,112,.24);
+  color:#f4edc4;font-size:8.5px;font-weight:800;line-height:1.3;text-align:left
+}
+.angling-log-sync-note strong{color:#ffe47c}
 .angling-log-panel button{min-height:33px;padding:5px 13px!important;border-radius:999px;font-size:9px!important;font-weight:950}
 .angling-drill-panel{
   display:none;top:10px;width:min(510px,calc(100% - 20px));padding:9px 11px;border-radius:15px;text-align:center
@@ -4591,7 +4597,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · BETA 1.14';
+const VIEWER_VERSION='ACZO56 · BETA 1.17';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -25145,36 +25151,78 @@ function addAnglingRecordCard(title,value){
 
 function renderAnglingLog(){
   const catches=anglingProgress.catches;
+  const localCatchCount=catches.length;
+  const totalCatchCount=Math.max(localCatchCount,Math.max(0,Number(anglingProgress.totalCatches)||0));
   const recordFish=Object.values(anglingProgress.records);
   const speciesCount=recordFish.length;
-  anglingLogSummary.textContent=anglingProgress.totalCatches+' Fänge · '+speciesCount+' von '+Object.keys(ANGLING_POPULATION).length+' Arten · Anglerstufe '+anglingLevelForXp(anglingProgress.lifetimeXp);
+
+  anglingLogSummary.textContent=
+    totalCatchCount+' Fänge gesamt · '+speciesCount+' von '+Object.keys(ANGLING_POPULATION).length+
+    ' Arten · Anglerstufe '+anglingLevelForXp(anglingProgress.lifetimeXp);
+
   const hasCaughtKoi=!!anglingProgress.records.koi||catches.some(c=>c.species==='koi');
   anglingKoiBadge.classList.toggle('show',hasCaughtKoi);
   anglingLogRecords.textContent='';anglingLogSpecies.textContent='';
+
   const largest=recordFish.reduce((best,c)=>(Number(c.cm)||0)>(Number(best?.cm)||0)?c:best,null);
   const heaviest=recordFish.reduce((best,c)=>anglingEstimatedKg(c.species,c.cm)>anglingEstimatedKg(best?.species,best?.cm)?c:best,null);
-  addAnglingRecordCard('Fänge gesamt',String(anglingProgress.totalCatches));
+
+  addAnglingRecordCard(
+    'Fänge gesamt',
+    localCatchCount<totalCatchCount
+      ? totalCatchCount+' · '+localCatchCount+' auf diesem Gerät'
+      : String(totalCatchCount)
+  );
   addAnglingRecordCard('Größter Fisch',largest?(fishDisplayNames[largest.species]+' · '+formatAnglingLength(largest.cm)):'–');
   addAnglingRecordCard('Schwerster geschätzt',heaviest?(fishDisplayNames[heaviest.species]+' · '+formatAnglingWeight(anglingEstimatedKg(heaviest.species,heaviest.cm))):'–');
   addAnglingRecordCard('Arten gefangen',speciesCount+' von '+Object.keys(ANGLING_POPULATION).length);
+
   const caughtSet=new Set(Object.keys(anglingProgress.records));
   Object.keys(ANGLING_POPULATION).forEach(species=>{
-    const icon=document.createElement('i');icon.title=caughtSet.has(species)?fishDisplayNames[species]:'Noch nicht im Fangbuch';
-    icon.style.backgroundImage='url("'+fishImageData[species]+'")';icon.classList.toggle('caught',caughtSet.has(species));
+    const icon=document.createElement('i');
+    icon.title=caughtSet.has(species)?fishDisplayNames[species]:'Noch nicht im Fangbuch';
+    icon.style.backgroundImage='url("'+fishImageData[species]+'")';
+    icon.classList.toggle('caught',caughtSet.has(species));
     anglingLogSpecies.appendChild(icon);
   });
+
   anglingLogList.textContent='';
-  if(!catches.length){
-    const empty=document.createElement('div');empty.className='angling-log-empty';
-    empty.textContent='Noch kein Fisch gelandet.';anglingLogList.appendChild(empty);return;
+
+  // BETA 1.16: Cloud-Gesamtstand und lokale Fanghistorie sauber auseinanderhalten.
+  // Bisher sah z.B. "129 Fänge" zusammen mit nur einer Fangzeile wie Datenverlust aus.
+  if(localCatchCount<totalCatchCount){
+    const note=document.createElement('div');
+    note.className='angling-log-sync-note';
+    note.innerHTML=
+      '<strong>'+totalCatchCount+' Fänge gehören zu deinem Cloud-Spielstand.</strong> '+
+      'Die einzelnen Fangbuch-Zeilen werden in der bisherigen Sheets-Version nicht gespeichert. '+
+      'Auf diesem Gerät sind '+localCatchCount+' einzelne '+(localCatchCount===1?'Fang':'Fänge')+' vorhanden.';
+    anglingLogList.appendChild(note);
   }
+
+  if(!catches.length){
+    const empty=document.createElement('div');
+    empty.className='angling-log-empty';
+    empty.textContent=totalCatchCount>0
+      ?'Auf diesem Gerät gibt es noch keine einzelnen Fangbuch-Einträge.'
+      :'Noch kein Fisch gelandet.';
+    anglingLogList.appendChild(empty);
+    return;
+  }
+
   catches.slice().reverse().forEach(c=>{
     const row=document.createElement('div');row.className='angling-log-entry';
-    const species=document.createElement('span');species.textContent=(fishDisplayNames[c.species]||'Fisch')+(Number(anglingProgress.records[c.species]?.cm)===Number(c.cm)?' · PB':'');
-    const size=document.createElement('span');size.textContent=formatAnglingLength(c.cm)+' · '+formatAnglingWeight(anglingEstimatedKg(c.species,c.cm));
+    const species=document.createElement('span');
+    species.textContent=(fishDisplayNames[c.species]||'Fisch')+
+      (Number(anglingProgress.records[c.species]?.cm)===Number(c.cm)?' · PB':'');
+    const size=document.createElement('span');
+    size.textContent=formatAnglingLength(c.cm)+' · '+formatAnglingWeight(anglingEstimatedKg(c.species,c.cm));
     const date=document.createElement('span');
-    date.textContent=new Date(c.time||Date.now()).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    row.append(species,size,date);anglingLogList.appendChild(row);
+    date.textContent=new Date(c.time||Date.now()).toLocaleString('de-DE',{
+      day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'
+    });
+    row.append(species,size,date);
+    anglingLogList.appendChild(row);
   });
 }
 
@@ -26195,6 +26243,7 @@ const ANGLING_PLAYER_KEY='aczo56-angling-player-v1';
 const ANGLING_RECOVERY_KEY='aczo56-angling-recovery-v1';
 const ANGLING_CLOUD_ENABLED_KEY='aczo56-angling-cloud-enabled-v1';
 const ANGLING_SETUP_COMPLETE_KEY='aczo56-angling-setup-complete-v1';
+const ANGLING_LAST_VISIT_KEY='aczo56-angling-last-visit-v1';
 let anglingSetupComplete=false;
 try{anglingSetupComplete=localStorage.getItem(ANGLING_SETUP_COMPLETE_KEY)==='1';}catch(err){}
 const ANGLING_PRESENCE_NAMED_KEY='aczo56-angling-presence-named-v1';
@@ -26202,7 +26251,11 @@ let anglingPresenceNamed=false;
 try{anglingPresenceNamed=localStorage.getItem(ANGLING_PRESENCE_NAMED_KEY)==='1';}catch(err){}
 let anglingLastCloudSuccessAt=0;
 let anglingPreviousLastActiveAt='';
+try{anglingPreviousLastActiveAt=String(localStorage.getItem(ANGLING_LAST_VISIT_KEY)||'');}catch(err){}
 let anglingWelcomeBackShownForSession=false;
+let anglingWelcomeBackDurationText='';
+let anglingLatestRecentPlayers=[];
+let anglingLatestActivePlayers=[];
 let anglingWelcomeBackTimer=null;
 let anglingLastCloudMessage='';
 let anglingPresenceTimer=null;
@@ -26388,7 +26441,7 @@ function anglingCloudPlayerStateSignature(player){
 
 function applyAnglingCloudPlayer(player){
   if(!player||typeof player!=='object')return false;
-  if(player.lastActiveAt&&!anglingMode){
+  if(player.lastActiveAt&&!anglingMode&&!anglingPreviousLastActiveAt){
     anglingPreviousLastActiveAt=String(player.lastActiveAt);
   }
 
@@ -26482,7 +26535,13 @@ async function loadAnglingPlayerCloud(){
 
     const player=data.player;
     if(player&&player.lastActiveAt){
-      anglingPreviousLastActiveAt=String(player.lastActiveAt);
+      // BETA 1.15: Beim bereits gestarteten Angelspiel kann Presence den
+      // Server-Zeitstempel schon auf "jetzt" setzen. Eine lokal gespeicherte
+      // Rückkehrzeit ist dann für die Begrüßung zuverlässiger und bleibt erhalten.
+      if(!anglingMode||!anglingPreviousLastActiveAt){
+        anglingPreviousLastActiveAt=String(player.lastActiveAt);
+      }
+      if(anglingMode)showAnglingWelcomeBackIfNeeded();
     }
     const serverRevision=Math.max(0,Math.floor(Number(player.revision)||0));
     const localRevision=Math.max(0,Math.floor(Number(anglingProgress.xpRevision)||0));
@@ -26606,9 +26665,22 @@ function flushAnglingCloudSync(){
   }catch(err){}
 }
 
-window.addEventListener('pagehide',flushAnglingCloudSync);
+function rememberAnglingLastVisit(){
+  if(!anglingSetupComplete)return;
+  const iso=new Date().toISOString();
+  anglingPreviousLastActiveAt=iso;
+  try{localStorage.setItem(ANGLING_LAST_VISIT_KEY,iso);}catch(err){}
+}
+
+window.addEventListener('pagehide',()=>{
+  if(anglingMode)rememberAnglingLastVisit();
+  flushAnglingCloudSync();
+});
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden')flushAnglingCloudSync();
+  if(document.visibilityState==='hidden'){
+    if(anglingMode)rememberAnglingLastVisit();
+    flushAnglingCloudSync();
+  }
 });
 
 // V8.101: Erst Cloud lesen, wenn dieses Browserprofil bereits eingerichtet ist.
@@ -26648,6 +26720,23 @@ function hideAnglingWelcomeBack(){
   anglingWelcomeBack?.classList.remove('show');
 }
 
+function updateAnglingWelcomeBackCommunityText(){
+  if(!anglingWelcomeBackDurationText||!anglingWelcomeBackText)return;
+  const parts=['Du bist seit '+anglingWelcomeBackDurationText+' wieder am Wasser.'];
+
+  const newest=anglingLatestRecentPlayers?.[0];
+  if(newest?.name){
+    parts.push('Neuester Angler: '+String(newest.name).slice(0,30));
+  }
+
+  const activeCount=Array.isArray(anglingLatestActivePlayers)?anglingLatestActivePlayers.length:0;
+  if(activeCount>0){
+    parts.push(activeCount+' weitere'+(activeCount===1?'r Angler ist':' Angler sind')+' gerade am Weiher');
+  }
+
+  anglingWelcomeBackText.textContent=parts.join(' · ');
+}
+
 function showAnglingWelcomeBackIfNeeded(){
   if(anglingWelcomeBackShownForSession||!anglingSetupComplete)return;
   if(!anglingPreviousLastActiveAt)return;
@@ -26656,22 +26745,23 @@ function showAnglingWelcomeBackIfNeeded(){
   if(!Number.isFinite(previous)||previous<=0)return;
 
   const elapsed=Date.now()-previous;
-  // Unter 15 Minuten keine dramatische Rückkehrmeldung.
-  if(elapsed<15*60*1000)return;
+  // BETA 1.15: Schon nach zwei Minuten wieder anzeigen. So verschwindet die
+  // Begrüßung auf Mobilgeräten nicht nur deshalb, weil kurz zuvor getestet wurde.
+  if(elapsed<2*60*1000)return;
 
   const name=(anglingPlayerProfile.name||'Angler').trim()||'Angler';
-  const duration=formatAnglingReturnDuration(elapsed);
+  anglingWelcomeBackDurationText=formatAnglingReturnDuration(elapsed);
 
   anglingWelcomeBackShownForSession=true;
   anglingWelcomeBackTitle.textContent='Hallo '+name+'!';
-  anglingWelcomeBackText.textContent='Du bist seit '+duration+' endlich wieder am Wasser.';
+  updateAnglingWelcomeBackCommunityText();
   anglingWelcomeBack.classList.add('show');
 
   if(anglingWelcomeBackTimer)window.clearTimeout(anglingWelcomeBackTimer);
   anglingWelcomeBackTimer=window.setTimeout(()=>{
     anglingWelcomeBack.classList.remove('show');
     anglingWelcomeBackTimer=null;
-  },5200);
+  },7200);
 }
 
 function anglingRelativeTime(iso){
@@ -26740,8 +26830,10 @@ async function loadAnglingCommunity(){
     ]);
 
     if(recentResult.status==='fulfilled'){
-      renderAnglingCommunityList(anglingRecentPlayers,recentResult.value?.players||[],'Noch keine neuen Angler.',true);
+      anglingLatestRecentPlayers=recentResult.value?.players||[];
+      renderAnglingCommunityList(anglingRecentPlayers,anglingLatestRecentPlayers,'Noch keine neuen Angler.',true);
     }else{
+      anglingLatestRecentPlayers=[];
       renderAnglingCommunityList(anglingRecentPlayers,[],recentResult.reason?.name==='AbortError'
         ?'Communitydaten antworten gerade zu langsam.'
         :'Communitydaten derzeit nicht erreichbar.');
@@ -26750,14 +26842,21 @@ async function loadAnglingCommunity(){
 
     if(activeResult.status==='fulfilled'){
       const activePlayers=activeResult.value?.players||[];
+      anglingLatestActivePlayers=activePlayers;
       renderAnglingCommunityList(anglingActivePlayers,activePlayers,'Gerade ist sonst niemand aktiv.',false);
       updateAnglingActiveToast(activePlayers);
     }else{
+      anglingLatestActivePlayers=[];
       renderAnglingCommunityList(anglingActivePlayers,[],activeResult.reason?.name==='AbortError'
         ?'Aktivstatus antwortet gerade zu langsam.'
         :'Aktivstatus derzeit nicht erreichbar.');
       updateAnglingActiveToast([]);
       console.warn('Aktivstatus nicht verfügbar:',activeResult.reason);
+    }
+
+    // Wenn die Begrüßung bereits sichtbar ist, Community-Infos direkt ergänzen.
+    if(anglingWelcomeBack?.classList.contains('show')){
+      updateAnglingWelcomeBackCommunityText();
     }
   })();
   anglingCommunityLoadInFlight=task;
@@ -26878,10 +26977,18 @@ function updateAnglingMainMenuUi(){
 
 function openAnglingFirstSetup(){
   openAnglingMainMenu();
+
+  // BETA 1.17: Bei einem echten Neubenutzer sind die drei Online-Optionen
+  // standardmäßig aktiviert. Sie können vor dem ersten Speichern bewusst
+  // abgewählt werden. Bestehende Benutzerprofile werden dadurch nicht geändert.
+  anglingMainCloudEnabled.checked=true;
+  anglingMainHighscorePublic.checked=true;
+  anglingMainPresenceNamed.checked=true;
+
   anglingMainSaveProfileBtn.style.display='none';
   anglingFirstSetupContinueBtn.style.display='';
   anglingMainSubtitle.textContent='Willkommen beim Angelspiel. Richte einmal kurz dein Spielerprofil und die Speicheroptionen ein.';
-  anglingMainStatus.textContent='Ersteinrichtung: Entscheide einmal über Name, Cloud und Sichtbarkeit. Danach startet „Angeln“ künftig direkt mit der Angelstellenauswahl.';
+  anglingMainStatus.textContent='Ersteinrichtung: Cloud-Sicherung, öffentliche Rekorde und Namensanzeige sind vorausgewählt. Du kannst jede Option vor dem Speichern abwählen.';
   const playSection=anglingMainPlayBtn.closest('.angling-main-section');
   if(playSection)playSection.style.display='none';
   anglingMainSettings.style.display='none';
@@ -27109,6 +27216,7 @@ async function resetAnglingAsBrandNewUser(){
       ANGLING_RECOVERY_KEY,
       ANGLING_CLOUD_ENABLED_KEY,
       ANGLING_SETUP_COMPLETE_KEY,
+      ANGLING_LAST_VISIT_KEY,
       ANGLING_PRESENCE_NAMED_KEY,
       ANGLING_LEADERBOARD_INTRO_KEY,
       ANGLING_DAILY_QUEST_KEY,
@@ -27123,13 +27231,13 @@ async function resetAnglingAsBrandNewUser(){
   hideAnglingWelcomeBack();
   anglingRecoveryCode='';
   anglingCloudEnabled=true;
-  anglingPresenceNamed=false;
+  anglingPresenceNamed=true;
   anglingLastCloudSuccessAt=0;
   anglingLastCloudMessage='';
   anglingPlayerProfile={
     id:createAnglingPlayerId(),
     name:'',
-    shareRecords:false
+    shareRecords:true
   };
   try{
     localStorage.setItem(ANGLING_PLAYER_KEY,JSON.stringify(anglingPlayerProfile));
@@ -30352,6 +30460,8 @@ function startAnglingMode(){
   anglingUi.classList.add('is-active');
   showAnglingWelcomeBackIfNeeded();
   startAnglingPresence();
+  // Falls Cloud/Community erst nach dem Start antworten, wird die Begrüßung
+  // durch deren Callback nachgezogen statt lautlos auszufallen.
   const wrap=document.querySelector('.wrap');
   wrap.classList.add('angling-mode');
   anglingUi.classList.remove('is-fishing','line-active','is-drilling','is-landing','bite-alert','bite-focus','perfect-hit','fight-pulse','aim-locked','is-caught','is-catch-sequence','artificial-lure','is-returning');
@@ -33662,7 +33772,7 @@ function finishLeaveAngling(){
   restoreAnglingPanoramaBackdropEffects();
   document.querySelector('.wrap').classList.remove('angling-mode');
   stopAnglingPresence();hideAnglingWelcomeBack();anglingUi.classList.remove('is-active');
-  anglingPreviousLastActiveAt=new Date().toISOString();
+  rememberAnglingLastVisit();
   anglingWelcomeBackShownForSession=false;
   anglingMode=false;anglingState='idle';anglingSelection=null;anglingSaved=null;anglingPhotoHorizon.visible=false;
   anglingMarkerHalo.visible=false;anglingMarkerNightLight.visible=false;
