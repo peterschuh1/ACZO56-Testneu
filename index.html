@@ -4597,7 +4597,7 @@ Wetterdaten: Open-Meteo · Astronomische Berechnungen: SunCalc<br>
 <script>
 // V7.75: Der Startlayer ist bereits durch HTML/CSS sichtbar, bevor dieser schwere
 // Three.js-Block ausgeführt wird. Er wird erst nach einem echten Renderbild freigegeben.
-const VIEWER_VERSION='ACZO56 · BETA 1.17';
+const VIEWER_VERSION='ACZO56 · BETA 1.18';
 const helpVersion=document.getElementById('helpVersion');
 if(helpVersion) helpVersion.textContent=VIEWER_VERSION;
 
@@ -26239,6 +26239,7 @@ function openAnglingShop(){if(guardAnglingMenuOpen())return;closeAnglingGamePane
 
 
 const ANGLING_LEADERBOARD_ENDPOINT='https://script.google.com/macros/s/AKfycbyJ1_6pwlsyKAXjyojruOEDNvZOuYii3wMJbVY0NX5yxneShEHu9pq3uYfR-0LGXQ/exec';
+const ANGLING_REQUIRED_CLOUD_API=13;
 const ANGLING_PLAYER_KEY='aczo56-angling-player-v1';
 const ANGLING_RECOVERY_KEY='aczo56-angling-recovery-v1';
 const ANGLING_CLOUD_ENABLED_KEY='aczo56-angling-cloud-enabled-v1';
@@ -26511,7 +26512,7 @@ async function loadAnglingPlayerCloud(){
         recoveryCode:anglingRecoveryCode||''
       }),
       cache:'no-store'
-    },15000);
+    },30000);
     let data=await res.json().catch(()=>null);
     // Übergangsweg für die kurze Zeit, in der das neue HTML bereits online ist,
     // aber noch die vorherige Backend-Version läuft. Nach V12 wird ausschließlich
@@ -26579,6 +26580,9 @@ async function loadAnglingPlayerCloud(){
       await syncAnglingPlayerCloud();
     }
 
+    anglingLastCloudSuccessAt=Date.now();
+    anglingLastCloudMessage='Abgeglichen';
+    updateAnglingCloudStatus();
     return true;
 
   }catch(err){
@@ -26610,7 +26614,7 @@ async function syncAnglingPlayerCloud(){
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
         body:JSON.stringify(requestPayload)
-      },15000);
+      },30000);
 
       if(!res.ok)return false;
       const data=await res.json().catch(()=>null);
@@ -26788,7 +26792,8 @@ function updateAnglingCloudStatus(){
   }
   if(anglingLastCloudSuccessAt){
     const d=new Date(anglingLastCloudSuccessAt);
-    anglingMainCloudState.textContent='☁️ Gespeichert · zuletzt '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+    const label=anglingLastCloudMessage||'Abgeglichen';
+    anglingMainCloudState.textContent='☁️ '+label+' · zuletzt '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
     return;
   }
   anglingMainCloudState.textContent='☁️ Cloud aktiviert · noch kein erfolgreicher Abgleich in dieser Sitzung';
@@ -26819,46 +26824,54 @@ async function loadAnglingCommunity(){
     renderAnglingCommunityList(anglingActivePlayers,[],'Online-Verbindung nicht eingerichtet.');
     return;
   }
-  // V8.90: Menüöffnung und Präsenzstart dürfen nicht gleichzeitig dieselben
-  // Community-Abfragen vervielfachen.
   if(anglingCommunityLoadInFlight)return anglingCommunityLoadInFlight;
+
   const task=(async()=>{
     const base=ANGLING_LEADERBOARD_ENDPOINT+(ANGLING_LEADERBOARD_ENDPOINT.includes('?')?'&':'?');
+
+    try{
+      const data=await anglingLeaderboardJson(
+        base+'action=community&limit=5&minutes=5&exclude='+encodeURIComponent(anglingPlayerProfile.id||''),
+        {method:'GET',cache:'no-store'},
+        30000
+      );
+
+      if(Array.isArray(data?.recentPlayers)&&Array.isArray(data?.activePlayers)){
+        anglingLatestRecentPlayers=data.recentPlayers;
+        anglingLatestActivePlayers=data.activePlayers;
+        renderAnglingCommunityList(anglingRecentPlayers,anglingLatestRecentPlayers,'Noch keine neuen Angler.',true);
+        renderAnglingCommunityList(anglingActivePlayers,anglingLatestActivePlayers,'Gerade ist sonst niemand aktiv.',false);
+        updateAnglingActiveToast(anglingLatestActivePlayers);
+        if(anglingWelcomeBack?.classList.contains('show'))updateAnglingWelcomeBackCommunityText();
+        return;
+      }
+    }catch(err){
+      console.warn('V13-Community-Abfrage nicht verfügbar, Fallback wird benutzt:',err);
+    }
+
     const [recentResult,activeResult]=await Promise.allSettled([
-      anglingLeaderboardJson(base+'action=recentPlayers&limit=5',{method:'GET',cache:'no-store'},15000),
-      anglingLeaderboardJson(base+'action=activePlayers&minutes=5&exclude='+encodeURIComponent(anglingPlayerProfile.id||''),{method:'GET',cache:'no-store'},15000)
+      anglingLeaderboardJson(base+'action=recentPlayers&limit=5',{method:'GET',cache:'no-store'},30000),
+      anglingLeaderboardJson(base+'action=activePlayers&minutes=5&exclude='+encodeURIComponent(anglingPlayerProfile.id||''),{method:'GET',cache:'no-store'},30000)
     ]);
 
     if(recentResult.status==='fulfilled'){
       anglingLatestRecentPlayers=recentResult.value?.players||[];
       renderAnglingCommunityList(anglingRecentPlayers,anglingLatestRecentPlayers,'Noch keine neuen Angler.',true);
-    }else{
-      anglingLatestRecentPlayers=[];
-      renderAnglingCommunityList(anglingRecentPlayers,[],recentResult.reason?.name==='AbortError'
-        ?'Communitydaten antworten gerade zu langsam.'
-        :'Communitydaten derzeit nicht erreichbar.');
-      console.warn('Communitydaten nicht verfügbar:',recentResult.reason);
+    }else if(!anglingLatestRecentPlayers.length){
+      renderAnglingCommunityList(anglingRecentPlayers,[],'Communitydaten werden beim nächsten Abgleich erneut geladen.');
     }
 
     if(activeResult.status==='fulfilled'){
-      const activePlayers=activeResult.value?.players||[];
-      anglingLatestActivePlayers=activePlayers;
-      renderAnglingCommunityList(anglingActivePlayers,activePlayers,'Gerade ist sonst niemand aktiv.',false);
-      updateAnglingActiveToast(activePlayers);
-    }else{
-      anglingLatestActivePlayers=[];
-      renderAnglingCommunityList(anglingActivePlayers,[],activeResult.reason?.name==='AbortError'
-        ?'Aktivstatus antwortet gerade zu langsam.'
-        :'Aktivstatus derzeit nicht erreichbar.');
-      updateAnglingActiveToast([]);
-      console.warn('Aktivstatus nicht verfügbar:',activeResult.reason);
+      anglingLatestActivePlayers=activeResult.value?.players||[];
+      renderAnglingCommunityList(anglingActivePlayers,anglingLatestActivePlayers,'Gerade ist sonst niemand aktiv.',false);
+      updateAnglingActiveToast(anglingLatestActivePlayers);
+    }else if(!anglingLatestActivePlayers.length){
+      renderAnglingCommunityList(anglingActivePlayers,[],'Aktivstatus wird beim nächsten Abgleich erneut geladen.');
     }
 
-    // Wenn die Begrüßung bereits sichtbar ist, Community-Infos direkt ergänzen.
-    if(anglingWelcomeBack?.classList.contains('show')){
-      updateAnglingWelcomeBackCommunityText();
-    }
+    if(anglingWelcomeBack?.classList.contains('show'))updateAnglingWelcomeBackCommunityText();
   })();
+
   anglingCommunityLoadInFlight=task;
   try{
     return await task;
@@ -26906,7 +26919,7 @@ async function sendAnglingPresence(){
         name:anglingPlayerProfile.name||'',
         presenceNameVisible:!!anglingPresenceNamed
       })
-    },12000);
+    },25000);
     return data?.registered!==false;
   }catch(err){
     console.warn('Aktivstatus konnte nicht gesendet werden:',err);
@@ -26914,16 +26927,32 @@ async function sendAnglingPresence(){
   }
 }
 
+let anglingPresenceStartTimer=null;
 function startAnglingPresence(){
   stopAnglingPresence();
   if(!anglingCloudEnabled)return;
-  sendAnglingPresence();
-  loadAnglingCommunity();
+
+  anglingPresenceStartTimer=window.setTimeout(async()=>{
+    anglingPresenceStartTimer=null;
+    if(!anglingMode||!anglingCloudEnabled)return;
+
+    if(anglingCloudSyncPromise){
+      try{await anglingCloudSyncPromise;}catch(err){}
+    }
+
+    await sendAnglingPresence();
+    if(anglingMode&&anglingCloudEnabled)await loadAnglingCommunity();
+  },1200);
+
   anglingPresenceTimer=window.setInterval(sendAnglingPresence,60000);
   anglingCommunityTimer=window.setInterval(loadAnglingCommunity,90000);
 }
 
 function stopAnglingPresence(){
+  if(anglingPresenceStartTimer){
+    window.clearTimeout(anglingPresenceStartTimer);
+    anglingPresenceStartTimer=null;
+  }
   if(anglingPresenceTimer){window.clearInterval(anglingPresenceTimer);anglingPresenceTimer=null;}
   if(anglingCommunityTimer){window.clearInterval(anglingCommunityTimer);anglingCommunityTimer=null;}
   if(anglingCommunityToastTimer){window.clearTimeout(anglingCommunityToastTimer);anglingCommunityToastTimer=null;}
@@ -26969,7 +26998,7 @@ function updateAnglingMainMenuUi(){
   // P33 CLOUD: Beim ersten Einrichten bzw. vor vorhandener Recovery-ID keine
   // zwei Community-GETs im Hintergrund starten. Das verhindert Konkurrenz mit
   // getPlayer/recoverPlayer auf einem kalten Google-Apps-Script-Backend.
-  if(anglingSetupComplete&&anglingCloudEnabled&&anglingRecoveryCode)loadAnglingCommunity();
+  if(anglingSetupComplete&&anglingCloudEnabled&&anglingRecoveryCode&&anglingLastCloudSuccessAt)loadAnglingCommunity();
   syncAnglingHallOfFameMenuAvailability();
   updateAnglingDailyQuestMenuButton();
 }
@@ -27397,8 +27426,14 @@ async function fetchAnglingRecoveryPlayer(code){
       const data=await res.json().catch(()=>null);
 
       if(!res.ok){
-        const error=new Error(data?.error||('HTTP '+res.status));
+        const backendMismatch=res.status===404||res.status===405;
+        const error=new Error(
+          backendMismatch
+            ?'Cloud-Backend passt nicht zur Spielversion (HTTP '+res.status+'). Apps Script V13 neu bereitstellen.'
+            :(data?.error||('HTTP '+res.status))
+        );
         error.retryable=res.status>=500;
+        error.backendMismatch=backendMismatch;
         throw error;
       }
       if(!data){
